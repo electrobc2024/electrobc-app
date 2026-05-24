@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>ELECTRO BC – Importar Clientes</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,sans-serif;background:#EEF0F5;display:flex;align-items:center;
+  justify-content:center;min-height:100vh;padding:20px}
+.card{background:#fff;border-radius:14px;padding:32px 36px;max-width:580px;width:100%;
+  box-shadow:0 4px 24px rgba(0,0,0,0.10)}
+h2{color:#0A0F1E;font-size:22px;margin-bottom:6px}
+.sub{color:#64748B;font-size:13px;margin-bottom:20px;line-height:1.6}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:20px}
+.stat{background:#F8FAFC;border-radius:10px;padding:10px 12px;border:1px solid #E2E8F0;text-align:center}
+.stat-n{font-size:22px;font-weight:800;color:#0A0F1E}
+.stat-l{font-size:10px;color:#94A3B8;text-transform:uppercase;letter-spacing:.06em}
+.warn{background:#FFFBEB;color:#B45309;border:1px solid #FCD34D;border-radius:8px;
+  padding:10px 14px;font-size:12px;line-height:1.6;margin-bottom:16px}
+button{width:100%;background:#F26B1D;color:#fff;border:none;border-radius:9px;
+  padding:13px;font-size:15px;font-weight:700;cursor:pointer;margin-bottom:8px}
+button:hover{background:#d95c10}
+button:disabled{background:#CBD5E1;cursor:not-allowed}
+.note{font-size:11px;color:#94A3B8;text-align:center;margin-bottom:4px}
+#msg{border-radius:9px;padding:12px;font-size:13px;font-weight:600;text-align:center;display:none;margin-top:10px}
+.ok{background:#ECFDF5;color:#065F46;border:1px solid #6EE7B7}
+.err{background:#FEF2F2;color:#DC2626;border:1px solid #FECACA}
+</style>
+</head>
+<body>
+<div class="card">
+  <h2>⚡ ELECTRO BC — Importar Clientes</h2>
+  <p class="sub">51 clientes organizados y depurados, todos con teléfono.</p>
+  <div class="stats">
+    <div class="stat"><div class="stat-n">10</div><div class="stat-l">Admin</div></div>
+    <div class="stat"><div class="stat-n">12</div><div class="stat-l">Constructora</div></div>
+    <div class="stat"><div class="stat-n">1</div><div class="stat-l">Licitación</div></div>
+    <div class="stat"><div class="stat-n">28</div><div class="stat-l">Particular</div></div>
+  </div>
+  <div class="warn">⚠ Abrí desde el mismo navegador donde usás ELECTRO BC (Live Server o Vercel).<br>
+  Los clientes nuevos se agregan sin borrar los que ya tenés.</div>
+  <button id="btn" onclick="importar()">📥 Importar 51 clientes</button>
+  <p class="note">No sobreescribe clientes existentes con el mismo nombre</p>
+  <div id="msg"></div>
+</div>
+<script>
+const CLKEY='ebc-clients-v2';
+const clients=[{"nombre": "Admin. Ferrario & Asoc", "empresa": "", "administracion": "Admin. Ferrario & Asoc", "telefonoAdm": "2213106993", "telefono": "", "tipo": "admin", "id": "j5m3jmb"}, {"nombre": "Admin. Alejandro Perez Sarchi", "empresa": "", "administracion": "Admin. Alejandro Perez Sarchi", "telefonoAdm": "2214880619", "telefono": "", "tipo": "admin", "id": "d5qxfes"}, {"nombre": "Admin. Claudio Di Benedetto", "empresa": "", "administracion": "Admin. Claudio Di Benedetto", "telefonoAdm": "2216760392", "telefono": "", "tipo": "admin", "id": "zxfzqk0"}, {"nombre": "Admin. Fernandez", "empresa": "", "administracion": "Admin. Fernandez", "telefonoAdm": "1121733375", "telefono": "", "tipo": "admin", "id": "4yazqze"}, {"nombre": "Admin. MEG", "empresa": "", "administracion": "Admin. MEG", "telefonoAdm": "2212268570", "telefono": "", "tipo": "admin", "id": "vfriqa0"}, {"nombre": "D'dadario Nestor", "empresa": "", "administracion": "D'dadario Nestor", "telefonoAdm": "2215060221", "telefono": "", "tipo": "admin", "id": "4snj7yn"}, {"nombre": "Nicolas Ferrario", "empresa": "", "administracion": "Admin. Ferrario & Asoc", "telefonoAdm": "", "telefono": "2212266382", "tipo": "admin", "id": "el4gduv"}, {"nombre": "Consorcio 10 433", "empresa": "", "administracion": "", "telefonoAdm": "", "telefono": "2214880619", "tipo": "admin", "id": "yp5ezed"}, {"nombre": "Consorcio 12 277", "empresa": "", "administracion": "", "telefonoAdm": "", "telefono": "2214310161", "tipo": "admin", "id": "7hkim8s"}, {"nombre": "Consorcio 26", "empresa": "", "administracion": "", "telefonoAdm": "", "telefono": "2215448884", "tipo": "admin", "id": "lm6mpzs"}, {"nombre": "Dario Arriaga", "empresa": "JMS Constructora", "administracion": "", "telefonoAdm": "", "telefono": "2213039870", "tipo": "constructora", "id": "ww1c3qs"}, {"nombre": "Christian Menorio", "empresa": "CONINSA", "administracion": "", "telefonoAdm": "", "telefono": "2215225282", "tipo": "constructora", "id": "mopd6wq"}, {"nombre": "Gaston Pizarro", "empresa": "CONINSA", "administracion": "", "telefonoAdm": "", "telefono": "2214258077", "tipo": "constructora", "id": "5ogcufm"}, {"nombre": "Geronimo", "empresa": "Kavos Constructora", "administracion": "", "telefonoAdm": "", "telefono": "2213106993", "tipo": "constructora", "id": "oy4bo4h"}, {"nombre": "Lautaro Cano", "empresa": "Estudio Cano", "administracion": "", "telefonoAdm": "", "telefono": "2215728614", "tipo": "constructora", "id": "yyo9fbx"}, {"nombre": "Diego Incendio", "empresa": "27Alone", "administracion": "", "telefonoAdm": "", "telefono": "2215667498", "tipo": "constructora", "id": "0ivpyb6"}, {"nombre": "Walter Franceschini", "empresa": "Walter Suspension", "administracion": "", "telefonoAdm": "", "telefono": "2216731690", "tipo": "constructora", "id": "5tb324h"}, {"nombre": "Lisandro Menendez", "empresa": "", "administracion": "", "telefonoAdm": "", "telefono": "2216230122", "tipo": "constructora", "id": "9v3hquy"}, {"nombre": "Martin Conte", "empresa": "Ente Municipal", "administracion": "", "telefonoAdm": "", "telefono": "2216747985", "tipo": "licitacion", "id": "g07wilx"}, {"nombre": "FLYDAC", "empresa": "FLYDAC", "administracion": "Pablo", "telefonoAdm": "", "telefono": "2216123828", "tipo": "constructora", "id": "6h9arm7"}, {"nombre": "Club Capital Chica", "empresa": "Club Capital Chica", "administracion": "", "telefonoAdm": "", "telefono": "2216760392", "tipo": "constructora", "id": "7cbp8ta"}, {"nombre": "Olmos Protege", "empresa": "Olmos Protege", "administracion": "", "telefonoAdm": "", "telefono": "2214091073", "tipo": "constructora", "id": "97mhm3y"}, {"nombre": "Martin Chef", "empresa": "Martin Chef", "administracion": "", "telefonoAdm": "", "telefono": "2214972302", "tipo": "constructora", "id": "l6w0zpo"}, {"nombre": "Alicia Jaca", "empresa": "", "administracion": "", "telefonoAdm": "", "telefono": "2216182165", "tipo": "particular", "id": "4etkwht"}, {"nombre": "Ana Mazzaroni", "empresa": "", "administracion": "", "telefonoAdm": "", "telefono": "2216212029", "tipo": "particular", "id": "j2p7ttr"}, {"nombre": "Gaston Cabanchick", "empresa": "", "administracion": "", "telefonoAdm": "", "telefono": "2215016013", "tipo": "particular", "id": "njjexg8"}, {"nombre": "Gonzalo Boquicho", "empresa": "", "administracion": "", "telefonoAdm": "", "telefono": "2344427521", "tipo": "particular", "id": "b5b2tel"}, {"nombre": "Gustavo Castaldo", "empresa": "", "administracion": "", "telefonoAdm": "", "telefono": "2213627254", "tipo": "particular", "id": "dvf7ucx"}, {"nombre": "Joaquin Serpa", "empresa": "", "administracion": "", "telefonoAdm": "", "telefono": "2215941554", "tipo": "particular", "id": "u2iay3g"}, {"nombre": "Johan Vallejo", "empresa": "", "administracion": "", "telefonoAdm": "", "telefono": "2216408465", "tipo": "particular", "id": "cv4xmto"}, {"nombre": "Jorge Del Pecho", "empresa": "", "administracion": "", "telefonoAdm": "", "telefono": "2214208752", "tipo": "particular", "id": "r4001jb"}, {"nombre": "Justa Franceschini", "empresa": "", "administracion": "", "telefonoAdm": "", "telefono": "2215411565", "tipo": "particular", "id": "42pk443"}, {"nombre": "Juliana Allan", "empresa": "", "administracion": "", "telefonoAdm": "", "telefono": "1124863585", "tipo": "particular", "id": "w1pn504"}, {"nombre": "Julieta Arriaga", "empresa": "", "administracion": "", "telefonoAdm": "", "telefono": "2214004781", "tipo": "particular", "id": "7l5oph8"}, {"nombre": "Leandro Rocchetti", "empresa": "", "administracion": "", "telefonoAdm": "", "telefono": "2215077067", "tipo": "particular", "id": "iobss0b"}, {"nombre": "Lucas Irazabal", "empresa": "", "administracion": "", "telefonoAdm": "", "telefono": "2214091833", "tipo": "particular", "id": "erd3bao"}, {"nombre": "Luciana", "empresa": "", "administracion": "", "telefonoAdm": "", "telefono": "2215433505", "tipo": "particular", "id": "ast290f"}, {"nombre": "Luciano Almada", "empresa": "", "administracion": "", "telefonoAdm": "", "telefono": "2214880619", "tipo": "particular", "id": "awle0l4"}, {"nombre": "Marcela PB", "empresa": "", "administracion": "", "telefonoAdm": "", "telefono": "2213106993", "tipo": "particular", "id": "v3k9qir"}, {"nombre": "Marcelo", "empresa": "", "administracion": "", "telefonoAdm": "", "telefono": "1144443068", "tipo": "particular", "id": "z1o8jln"}, {"nombre": "Maria Beatriz", "empresa": "", "administracion": "", "telefonoAdm": "", "telefono": "2213106993", "tipo": "particular", "id": "0z943a2"}, {"nombre": "Maria Laura", "empresa": "", "administracion": "", "telefonoAdm": "", "telefono": "2996370313", "tipo": "particular", "id": "qfg5jsg"}, {"nombre": "Mariana", "empresa": "", "administracion": "", "telefonoAdm": "", "telefono": "2214880619", "tipo": "particular", "id": "g08a1nb"}, {"nombre": "Mario", "empresa": "", "administracion": "", "telefonoAdm": "", "telefono": "2214880619", "tipo": "particular", "id": "rrnt4eh"}, {"nombre": "Martin Cano", "empresa": "", "administracion": "", "telefonoAdm": "", "telefono": "2216246993", "tipo": "particular", "id": "87gs6lm"}, {"nombre": "Martin Vicente", "empresa": "", "administracion": "", "telefonoAdm": "", "telefono": "2215448884", "tipo": "particular", "id": "s6g1b9p"}, {"nombre": "Mirari Urlezaga", "empresa": "", "administracion": "", "telefonoAdm": "", "telefono": "2284539165", "tipo": "particular", "id": "v0narhc"}, {"nombre": "Nicolas Conca", "empresa": "", "administracion": "", "telefonoAdm": "", "telefono": "2215999462", "tipo": "particular", "id": "pzaieoc"}, {"nombre": "Pedro Aliende", "empresa": "", "administracion": "", "telefonoAdm": "", "telefono": "2216095970", "tipo": "particular", "id": "0a6yaab"}, {"nombre": "Rosana", "empresa": "", "administracion": "", "telefonoAdm": "", "telefono": "3446413852", "tipo": "particular", "id": "8q1hn95"}, {"nombre": "Virginia Beorlegui", "empresa": "", "administracion": "", "telefonoAdm": "", "telefono": "2216034484", "tipo": "particular", "id": "ynhh87d"}];
+function importar(){
+  const btn=document.getElementById('btn'),msg=document.getElementById('msg');
+  btn.disabled=true;btn.textContent='Importando…';
+  try{
+    const ex=JSON.parse(localStorage.getItem(CLKEY)||'[]');
+    const merged=[...ex];let added=0;
+    clients.forEach(c=>{
+      const dup=merged.find(e=>e.nombre.trim().toLowerCase()===c.nombre.trim().toLowerCase());
+      if(!dup){merged.push(c);added++;}
+    });
+    localStorage.setItem(CLKEY,JSON.stringify(merged));
+    msg.className='ok';msg.style.display='block';
+    msg.innerHTML='✓ '+added+' clientes importados ('+merged.length+' en total).<br>Recargá ELECTRO BC para verlos.';
+    btn.textContent='✓ Hecho';
+  }catch(e){
+    msg.className='err';msg.style.display='block';
+    msg.textContent='Error: '+e.message;
+    btn.disabled=false;btn.textContent='📥 Reintentar';
+  }
+}
+</script>
+</body>
+</html>
