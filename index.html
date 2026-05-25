@@ -1740,6 +1740,12 @@ function TipoBadge({
   }));
 }
 
+// ── Shared helpers ────────────────────────────────────────────────────────────
+const waLink = phone => {
+  const d = (phone || "").replace(/\D/g, "");
+  return d ? "https://wa.me/" + d : "";
+};
+
 // ── ClientesView ──────────────────────────────────────────────────────────────
 function ClientesView({
   clients,
@@ -1845,10 +1851,6 @@ function ClientesView({
   const del = id => {
     if (!confirm("¿Eliminar cliente?")) return;
     onSave(clients.filter(c => c.id !== id));
-  };
-  const waLink = phone => {
-    const d = phone.replace(/\D/g, "");
-    return d ? "https://wa.me/" + d : "";
   };
   const inpSt = {
     border: "1px solid #E2E8F0",
