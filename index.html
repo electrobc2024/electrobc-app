@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html lang="es"><head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ELECTRO BC – Presupuestos</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700;800&family=Oswald:wght@600;700&display=swap" rel="stylesheet">
 </head><body style="margin:0;padding:0;">
@@ -3345,6 +3344,8 @@ function Tracker({
   const [clientFilter, setClientFilter] = useState("");
   const [dropId, setDropId] = useState(null);
   const [expandId, setExpandId] = useState(highlightId || null);
+  const [editInlineId, setEditInlineId] = useState(null);
+  const [editForm, setEditForm] = useState({});
   const highlightRef = useRef(null);
   useEffect(() => {
     if (highlightId) {
