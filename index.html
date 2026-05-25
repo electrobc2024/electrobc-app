@@ -1,22 +1,17 @@
 <!DOCTYPE html>
-<html lang="es">
-<head>
+<html lang="es"><head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ELECTRO BC – Presupuestos</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700;800&family=Oswald:wght@600;700&display=swap" rel="stylesheet">
-</head>
-<body style="margin:0;padding:0;">
+</head><body style="margin:0;padding:0;">
 <div id="root"></div>
 <script src="https://unpkg.com/react@18.2.0/umd/react.production.min.js"></script>
 <script src="https://unpkg.com/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <script>
-if(typeof React==='undefined'){
-  document.body.innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:system-ui;text-align:center;flex-direction:column;gap:12px;padding:20px"><h2>ELECTRO BC</h2><p style="color:#64748B">Abrí desde Vercel o Live Server.</p></div>';
-}else{
-"use strict";
-const {useState,useEffect,useCallback,useRef}=React;
+if(typeof React==='undefined'){document.body.innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:system-ui;text-align:center;flex-direction:column;gap:12px"><h2>ELECTRO BC</h2><p style="color:#64748B">Abrí desde Vercel.</p></div>';}
+else{"use strict";const {useState,useEffect,useCallback,useRef}=React;
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 if (typeof document !== "undefined") {
   const lk = document.createElement("link");
@@ -399,10 +394,11 @@ const Badge = ({
       display: "inline-block",
       fontSize: 10,
       fontWeight: 700,
-      letterSpacing: "0.05em",
+      letterSpacing: "0.04em",
       textTransform: "uppercase",
-      padding: "3px 9px",
+      padding: "4px 10px",
       borderRadius: 20,
+      whiteSpace: "nowrap",
       backgroundColor: c.bg,
       color: c.fg,
       border: `1px solid ${c.br}`
@@ -3365,6 +3361,7 @@ function Tracker({
   const [filter, setFilter] = useState("todos");
   const [sortTr, setSortTr] = useState("num_desc");
   const [searchTr, setSearchTr] = useState("");
+  const [searchDir, setSearchDir] = useState("");
   const sorted = [...quotes].sort((a, b) => {
     if (sortTr === "num_asc") return parseInt(a.numero || 0) - parseInt(b.numero || 0);
     if (sortTr === "num_desc") return parseInt(b.numero || 0) - parseInt(a.numero || 0);
@@ -3374,7 +3371,7 @@ function Tracker({
   });
   // unique client names for filter
   const clientNames = [...new Set(quotes.map(q => q.cliente.nombre).filter(Boolean))].sort();
-  const filtered = sorted.filter(q => filter === "todos" || effectiveStatus(q) === filter || q.status === filter).filter(q => !clientFilter || q.cliente.nombre === clientFilter).filter(q => !searchTr.trim() || (q.cliente.nombre || "").toLowerCase().includes(searchTr.toLowerCase()) || (q.cliente.administracion || "").toLowerCase().includes(searchTr.toLowerCase()) || (q.numero || "").includes(searchTr) || (q.referencia || "").toLowerCase().includes(searchTr.toLowerCase()));
+  const filtered = sorted.filter(q => filter === "todos" || effectiveStatus(q) === filter || q.status === filter).filter(q => !clientFilter || q.cliente.nombre === clientFilter).filter(q => !searchTr.trim() || (q.cliente.nombre || "").toLowerCase().includes(searchTr.toLowerCase()) || (q.cliente.administracion || "").toLowerCase().includes(searchTr.toLowerCase()) || (q.numero || "").includes(searchTr) || (q.referencia || "").toLowerCase().includes(searchTr.toLowerCase())).filter(q => !searchDir.trim() || [q.cliente.calle, q.cliente.numero, q.cliente.depto, q.cliente.entreCalles].filter(Boolean).join(" ").toLowerCase().includes(searchDir.toLowerCase()));
   // per-client stats when filter active
   const clientStats = clientFilter ? {
     total: filtered.length,
@@ -3561,7 +3558,11 @@ function Tracker({
   }, /*#__PURE__*/React.createElement(SearchInput, {
     value: searchTr,
     onChange: setSearchTr,
-    placeholder: "Buscar por cliente, administraci\xF3n o N\xB0 de presupuesto\u2026"
+    placeholder: "Buscar por cliente, N\xB0 o referencia\u2026"
+  }), /*#__PURE__*/React.createElement(SearchInput, {
+    value: searchDir,
+    onChange: setSearchDir,
+    placeholder: "Buscar por direcci\xF3n\u2026"
   }), /*#__PURE__*/React.createElement(SortBar, {
     value: sortTr,
     onChange: setSortTr,
@@ -3711,6 +3712,12 @@ function Tracker({
   }, "Cliente"), /*#__PURE__*/React.createElement("th", {
     style: {
       ...thS,
+      textAlign: "left",
+      width: 160
+    }
+  }, "Direcci\xF3n"), /*#__PURE__*/React.createElement("th", {
+    style: {
+      ...thS,
       textAlign: "right",
       width: 108
     }
@@ -3718,7 +3725,7 @@ function Tracker({
     style: {
       ...thS,
       textAlign: "center",
-      width: 120
+      width: 160
     }
   }, "Estado"), /*#__PURE__*/React.createElement("th", {
     style: {
@@ -3926,14 +3933,25 @@ function Tracker({
         color: "#475569"
       }
     }, "\uD83D\uDC41"), /*#__PURE__*/React.createElement("button", {
-      onClick: () => onEdit(q),
+      onClick: () => {
+        setEditInlineId(q.id);
+        setEditForm({
+          ...q,
+          cliente: {
+            ...q.cliente
+          },
+          mdo: [...(q.mdo || [])],
+          mat: [...(q.mat || [])]
+        });
+        setExpandId(null);
+      },
       style: {
         background: "none",
-        border: "1px solid #E2E8F0",
+        border: "1px solid " + (editInlineId === q.id ? ORANGE : "#E2E8F0"),
         borderRadius: 5,
         padding: "4px 8px",
         fontSize: 11,
-        color: "#475569"
+        color: editInlineId === q.id ? ORANGE : "#475569"
       }
     }, "\u270F\uFE0F"), /*#__PURE__*/React.createElement("button", {
       onClick: () => onDelete(q.id),
@@ -3951,7 +3969,7 @@ function Tracker({
         backgroundColor: "#F8FAFC"
       }
     }, /*#__PURE__*/React.createElement("td", {
-      colSpan: 6,
+      colSpan: 7,
       style: {
         padding: "16px",
         borderBottom: "2px solid #E2E8F0"
@@ -4180,7 +4198,308 @@ function Tracker({
         color: "#475569",
         whiteSpace: "pre-wrap"
       }
-    }, q.aclaraciones)))));
+    }, q.aclaraciones)))), editInlineId === q.id && /*#__PURE__*/React.createElement("tr", {
+      key: q.id + "edit"
+    }, /*#__PURE__*/React.createElement("td", {
+      colSpan: 7,
+      style: {
+        padding: "16px 20px",
+        backgroundColor: "#F0F4FF",
+        borderBottom: "2px solid " + ORANGE
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 11,
+        fontWeight: 700,
+        color: ORANGE,
+        textTransform: "uppercase",
+        letterSpacing: "0.08em",
+        marginBottom: 12
+      }
+    }, "\u270F\uFE0F Editar presupuesto #", q.numero), /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: "grid",
+        gridTemplateColumns: "repeat(4,1fr)",
+        gap: 10,
+        marginBottom: 12
+      }
+    }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 10,
+        color: "#94A3B8",
+        fontWeight: 700,
+        marginBottom: 3
+      }
+    }, "FECHA"), /*#__PURE__*/React.createElement("input", {
+      type: "date",
+      value: editForm.fecha || "",
+      onChange: e => setEditForm(f => ({
+        ...f,
+        fecha: e.target.value
+      })),
+      style: {
+        border: "1px solid #E2E8F0",
+        borderRadius: 5,
+        padding: "5px 8px",
+        fontSize: 12,
+        width: "100%"
+      }
+    })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 10,
+        color: "#94A3B8",
+        fontWeight: 700,
+        marginBottom: 3
+      }
+    }, "REFERENCIA INTERNA"), /*#__PURE__*/React.createElement("input", {
+      value: editForm.referencia || "",
+      onChange: e => setEditForm(f => ({
+        ...f,
+        referencia: e.target.value
+      })),
+      style: {
+        border: "1px solid #E2E8F0",
+        borderRadius: 5,
+        padding: "5px 8px",
+        fontSize: 12,
+        width: "100%"
+      },
+      placeholder: "Referencia interna"
+    })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 10,
+        color: "#94A3B8",
+        fontWeight: 700,
+        marginBottom: 3
+      }
+    }, "TIPO DE TRABAJO"), /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: "flex",
+        gap: 4,
+        flexWrap: "wrap"
+      }
+    }, TIPOS_TRABAJO.map(t => {
+      const arr = Array.isArray(editForm.tipoTrabajo) ? editForm.tipoTrabajo : [editForm.tipoTrabajo || "electricidad"];
+      const active = arr.includes(t);
+      return /*#__PURE__*/React.createElement("button", {
+        key: t,
+        type: "button",
+        onMouseDown: e => e.preventDefault(),
+        onClick: () => {
+          const cur = Array.isArray(editForm.tipoTrabajo) ? editForm.tipoTrabajo : [editForm.tipoTrabajo || "electricidad"];
+          const next = cur.includes(t) ? cur.filter(x => x !== t) : [...cur, t];
+          setEditForm(f => ({
+            ...f,
+            tipoTrabajo: next.length ? next : ["electricidad"]
+          }));
+        },
+        style: {
+          padding: "3px 8px",
+          borderRadius: 6,
+          fontSize: 10,
+          fontWeight: 700,
+          cursor: "pointer",
+          border: "1.5px solid " + (active ? ORANGE : "#E2E8F0"),
+          backgroundColor: active ? "#FFF7ED" : "#fff",
+          color: active ? ORANGE : "#94A3B8"
+        }
+      }, t === "electricidad" ? "⚡" : t === "pintura" ? "🎨" : "🔧", " ", t);
+    }))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 10,
+        color: "#94A3B8",
+        fontWeight: 700,
+        marginBottom: 3
+      }
+    }, "ESTADO"), /*#__PURE__*/React.createElement("select", {
+      value: editForm.status || "generado",
+      onChange: e => setEditForm(f => ({
+        ...f,
+        status: e.target.value
+      })),
+      style: {
+        border: "1px solid #E2E8F0",
+        borderRadius: 5,
+        padding: "5px 8px",
+        fontSize: 12,
+        width: "100%",
+        backgroundColor: "#fff"
+      }
+    }, ["generado", "revision", "espera", "aceptado", "rechazado"].map(s => /*#__PURE__*/React.createElement("option", {
+      key: s,
+      value: s
+    }, s.charAt(0).toUpperCase() + s.slice(1)))))), /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: "grid",
+        gridTemplateColumns: "repeat(4,1fr)",
+        gap: 10,
+        marginBottom: 12
+      }
+    }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 10,
+        color: "#94A3B8",
+        fontWeight: 700,
+        marginBottom: 3
+      }
+    }, "NOMBRE CLIENTE"), /*#__PURE__*/React.createElement("input", {
+      value: editForm.cliente?.nombre || "",
+      onChange: e => setEditForm(f => ({
+        ...f,
+        cliente: {
+          ...f.cliente,
+          nombre: e.target.value
+        }
+      })),
+      style: {
+        border: "1px solid #E2E8F0",
+        borderRadius: 5,
+        padding: "5px 8px",
+        fontSize: 12,
+        width: "100%"
+      }
+    })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 10,
+        color: "#94A3B8",
+        fontWeight: 700,
+        marginBottom: 3
+      }
+    }, "TEL\xC9FONO"), /*#__PURE__*/React.createElement("input", {
+      value: editForm.cliente?.telefono || "",
+      onChange: e => setEditForm(f => ({
+        ...f,
+        cliente: {
+          ...f.cliente,
+          telefono: e.target.value
+        }
+      })),
+      style: {
+        border: "1px solid #E2E8F0",
+        borderRadius: 5,
+        padding: "5px 8px",
+        fontSize: 12,
+        width: "100%"
+      }
+    })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 10,
+        color: "#94A3B8",
+        fontWeight: 700,
+        marginBottom: 3
+      }
+    }, "CALLE"), /*#__PURE__*/React.createElement("input", {
+      value: editForm.cliente?.calle || "",
+      onChange: e => setEditForm(f => ({
+        ...f,
+        cliente: {
+          ...f.cliente,
+          calle: e.target.value
+        }
+      })),
+      style: {
+        border: "1px solid #E2E8F0",
+        borderRadius: 5,
+        padding: "5px 8px",
+        fontSize: 12,
+        width: "100%"
+      }
+    })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 10,
+        color: "#94A3B8",
+        fontWeight: 700,
+        marginBottom: 3
+      }
+    }, "N\xDAMERO / DEPTO"), /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: "flex",
+        gap: 6
+      }
+    }, /*#__PURE__*/React.createElement("input", {
+      value: editForm.cliente?.numero || "",
+      onChange: e => setEditForm(f => ({
+        ...f,
+        cliente: {
+          ...f.cliente,
+          numero: e.target.value
+        }
+      })),
+      style: {
+        border: "1px solid #E2E8F0",
+        borderRadius: 5,
+        padding: "5px 8px",
+        fontSize: 12,
+        flex: 1
+      },
+      placeholder: "Nro"
+    }), /*#__PURE__*/React.createElement("input", {
+      value: editForm.cliente?.depto || "",
+      onChange: e => setEditForm(f => ({
+        ...f,
+        cliente: {
+          ...f.cliente,
+          depto: e.target.value
+        }
+      })),
+      style: {
+        border: "1px solid #E2E8F0",
+        borderRadius: 5,
+        padding: "5px 8px",
+        fontSize: 12,
+        width: 50
+      },
+      placeholder: "Dto"
+    })))), /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: "flex",
+        gap: 8,
+        justifyContent: "flex-end"
+      }
+    }, /*#__PURE__*/React.createElement("button", {
+      onMouseDown: e => e.preventDefault(),
+      onClick: () => {
+        onEdit(editForm);
+        setEditInlineId(null);
+      },
+      style: {
+        background: "none",
+        border: "1px solid #94A3B8",
+        borderRadius: 6,
+        padding: "6px 14px",
+        fontSize: 12,
+        color: "#475569",
+        cursor: "pointer"
+      }
+    }, "Abrir editor completo"), /*#__PURE__*/React.createElement("button", {
+      onMouseDown: e => e.preventDefault(),
+      onClick: () => setEditInlineId(null),
+      style: {
+        background: "none",
+        border: "1px solid #E2E8F0",
+        borderRadius: 6,
+        padding: "6px 14px",
+        fontSize: 12,
+        color: "#64748B",
+        cursor: "pointer"
+      }
+    }, "Cancelar"), /*#__PURE__*/React.createElement("button", {
+      onMouseDown: e => e.preventDefault(),
+      onClick: () => {
+        onEdit(editForm);
+        setEditInlineId(null);
+      },
+      style: {
+        backgroundColor: ORANGE,
+        color: "#fff",
+        border: "none",
+        borderRadius: 6,
+        padding: "6px 16px",
+        fontSize: 12,
+        fontWeight: 700,
+        cursor: "pointer"
+      }
+    }, "\u2713 Guardar cambios")))));
   })))), dropId && /*#__PURE__*/React.createElement("div", {
     onClick: () => setDropId(null),
     style: {
@@ -5139,8 +5458,7 @@ function App() {
     onMarkSent: handleMarkSent
   }));
 }
-ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(App));
-}
+ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(App));}
 </script>
 <script>
 (function(){
@@ -5177,10 +5495,9 @@ ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(
       }else{mQ.push(q);added++;}
     });
     localStorage.setItem(SKEY,JSON.stringify(mQ));
-    alert('✓ '+added+' nuevos, '+updated+' actualizados con direcciones.');
+    alert('✓ '+added+' nuevos, '+updated+' actualizados.');
     location.href='/';
   }
 })();
 </script>
-</body>
-</html>
+</body></html>
