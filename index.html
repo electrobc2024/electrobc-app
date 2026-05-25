@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="es"><head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>ELECTRO BC</title>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ELECTRO BC – Presupuestos</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700;800&family=Oswald:wght@600;700&display=swap" rel="stylesheet">
 </head><body style="margin:0;padding:0;">
 <div id="root"></div>
@@ -9,7 +9,7 @@
 <script src="https://unpkg.com/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <script>
-if(typeof React==='undefined'){document.body.innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:system-ui;text-align:center;flex-direction:column;gap:12px"><h2>ELECTRO BC</h2></div>';}
+if(typeof React==='undefined'){document.body.innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:system-ui;text-align:center;flex-direction:column;gap:12px"><h2>ELECTRO BC</h2><p style="color:#64748B">Abrí desde Vercel.</p></div>';}
 else{"use strict";const {useState,useEffect,useCallback,useRef}=React;
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 if (typeof document !== "undefined") {
@@ -35,19 +35,6 @@ if (typeof document !== "undefined") {
   `;
   document.head.appendChild(st);
 }
-
-// ── Responsive hook ──────────────────────────────────────────────────────────
-const useW = () => {
-  const [w, setW] = useState(() => typeof window !== "undefined" ? window.innerWidth : 1200);
-  useEffect(() => {
-    const h = () => setW(window.innerWidth);
-    window.addEventListener("resize", h);
-    return () => window.removeEventListener("resize", h);
-  }, []);
-  return w;
-};
-const isMob = w => w < 768;
-const isTab = w => w >= 768 && w < 1100;
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const NAVY = "#0A0F1E",
@@ -1765,8 +1752,7 @@ function ClientesView({
   quotes = [],
   onPreviewQuote,
   onGoToTracker,
-  initialSearch = "",
-  mob = false
+  initialSearch = ""
 }) {
   const [form, setForm] = useState(mkClient());
   const [editId, setEditId] = useState(null);
@@ -3353,8 +3339,7 @@ function Tracker({
   setPrintQuote,
   onGoToClient,
   highlightId,
-  onClearHighlight,
-  mob = false
+  onClearHighlight
 }) {
   const [clientFilter, setClientFilter] = useState("");
   const [dropId, setDropId] = useState(null);
@@ -3712,36 +3697,42 @@ function Tracker({
     style: {
       ...thS,
       textAlign: "left",
-      width: 60
+      width: 66
     }
   }, "N\xB0"), /*#__PURE__*/React.createElement("th", {
     style: {
       ...thS,
       textAlign: "left",
-      width: 80
+      width: 76
     }
   }, "Fecha"), /*#__PURE__*/React.createElement("th", {
     style: {
       ...thS,
       textAlign: "left"
     }
-  }, "Cliente / Direcci\xF3n"), /*#__PURE__*/React.createElement("th", {
+  }, "Cliente"), /*#__PURE__*/React.createElement("th", {
+    style: {
+      ...thS,
+      textAlign: "left",
+      width: 160
+    }
+  }, "Direcci\xF3n"), /*#__PURE__*/React.createElement("th", {
     style: {
       ...thS,
       textAlign: "right",
-      width: 110
+      width: 108
     }
   }, "Total"), /*#__PURE__*/React.createElement("th", {
     style: {
       ...thS,
       textAlign: "center",
-      width: 155
+      width: 160
     }
   }, "Estado"), /*#__PURE__*/React.createElement("th", {
     style: {
       ...thS,
       textAlign: "center",
-      width: 120
+      width: 124
     }
   }, "Acciones"))), /*#__PURE__*/React.createElement("tbody", null, filtered.map((q, ri) => {
     const subMdo = calcSub(q.mdo),
@@ -3810,18 +3801,7 @@ function Tracker({
         fontSize: 11,
         color: "#94A3B8"
       }
-    }, q.cliente.administracion)), (q.cliente.calle || q.referencia) && /*#__PURE__*/React.createElement("div", {
-      style: {
-        fontSize: 11,
-        color: "#64748B",
-        marginTop: 2
-      }
-    }, [q.cliente.calle, q.cliente.numero, q.cliente.depto ? "Dto " + q.cliente.depto : ""].filter(Boolean).join(" "), q.referencia && /*#__PURE__*/React.createElement("span", {
-      style: {
-        color: "#94A3B8",
-        fontStyle: "italic"
-      }
-    }, " · " + q.referencia))), /*#__PURE__*/React.createElement("td", {
+    }, q.cliente.administracion))), /*#__PURE__*/React.createElement("td", {
       style: {
         padding: "10px 10px",
         textAlign: "right",
@@ -3990,7 +3970,7 @@ function Tracker({
         backgroundColor: "#F8FAFC"
       }
     }, /*#__PURE__*/React.createElement("td", {
-      colSpan: 6,
+      colSpan: 7,
       style: {
         padding: "16px",
         borderBottom: "2px solid #E2E8F0"
@@ -4222,7 +4202,7 @@ function Tracker({
     }, q.aclaraciones)))), editInlineId === q.id && /*#__PURE__*/React.createElement("tr", {
       key: q.id + "edit"
     }, /*#__PURE__*/React.createElement("td", {
-      colSpan: 6,
+      colSpan: 7,
       style: {
         padding: "16px 20px",
         backgroundColor: "#F0F4FF",
@@ -4543,8 +4523,7 @@ function QuoteForm({
   quotes = [],
   onSaveClient,
   onUpdateClient,
-  onCatalogChange,
-  mob = false
+  onCatalogChange
 }) {
   const [errors, setErrors] = useState([]);
   const [touched, setTouch] = useState({});
@@ -4700,7 +4679,7 @@ function QuoteForm({
   }, /*#__PURE__*/React.createElement("div", {
     style: {
       display: "grid",
-      gridTemplateColumns: mob ? "1fr 1fr" : "1fr 1fr 1fr",
+      gridTemplateColumns: "1fr 1fr 1fr",
       gap: 14
     }
   }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement(Lbl, null, "N\xB0 de Presupuesto"), /*#__PURE__*/React.createElement("div", {
@@ -5334,31 +5313,13 @@ function App() {
     id: "tracker",
     label: "Seguimiento"
   }];
-  const w = useW();
-  const mob = isMob(w);
-
-  // Mobile nav icons
-  const navIcons = {
-    "form": "⚡",
-    "clients": "👥",
-    "catMdo": "🔨",
-    "catMat": "📦",
-    "tracker": "📋"
-  };
-  const navShort = {
-    "form": "Nuevo",
-    "clients": "Clientes",
-    "catMdo": "M. Obra",
-    "catMat": "Materiales",
-    "tracker": "Seguim."
-  };
   return /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
       flexDirection: "column",
       height: "100vh"
     }
-  }, !mob && /*#__PURE__*/React.createElement("header", {
+  }, /*#__PURE__*/React.createElement("header", {
     className: "no-print",
     style: {
       backgroundColor: NAVY,
@@ -5434,41 +5395,12 @@ function App() {
       fontSize: 9,
       color: "rgba(255,255,255,0.18)"
     }
-  }, "v3.0"))), mob && /*#__PURE__*/React.createElement("header", {
-    className: "no-print",
-    style: {
-      backgroundColor: NAVY,
-      flexShrink: 0,
-      display: "flex",
-      alignItems: "center",
-      height: 50,
-      borderBottom: `3px solid ${ORANGE}`,
-      padding: "0 14px",
-      gap: 8
-    }
-  }, /*#__PURE__*/React.createElement(LogoIcon, {
-    size: 22
-  }), /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontFamily: "'Oswald',system-ui",
-      fontSize: 15,
-      fontWeight: 700,
-      color: "#fff",
-      letterSpacing: "0.04em"
-    }
-  }, "ELECTRO BC"), /*#__PURE__*/React.createElement("div", {
-    style: {
-      marginLeft: "auto",
-      fontSize: 8,
-      color: "rgba(255,255,255,0.25)"
-    }
-  }, "v3")), /*#__PURE__*/React.createElement("main", {
+  }, "v3.0"))), /*#__PURE__*/React.createElement("main", {
     style: {
       flex: 1,
       position: "relative",
       overflow: "hidden",
-      backgroundColor: "#EEF0F5",
-      paddingBottom: mob ? 60 : 0
+      backgroundColor: "#EEF0F5"
     }
   }, view === "form" && /*#__PURE__*/React.createElement(QuoteForm, {
     quote: quote,
@@ -5481,8 +5413,7 @@ function App() {
     quotes: quotes,
     onSaveClient: cl => handleClients([...clients, cl]),
     onUpdateClient: handleUpdateClient,
-    onCatalogChange: handleCatalog,
-    mob: mob
+    onCatalogChange: handleCatalog
   }), view === "clients" && /*#__PURE__*/React.createElement(ClientesView, {
     clients: clients,
     onSave: handleClients,
@@ -5492,8 +5423,7 @@ function App() {
     onGoToTracker: id => {
       setTrackerHighlight(id);
       setView("tracker");
-    },
-    mob: mob
+    }
   }), view === "catMdo" && /*#__PURE__*/React.createElement(CatalogView, {
     key: "catMdo",
     title: "Cat\xE1logo \xB7 Mano de Obra",
@@ -5522,59 +5452,7 @@ function App() {
       setView("clients");
     },
     highlightId: trackerHighlight,
-    onClearHighlight: () => setTrackerHighlight(null),
-    mob: mob
-  })), mob && /*#__PURE__*/React.createElement("nav", {
-    className: "no-print",
-    style: {
-      position: "fixed",
-      bottom: 0,
-      left: 0,
-      right: 0,
-      height: 58,
-      backgroundColor: NAVY,
-      borderTop: `2px solid ${ORANGE}`,
-      display: "flex",
-      zIndex: 200,
-      paddingBottom: "env(safe-area-inset-bottom)"
-    }
-  }, nav.map(item => {
-    const a = view === item.id;
-    return /*#__PURE__*/React.createElement("button", {
-      key: item.id,
-      onClick: () => setView(item.id),
-      style: {
-        flex: 1,
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        background: "none",
-        border: "none",
-        gap: 2,
-        color: a ? "#fff" : "rgba(255,255,255,0.4)",
-        cursor: "pointer"
-      }
-    }, /*#__PURE__*/React.createElement("span", {
-      style: {
-        fontSize: 18
-      }
-    }, navIcons[item.id]), /*#__PURE__*/React.createElement("span", {
-      style: {
-        fontSize: 9,
-        fontWeight: a ? 700 : 400,
-        letterSpacing: "0.02em"
-      }
-    }, navShort[item.id]), a && /*#__PURE__*/React.createElement("div", {
-      style: {
-        position: "absolute",
-        top: 0,
-        width: 36,
-        height: 2,
-        backgroundColor: ORANGE,
-        borderRadius: 2
-      }
-    }));
+    onClearHighlight: () => setTrackerHighlight(null)
   })), pdfQuote && /*#__PURE__*/React.createElement(PdfOverlay, {
     quote: pdfQuote,
     onClose: () => setPdfQuote(null),
@@ -5598,7 +5476,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(
       if(idx>=0){Object.assign(m[idx],c);updated++;}else{m.push(c);added++;}
     });
     localStorage.setItem(CLKEY,JSON.stringify(m));
-    alert('+ '+added+' nuevos, '+updated+' actualizados.');
+    alert('✓ '+added+' nuevos, '+updated+' actualizados.');
     location.href='/';
   }
   if(p==='datos'){
@@ -5606,15 +5484,19 @@ ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(
     var mQ=exQ.slice();var added=0,updated=0;
     quotes.forEach(function(q){
       var idx=mQ.findIndex(function(e){return e.numero===q.numero;});
-      if(idx>=0){mQ[idx].mdo=q.mdo;mQ[idx].mat=q.mat;mQ[idx].referencia=q.referencia;
+      if(idx>=0){
+        mQ[idx].mdo=q.mdo;mQ[idx].mat=q.mat;
+        mQ[idx].referencia=q.referencia;
         if(!mQ[idx].cliente)mQ[idx].cliente={};
-        mQ[idx].cliente.calle=q.cliente.calle;mQ[idx].cliente.numero=q.cliente.numero;
-        mQ[idx].cliente.depto=q.cliente.depto||'';mQ[idx].cliente.entreCalles=q.cliente.entreCalles||'';
+        mQ[idx].cliente.calle=q.cliente.calle;
+        mQ[idx].cliente.numero=q.cliente.numero;
+        mQ[idx].cliente.depto=q.cliente.depto||'';
+        mQ[idx].cliente.entreCalles=q.cliente.entreCalles||'';
         updated++;
       }else{mQ.push(q);added++;}
     });
     localStorage.setItem(SKEY,JSON.stringify(mQ));
-    alert('+ '+added+' nuevos, '+updated+' actualizados.');
+    alert('✓ '+added+' nuevos, '+updated+' actualizados.');
     location.href='/';
   }
 })();
