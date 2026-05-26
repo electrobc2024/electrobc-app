@@ -4487,7 +4487,7 @@ function Tracker({
     }, "Cancelar"), /*#__PURE__*/React.createElement("button", {
       onMouseDown: e => e.preventDefault(),
       onClick: () => {
-        onEdit(editForm);
+        if(onSaveInline) onSaveInline(editForm); else onEdit(editForm);
         setEditInlineId(null);
       },
       style: {
@@ -5252,6 +5252,11 @@ function App() {
     setQuote(q);
     setView("form");
   }, []);
+  const handleSaveInline = useCallback(async q => {
+    const cur = quotesRef.current;
+    const nl = cur.map(x => x.id === q.id ? q : x);
+    await persist(nl);
+  }, [persist]);
   const handleDelete = useCallback(async id => {
     if (!confirm("¿Eliminar?")) return;
     await persist(quotes.filter(q => q.id !== id));
