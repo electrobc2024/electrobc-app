@@ -3333,6 +3333,7 @@ function EsperaCountdown({
 function Tracker({
   quotes,
   onEdit,
+  onSaveInline,
   onDelete,
   onStatusChange,
   onUpdatePagos,
@@ -5448,6 +5449,7 @@ function App() {
   }), view === "tracker" && /*#__PURE__*/React.createElement(Tracker, {
     quotes: quotes,
     onEdit: handleEdit,
+    onSaveInline: handleSaveInline,
     onDelete: handleDelete,
     onStatusChange: handleStatus,
     onUpdatePagos: handlePagos,
