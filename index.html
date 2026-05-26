@@ -5254,9 +5254,23 @@ function App() {
     setView("form");
   }, []);
   const handleSaveInline = useCallback(async q => {
+    // 1. Save the quote
     const cur = quotesRef.current;
     const nl = cur.map(x => x.id === q.id ? q : x);
     await persist(nl);
+    // 2. Sync contact info back to client record
+    setClients(cls => {
+      const idx = cls.findIndex(c => c.nombre.trim().toLowerCase() === (q.cliente.nombre||'').trim().toLowerCase());
+      if(idx < 0) return cls;
+      const updated = [...cls];
+      updated[idx] = {...updated[idx],
+        telefono: q.cliente.telefono||updated[idx].telefono,
+        telefonoAdm: q.cliente.telefonoAdm||updated[idx].telefonoAdm,
+        administracion: q.cliente.administracion||updated[idx].administracion,
+      };
+      saveCl(updated);
+      return updated;
+    });
   }, [persist]);
   const handleDelete = useCallback(async id => {
     if (!confirm("¿Eliminar?")) return;
@@ -5285,7 +5299,19 @@ function App() {
   const handleClients = useCallback(async u => {
     setClients(u);
     await saveCl(u);
-  }, []);
+    // Sync client contact info to their quotes
+    const cur = quotesRef.current;
+    const nl = cur.map(q => {
+      const cl = u.find(c => c.nombre.trim().toLowerCase() === (q.cliente.nombre||'').trim().toLowerCase());
+      if(!cl) return q;
+      return {...q, cliente:{...q.cliente,
+        telefono: cl.telefono||q.cliente.telefono,
+        telefonoAdm: cl.telefonoAdm||q.cliente.telefonoAdm,
+        administracion: cl.administracion||q.cliente.administracion,
+      }};
+    });
+    await persist(nl);
+  }, [persist]);
   const handleUpdateClient = useCallback(async updated => {
     const u = clients.map(c => c.id === updated.id ? {
       ...updated,
