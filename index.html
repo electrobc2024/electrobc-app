@@ -5501,4 +5501,29 @@ ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(
   }
 })();
 </script>
+<script>
+(function patchDir(){
+  var SKEY='ebc-quotes-v6';
+  function doFill(){
+    var qs=JSON.parse(localStorage.getItem(SKEY)||'[]');
+    if(!qs.length)return;
+    var map={};
+    qs.forEach(function(q){if(q.cliente)map[q.numero]={calle:q.cliente.calle||'',num:q.cliente.numero||'',depto:q.cliente.depto||'',ref:q.referencia||''}});
+    document.querySelectorAll('table tbody tr').forEach(function(row){
+      var numEl=row.querySelector('td:first-child div');
+      if(!numEl)return;
+      var num=(numEl.textContent||'').replace('#','').trim();
+      var d=map[num];if(!d)return;
+      var tds=row.querySelectorAll('td');if(tds.length<4)return;
+      var td=tds[3];
+      if(td&&!td.textContent.trim()){
+        var addr=[d.calle,d.num,d.depto?'Dto '+d.depto:''].filter(Boolean).join(' ');
+        td.innerHTML=(addr?'<div style="font-size:12px;color:#475569;font-weight:500">'+addr+'</div>':'')+(d.ref?'<div style="font-size:11px;color:#94A3B8;font-style:italic">'+d.ref+'</div>':'');
+      }
+    });
+  }
+  setTimeout(doFill,1000);
+  new MutationObserver(function(){setTimeout(doFill,400);}).observe(document.body,{childList:true,subtree:true});
+})();
+</script>
 </body></html>
