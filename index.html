@@ -4500,6 +4500,9 @@ function QuoteForm({
     } catch (e) {
       errs = [];
     }
+    // Validate MdO is not empty
+    const subMdoVal = (quote.mdo||[]).reduce((s,r)=>s+(parseFloat(r.pu)||0)*(parseFloat(r.qty)||1),0);
+    if(subMdoVal===0) errs.push("El costo de Mano de Obra no puede ser $0. Usá la calculadora o ingresá los valores manualmente.");
     if (errs.length) {
       setErrors(errs);
       setTouch({
