@@ -315,7 +315,8 @@ const validateClient = f => {
   // All types: at least one phone
   if (!(f.telefono || "").trim() && !(f.telefonoAdm || "").trim()) e.push("Al menos un teléfono requerido");
   // All types: address
-  if (!(f.calle || "").trim()) e.push("Dirección requerida");
+  if (!(f.calle || "").trim()) e.push("Calle requerida");
+  if (!(f.numero || "").trim()) e.push("Número requerido");
   if (tipo === "particular") {
     if (!(f.nombre || "").trim()) e.push("Nombre y Apellido requerido");
   } else if (tipo === "admin") {
