@@ -4481,7 +4481,7 @@ function QuoteForm({
       const dLon = parseFloat(geoData[0].lon), dLat = parseFloat(geoData[0].lat);
       const rRes = await fetch("https://router.project-osrm.org/route/v1/driving/-57.9531,-34.9214;"+dLon+","+dLat+"?overview=false");
       const rData = await rRes.json();
-      if(rData.code==="Ok"&&rData.routes.length){setViaticosKm(Math.ceil(rData.routes[0].distance/1000));}
+      if(rData.code==="Ok"&&rData.routes.length){setViaticosKm(Math.round(rData.routes[0].distance/100)/10);}
       else{alert("No se pudo calcular. Ingresá los km manualmente.");}
     }catch(e){alert("Error al calcular distancia.");}
     setViaticosLoading(false);
