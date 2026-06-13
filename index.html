@@ -4496,8 +4496,7 @@ function QuoteForm({
       const dLon = parseFloat(geoData[0].lon), dLat = parseFloat(geoData[0].lat);
       const rRes = await fetch("https://router.project-osrm.org/route/v1/driving/-57.9531,-34.9214;"+dLon+","+dLat+"?overview=false");
       const rData = await rRes.json();
-      if(rData.code==="Ok"&&rData.routes.length){setViaticosKm(Math.round(rData.routes[0].distance/100)/10);}
-      else{alert("No se pudo calcular. Ingresá los km manualmente.");}
+      if(rData.code==="Ok"&&rData.routes.length){var km=Math.round(rData.routes[0].distance/100)/10;if(km>0&&km<200){setViaticosKm(km);}else{setViaticosKm(0);alert("No se pudo calcular la distancia. Ingresá los km manualmente.");}}else{setViaticosKm(0);alert("No se pudo calcular. Ingresá los km manualmente.");}
     }catch(e){alert("Error al calcular distancia.");}
     setViaticosLoading(false);
   };
@@ -5252,12 +5251,13 @@ function App() {
     if (!confirm("¿Eliminar?")) return;
     await persist(quotes.filter(q => q.id !== id));
   }, [quotes, persist]);
-  const handleDuplicate = useCallback(async q => {
-    const cur = quotesRef.current;
-    const nextNum = nextN(cur);
-    const dup = {...q, id: Math.random().toString(36).slice(2,9), numero: nextNum, status: "generado", fecha: new Date().toISOString(), pagos: [], esperaDesde: null};
-    const updated = cur.map(x => x.id === q.id ? {...x, status: "recotizar"} : x);
-    await persist([...updated, dup]);
+  const handleDuplicate = useCallback(async function(orig) {
+    var cur = quotesRef.current;
+    var nextNum = nextN(cur);
+    var newId = Math.random().toString(36).slice(2,9);
+    var dup = Object.assign({},orig,{id:newId,numero:nextNum,status:"generado",fecha:new Date().toISOString(),pagos:[],esperaDesde:null,recotizadoDe:orig.numero});
+    var upd = cur.map(function(x){return x.id===orig.id?Object.assign({},x,{status:"recotizado",recotizadoPor:nextNum}):x;});
+    await persist(upd.concat([dup]));
   }, [quotesRef, persist]);
   const handleStatus = useCallback(async (id, status) => {
     const extra = status === "espera" ? {
