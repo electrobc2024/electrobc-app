@@ -3889,17 +3889,6 @@ function Tracker({
         color: editInlineId === q.id ? ORANGE : "#475569"
       }
     }, "\u270F\uFE0F"), /*#__PURE__*/React.createElement("button", {
-      title: "Duplicar / Recotizar",
-      onClick: () => { if(confirm("¿Duplicar este presupuesto? El original quedará como 'Para recotizar'.")) onDuplicate(q); },
-      style: {
-        background: "none",
-        border: "1px solid #BAE6FD",
-        borderRadius: 5,
-        padding: "4px 8px",
-        fontSize: 11,
-        color: "#0369A1"
-      }
-    }, "📋"), /*#__PURE__*/React.createElement("button", {
       title: "Duplicar",
       onClick: function() { if(confirm("¿Duplicar presupuesto #"+q.numero+"? El original quedará como Recotizado.")) onDuplicate(q); },
       style: {
