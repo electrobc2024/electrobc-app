@@ -75,6 +75,7 @@ const STATUS_MAP = {
     bg: "#FFF7ED",
     br: "#FDBA74"
   },
+  recotizado: { label: "Recotizado", fg: "#6B7280", bg: "#F9FAFB", br: "#D1D5DB" },
   aceptado: {
     label: "Aceptado",
     fg: "#065F46",
@@ -404,7 +405,7 @@ const Badge = ({
       color: c.fg,
       border: `1px solid ${c.br}`
     }
-  }, c.label, q && isVencido(q) && /*#__PURE__*/React.createElement("span", {
+  }, c.label, q && q.recotizadoPor && /*#__PURE__*/React.createElement("span",{style:{marginLeft:4,fontSize:9,fontWeight:600}},"→ #"+q.recotizadoPor),q && isVencido(q) && /*#__PURE__*/React.createElement("span", {
     style: {
       marginLeft: 4,
       fontSize: 9
@@ -2048,7 +2049,7 @@ function ClientesView({
     value: searchCl,
     onChange: setSearchCl,
     placeholder: "Buscar por nombre, empresa o administraci\xF3n\u2026"
-  }), /*#__PURE__*/React.createElement(SortBar, {
+  }), /*#__PURE__*/React.createElement("select",{value:mesFilter,onChange:function(e){setMesFilter(e.target.value);},style:{border:"1px solid #E2E8F0",borderRadius:6,padding:"6px 10px",fontSize:12,color:"#475569",backgroundColor:"#fff",marginLeft:4}},/*#__PURE__*/React.createElement("option",{value:""},"Mes"),/*#__PURE__*/React.createElement("option",{value:"01"},"Ene"),/*#__PURE__*/React.createElement("option",{value:"02"},"Feb"),/*#__PURE__*/React.createElement("option",{value:"03"},"Mar"),/*#__PURE__*/React.createElement("option",{value:"04"},"Abr"),/*#__PURE__*/React.createElement("option",{value:"05"},"May"),/*#__PURE__*/React.createElement("option",{value:"06"},"Jun"),/*#__PURE__*/React.createElement("option",{value:"07"},"Jul"),/*#__PURE__*/React.createElement("option",{value:"08"},"Ago"),/*#__PURE__*/React.createElement("option",{value:"09"},"Sep"),/*#__PURE__*/React.createElement("option",{value:"10"},"Oct"),/*#__PURE__*/React.createElement("option",{value:"11"},"Nov"),/*#__PURE__*/React.createElement("option",{value:"12"},"Dic")), /*#__PURE__*/React.createElement("select",{value:anoFilter,onChange:function(e){setAnoFilter(e.target.value);},style:{border:"1px solid #E2E8F0",borderRadius:6,padding:"6px 10px",fontSize:12,color:"#475569",backgroundColor:"#fff",marginLeft:4}},/*#__PURE__*/React.createElement("option",{value:""},"Año"),/*#__PURE__*/React.createElement("option",{value:"2024"},"2024"),/*#__PURE__*/React.createElement("option",{value:"2025"},"2025"),/*#__PURE__*/React.createElement("option",{value:"2026"},"2026"),/*#__PURE__*/React.createElement("option",{value:"2027"},"2027")), /*#__PURE__*/React.createElement(SortBar, {
     value: sortCl,
     onChange: setSortCl,
     options: [{
@@ -3266,6 +3267,7 @@ function Tracker({
   onSaveInline,
   onDelete,
   onDuplicate,
+  onDuplicate,
   onStatusChange,
   onUpdatePagos,
   setPrintQuote,
@@ -3297,6 +3299,8 @@ function Tracker({
   const [searchDir, setSearchDir] = useState("");
   const [mesFilter, setMesFilter] = useState("");
   const [anoFilter, setAnoFilter] = useState("");
+  const [mesFilter, setMesFilter] = useState("");
+  const [anoFilter, setAnoFilter] = useState("");
   const sorted = [...quotes].sort((a, b) => {
     if (sortTr === "num_asc") return parseInt(a.numero || 0) - parseInt(b.numero || 0);
     if (sortTr === "num_desc") return parseInt(b.numero || 0) - parseInt(a.numero || 0);
@@ -3306,7 +3310,7 @@ function Tracker({
   });
   // unique client names for filter
   const clientNames = [...new Set(quotes.map(q => q.cliente.nombre).filter(Boolean))].sort();
-  const filtered = sorted.filter(q => filter === "todos" || effectiveStatus(q) === filter || q.status === filter).filter(q => !clientFilter || q.cliente.nombre === clientFilter).filter(q => !searchTr.trim() || (q.cliente.nombre || "").toLowerCase().includes(searchTr.toLowerCase()) || (q.cliente.administracion || "").toLowerCase().includes(searchTr.toLowerCase()) || (q.numero || "").includes(searchTr) || (q.referencia || "").toLowerCase().includes(searchTr.toLowerCase())).filter(q => !searchDir.trim() || [q.cliente.calle, q.cliente.numero, q.cliente.depto, q.cliente.entreCalles].filter(Boolean).join(" ").toLowerCase().includes(searchDir.toLowerCase())).filter(q => { if(!mesFilter&&!anoFilter) return true; const d=new Date(q.fecha||q.createdAt||0); return (!mesFilter||d.getMonth()===parseInt(mesFilter)-1)&&(!anoFilter||d.getFullYear()===parseInt(anoFilter)); });
+  const filtered = sorted.filter(q => filter === "todos" || effectiveStatus(q) === filter || q.status === filter).filter(q => !clientFilter || q.cliente.nombre === clientFilter).filter(q => !searchTr.trim() || (q.cliente.nombre || "").toLowerCase().includes(searchTr.toLowerCase()) || (q.cliente.administracion || "").toLowerCase().includes(searchTr.toLowerCase()) || (q.numero || "").includes(searchTr) || (q.referencia || "").toLowerCase().includes(searchTr.toLowerCase())).filter(q => !searchDir.trim() || [q.cliente.calle, q.cliente.numero, q.cliente.depto, q.cliente.entreCalles].filter(Boolean).join(" ").toLowerCase().includes(searchDir.toLowerCase())).filter(function(q){if(!mesFilter&&!anoFilter)return true;var d=new Date(q.fecha||0);return (!mesFilter||d.getMonth()===parseInt(mesFilter)-1)&&(!anoFilter||d.getFullYear()===parseInt(anoFilter));}).filter(q => { if(!mesFilter&&!anoFilter) return true; const d=new Date(q.fecha||q.createdAt||0); return (!mesFilter||d.getMonth()===parseInt(mesFilter)-1)&&(!anoFilter||d.getFullYear()===parseInt(anoFilter)); });
   // per-client stats when filter active
   const clientStats = clientFilter ? {
     total: filtered.length,
@@ -3890,6 +3894,17 @@ function Tracker({
     }, "\u270F\uFE0F"), /*#__PURE__*/React.createElement("button", {
       title: "Duplicar / Recotizar",
       onClick: () => { if(confirm("¿Duplicar este presupuesto? El original quedará como 'Para recotizar'.")) onDuplicate(q); },
+      style: {
+        background: "none",
+        border: "1px solid #BAE6FD",
+        borderRadius: 5,
+        padding: "4px 8px",
+        fontSize: 11,
+        color: "#0369A1"
+      }
+    }, "📋"), /*#__PURE__*/React.createElement("button", {
+      title: "Duplicar / Recotizar",
+      onClick: function() { if(confirm("¿Duplicar presupuesto #"+q.numero+"? El original quedará como Recotizado.")) onDuplicate(q); },
       style: {
         background: "none",
         border: "1px solid #BAE6FD",
@@ -5251,6 +5266,14 @@ function App() {
     if (!confirm("¿Eliminar?")) return;
     await persist(quotes.filter(q => q.id !== id));
   }, [quotes, persist]);
+  const handleDuplicate = useCallback(async function(orig) {
+    var cur = quotesRef.current;
+    var nextNum = nextN(cur);
+    var newId = Math.random().toString(36).slice(2,9);
+    var dup = Object.assign({},orig,{id:newId,numero:nextNum,status:"generado",fecha:new Date().toISOString(),pagos:[],esperaDesde:null,recotizadoDe:orig.numero});
+    var updated = cur.map(function(x){return x.id===orig.id?Object.assign({},x,{status:"recotizado",recotizadoPor:nextNum}):x;});
+    await persist(updated.concat([dup]));
+  }, [quotesRef, persist]);
   const handleDuplicate = useCallback(async q => {
     const cur = quotesRef.current;
     const nextNum = nextN(cur);
@@ -5461,6 +5484,7 @@ function App() {
     onEdit: handleEdit,
     onSaveInline: handleSaveInline,
     onDelete: handleDelete,
+    onDuplicate: handleDuplicate,
     onDuplicate: handleDuplicate,
     onStatusChange: handleStatus,
     onUpdatePagos: handlePagos,
