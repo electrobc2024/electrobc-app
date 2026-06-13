@@ -5503,11 +5503,7 @@ function MdoCalc({tipoCliente,updMdoWithCalc,clienteSeleccionado}){
       React.createElement('button',{type:'button',onMouseDown:e=>e.preventDefault(),onClick:()=>setOpen(false),style:{background:'none',border:'none',color:'#94A3B8',cursor:'pointer',fontSize:14}},'\u2715')
     ),
     React.createElement('div',{style:{display:'flex',gap:6,marginBottom:12}},
-      /*tipo ahora en Info Cliente*/ false?null:React.createElement('div',{style:{display:'flex',gap:6,marginBottom:12}},tipos.map(t=>React.createElement('button',{key:t,type:'button',onMouseDown:e=>e.preventDefault(),onClick:()=>setTipoLocal(t),
-        style:{flex:1,padding:'7px 4px',borderRadius:8,fontSize:11,fontWeight:700,cursor:'pointer',
-          border:'1.5px solid '+(tipo===t?ORANGE:'#E2E8F0'),backgroundColor:tipo===t?ORANGE:'#fff',color:tipo===t?'#fff':'#94A3B8'}
-      },tLbls[t]))
-    )),
+      /*tipo ahora en Info Cliente*/ false?null:React.createElement('div',{style:{display:'flex',gap:6,marginBottom:12}}),
     React.createElement('div',{style:{marginBottom:12}},
       React.createElement('div',{style:{fontSize:10,color:'#94A3B8',fontWeight:700,marginBottom:6}},'COMPLEJIDAD / RIESGO'),
       React.createElement('div',{style:{display:'flex',gap:6}},
