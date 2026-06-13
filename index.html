@@ -4964,7 +4964,7 @@ const updCli = (f, v) => {
         } : c)
       });
     }
-  })), /*#__PURE__*/React.createElement(MdoCalc,{key:quote.numero,tipoCliente:quote.cliente.tipo,updMdoWithCalc:function(ct){var rows=(quote.mdo||[]).filter(function(r){return r.desc&&r.desc.trim();});if(rows.length===0){updMdo([{id:(Math.random().toString(36).slice(2,9)),catId:"",desc:"Mano de obra",pu:String(Math.round(ct)),qty:1}]);}else{var pe=Math.round(ct/rows.length);var rem=Math.round(ct-pe*rows.length);var fc=0;updMdo((quote.mdo||[]).map(function(r){if(!r.desc||!r.desc.trim())return r;fc++;return Object.assign({},r,{pu:String(pe+(fc===rows.length?rem:0)),qty:1});}));}}}),/*#__PURE__*/React.createElement(CardBox, {
+  })), /*#__PURE__*/React.createElement(MdoCalc,{key:quote.numero,tipoCliente:quote.cliente.tipo,clienteSeleccionado:clientFromList,updMdoWithCalc:function(ct){var rows=(quote.mdo||[]).filter(function(r){return r.desc&&r.desc.trim();});if(rows.length===0){updMdo([{id:(Math.random().toString(36).slice(2,9)),catId:"",desc:"Mano de obra",pu:String(Math.round(ct)),qty:1}]);}else{var pe=Math.round(ct/rows.length);var rem=Math.round(ct-pe*rows.length);var fc=0;updMdo((quote.mdo||[]).map(function(r){if(!r.desc||!r.desc.trim())return r;fc++;return Object.assign({},r,{pu:String(pe+(fc===rows.length?rem:0)),qty:1});}));}}}),/*#__PURE__*/React.createElement(CardBox, {
     title: "Costo de Materiales"
   }, /*#__PURE__*/React.createElement(ItemsTable, {
     rows: quote.mat,
@@ -5461,7 +5461,7 @@ const ALLOWED_NEXT={generado:['revision'],revision:['espera'],espera:['aceptado'
 function canTransition(from,to){return(ALLOWED_NEXT[from]||[]).includes(to);}
 
 const MDO_CONFIG={particular:{boca:50000,horaGF:60000,horaAyudante:5000},admin:{boca:50000,horaGF:60000,horaAyudante:5000},empresa:{boca:40000,horaGF:48000,horaAyudante:4000},licitacion:{boca:104220,horaGF:52201,horaAyudante:40709}};
-function MdoCalc({tipoCliente,updMdoWithCalc}){
+function MdoCalc({tipoCliente,updMdoWithCalc,clienteSeleccionado}){
   const [open,setOpen]=React.useState(true);
   const [tipoLocal,setTipoLocal]=React.useState(Array.isArray(tipoCliente)?tipoCliente[0]:(tipoCliente||'particular'));
   React.useEffect(()=>{const t=Array.isArray(tipoCliente)?tipoCliente[0]:(tipoCliente||'particular');if(t&&t!=='particular')setTipoLocal(t);},[tipoCliente]);
@@ -5503,7 +5503,7 @@ function MdoCalc({tipoCliente,updMdoWithCalc}){
       React.createElement('button',{type:'button',onMouseDown:e=>e.preventDefault(),onClick:()=>setOpen(false),style:{background:'none',border:'none',color:'#94A3B8',cursor:'pointer',fontSize:14}},'\u2715')
     ),
     React.createElement('div',{style:{display:'flex',gap:6,marginBottom:12}},
-      (tipoCliente&&(Array.isArray(tipoCliente)?tipoCliente[0]:tipoCliente))?React.createElement('div',{style:{marginBottom:12,padding:'7px 12px',backgroundColor:'#FFF7ED',border:'1px solid #FDBA74',borderRadius:8,fontSize:12,color:'#92400E',fontWeight:600}},'Tipo: '+tLbls[tipo]+' (según cliente seleccionado)'):React.createElement('div',{style:{display:'flex',gap:6,marginBottom:12}},tipos.map(t=>React.createElement('button',{key:t,type:'button',onMouseDown:e=>e.preventDefault(),onClick:()=>setTipoLocal(t),
+      clienteSeleccionado?React.createElement('div',{style:{marginBottom:12,padding:'7px 12px',backgroundColor:'#FFF7ED',border:'1px solid #FDBA74',borderRadius:8,fontSize:12,color:'#92400E',fontWeight:600}},'Tipo: '+tLbls[tipo]+' (según cliente seleccionado)'):React.createElement('div',{style:{display:'flex',gap:6,marginBottom:12}},tipos.map(t=>React.createElement('button',{key:t,type:'button',onMouseDown:e=>e.preventDefault(),onClick:()=>setTipoLocal(t),
         style:{flex:1,padding:'7px 4px',borderRadius:8,fontSize:11,fontWeight:700,cursor:'pointer',
           border:'1.5px solid '+(tipo===t?ORANGE:'#E2E8F0'),backgroundColor:tipo===t?ORANGE:'#fff',color:tipo===t?'#fff':'#94A3B8'}
       },tLbls[t]))
