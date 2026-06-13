@@ -1493,7 +1493,7 @@ function CatalogView({
     value: searchCat,
     onChange: setSearchCat,
     placeholder: "Buscar \xEDtem\u2026"
-  }), /*#__PURE__*/React.createElement(SortBar, {
+  }), /*#__PURE__*/React.createElement("select",{value:mesFilter,onChange:e=>setMesFilter(e.target.value),style:{border:"1px solid #E2E8F0",borderRadius:6,padding:"6px 10px",fontSize:12,color:"#475569",backgroundColor:"#fff"}},/*#__PURE__*/React.createElement("option",{value:""},"Mes"),["01","02","03","04","05","06","07","08","09","10","11","12"].map((m,i)=>/*#__PURE__*/React.createElement("option",{key:m,value:m},["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"][i]))), /*#__PURE__*/React.createElement("select",{value:anoFilter,onChange:e=>setAnoFilter(e.target.value),style:{border:"1px solid #E2E8F0",borderRadius:6,padding:"6px 10px",fontSize:12,color:"#475569",backgroundColor:"#fff"}},/*#__PURE__*/React.createElement("option",{value:""},"Año"),[2024,2025,2026,2027].map(y=>/*#__PURE__*/React.createElement("option",{key:y,value:y},y))), /*#__PURE__*/React.createElement(SortBar, {
     value: sortCat,
     onChange: setSortCat,
     options: [{
@@ -3265,6 +3265,7 @@ function Tracker({
   onEdit,
   onSaveInline,
   onDelete,
+  onDuplicate,
   onStatusChange,
   onUpdatePagos,
   setPrintQuote,
@@ -3294,6 +3295,8 @@ function Tracker({
   const [sortTr, setSortTr] = useState("num_desc");
   const [searchTr, setSearchTr] = useState("");
   const [searchDir, setSearchDir] = useState("");
+  const [mesFilter, setMesFilter] = useState("");
+  const [anoFilter, setAnoFilter] = useState("");
   const sorted = [...quotes].sort((a, b) => {
     if (sortTr === "num_asc") return parseInt(a.numero || 0) - parseInt(b.numero || 0);
     if (sortTr === "num_desc") return parseInt(b.numero || 0) - parseInt(a.numero || 0);
@@ -3303,7 +3306,7 @@ function Tracker({
   });
   // unique client names for filter
   const clientNames = [...new Set(quotes.map(q => q.cliente.nombre).filter(Boolean))].sort();
-  const filtered = sorted.filter(q => filter === "todos" || effectiveStatus(q) === filter || q.status === filter).filter(q => !clientFilter || q.cliente.nombre === clientFilter).filter(q => !searchTr.trim() || (q.cliente.nombre || "").toLowerCase().includes(searchTr.toLowerCase()) || (q.cliente.administracion || "").toLowerCase().includes(searchTr.toLowerCase()) || (q.numero || "").includes(searchTr) || (q.referencia || "").toLowerCase().includes(searchTr.toLowerCase())).filter(q => !searchDir.trim() || [q.cliente.calle, q.cliente.numero, q.cliente.depto, q.cliente.entreCalles].filter(Boolean).join(" ").toLowerCase().includes(searchDir.toLowerCase()));
+  const filtered = sorted.filter(q => filter === "todos" || effectiveStatus(q) === filter || q.status === filter).filter(q => !clientFilter || q.cliente.nombre === clientFilter).filter(q => !searchTr.trim() || (q.cliente.nombre || "").toLowerCase().includes(searchTr.toLowerCase()) || (q.cliente.administracion || "").toLowerCase().includes(searchTr.toLowerCase()) || (q.numero || "").includes(searchTr) || (q.referencia || "").toLowerCase().includes(searchTr.toLowerCase())).filter(q => !searchDir.trim() || [q.cliente.calle, q.cliente.numero, q.cliente.depto, q.cliente.entreCalles].filter(Boolean).join(" ").toLowerCase().includes(searchDir.toLowerCase())).filter(q => { if(!mesFilter&&!anoFilter) return true; const d=new Date(q.fecha||q.createdAt||0); return (!mesFilter||d.getMonth()===parseInt(mesFilter)-1)&&(!anoFilter||d.getFullYear()===parseInt(anoFilter)); });
   // per-client stats when filter active
   const clientStats = clientFilter ? {
     total: filtered.length,
@@ -3885,6 +3888,17 @@ function Tracker({
         color: editInlineId === q.id ? ORANGE : "#475569"
       }
     }, "\u270F\uFE0F"), /*#__PURE__*/React.createElement("button", {
+      title: "Duplicar / Recotizar",
+      onClick: () => { if(confirm("¿Duplicar este presupuesto? El original quedará como 'Para recotizar'.")) onDuplicate(q); },
+      style: {
+        background: "none",
+        border: "1px solid #BAE6FD",
+        borderRadius: 5,
+        padding: "4px 8px",
+        fontSize: 11,
+        color: "#0369A1"
+      }
+    }, "📋"), /*#__PURE__*/React.createElement("button", {
       onClick: () => onDelete(q.id),
       style: {
         background: "none",
@@ -5237,6 +5251,13 @@ function App() {
     if (!confirm("¿Eliminar?")) return;
     await persist(quotes.filter(q => q.id !== id));
   }, [quotes, persist]);
+  const handleDuplicate = useCallback(async q => {
+    const cur = quotesRef.current;
+    const nextNum = nextN(cur);
+    const dup = {...q, id: Math.random().toString(36).slice(2,9), numero: nextNum, status: "generado", fecha: new Date().toISOString(), pagos: [], esperaDesde: null};
+    const updated = cur.map(x => x.id === q.id ? {...x, status: "recotizar"} : x);
+    await persist([...updated, dup]);
+  }, [quotesRef, persist]);
   const handleStatus = useCallback(async (id, status) => {
     const extra = status === "espera" ? {
       esperaDesde: new Date().toISOString()
@@ -5440,6 +5461,7 @@ function App() {
     onEdit: handleEdit,
     onSaveInline: handleSaveInline,
     onDelete: handleDelete,
+    onDuplicate: handleDuplicate,
     onStatusChange: handleStatus,
     onUpdatePagos: handlePagos,
     setPrintQuote: q => setPdfQuote(q),
