@@ -75,6 +75,7 @@ const STATUS_MAP = {
     bg: "#FFF7ED",
     br: "#FDBA74"
   },
+  recotizado: { label: "Recotizado", fg: "#6B7280", bg: "#F9FAFB", br: "#D1D5DB" },
   aceptado: {
     label: "Aceptado",
     fg: "#065F46",
@@ -404,7 +405,7 @@ const Badge = ({
       color: c.fg,
       border: `1px solid ${c.br}`
     }
-  }, c.label, q && isVencido(q) && /*#__PURE__*/React.createElement("span", {
+  }, c.label, q && q.recotizadoPor && /*#__PURE__*/React.createElement("span",{style:{marginLeft:4,fontSize:9,fontWeight:600}},"→ #"+q.recotizadoPor),q && isVencido(q) && /*#__PURE__*/React.createElement("span", {
     style: {
       marginLeft: 4,
       fontSize: 9
@@ -3890,6 +3891,17 @@ function Tracker({
     }, "\u270F\uFE0F"), /*#__PURE__*/React.createElement("button", {
       title: "Duplicar / Recotizar",
       onClick: () => { if(confirm("¿Duplicar este presupuesto? El original quedará como 'Para recotizar'.")) onDuplicate(q); },
+      style: {
+        background: "none",
+        border: "1px solid #BAE6FD",
+        borderRadius: 5,
+        padding: "4px 8px",
+        fontSize: 11,
+        color: "#0369A1"
+      }
+    }, "📋"), /*#__PURE__*/React.createElement("button", {
+      title: "Duplicar",
+      onClick: function() { if(confirm("¿Duplicar presupuesto #"+q.numero+"? El original quedará como Recotizado.")) onDuplicate(q); },
       style: {
         background: "none",
         border: "1px solid #BAE6FD",
