@@ -5253,7 +5253,8 @@ function App() {
   }, [quotes, persist]);
   const handleDuplicate = useCallback(async function(orig) {
     var cur = quotesRef.current;
-    var nextNum = nextN(cur);
+    var maxN = cur.reduce(function(m,q){return Math.max(m,parseInt(q.numero||0));},0);
+    var nextNum = String(maxN+1).padStart(4,"0");
     var newId = Math.random().toString(36).slice(2,9);
     var dup = Object.assign({},orig,{id:newId,numero:nextNum,status:"generado",fecha:new Date().toISOString(),pagos:[],esperaDesde:null,recotizadoDe:orig.numero});
     var upd = cur.map(function(x){return x.id===orig.id?Object.assign({},x,{status:"recotizado",recotizadoPor:nextNum}):x;});
