@@ -405,7 +405,7 @@ const Badge = ({
       color: c.fg,
       border: `1px solid ${c.br}`
     }
-  }, c.label, q && q.recotizadoPor && /*#__PURE__*/React.createElement("span",{style:{marginLeft:4,fontSize:9,fontWeight:600}},"→ #"+q.recotizadoPor),q && isVencido(q) && /*#__PURE__*/React.createElement("span", {
+  }, c.label, q && q.recotizadoPor && /*#__PURE__*/React.createElement("span",{style:{marginLeft:4,fontSize:9,fontWeight:600,cursor:"pointer",textDecoration:"underline"},onClick:function(e){e.stopPropagation();var targetQ=window.__ebc_quotes&&window.__ebc_quotes.find(function(x){return x.numero===q.recotizadoPor;});if(targetQ&&window.__ebc_highlight){window.__ebc_highlight(targetQ.id);}}},"→ #"+q.recotizadoPor),q && isVencido(q) && /*#__PURE__*/React.createElement("span", {
     style: {
       marginLeft: 4,
       fontSize: 9
@@ -5193,6 +5193,7 @@ function App() {
   const [pdfQuote, setPdfQuote] = useState(null);
   const [clientsFilter, setClientsFilter] = useState("");
   const [trackerHighlight, setTrackerHighlight] = useState(null);
+  React.useEffect(function(){window.__ebc_quotes=quotes;window.__ebc_highlight=function(id){setTrackerHighlight(id);setView("tracker");};},[quotes]);
   const quotesRef = useRef(quotes);
   useEffect(() => {
     setupGlobalNav();
