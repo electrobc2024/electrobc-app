@@ -3777,7 +3777,22 @@ function Tracker({
         fontSize: 9,
         color: "#94A3B8"
       }
-    }, "\u25BE")), dropId === q.id && /*#__PURE__*/React.createElement("div", {
+    }, "\u25BE")), dropId === q.id && effectiveStatus(q)==="recotizar" && /*#__PURE__*/React.createElement("div",{
+      onClick:e=>e.stopPropagation(),
+      style:{position:"absolute",left:"50%",transform:"translateX(-50%)",top:"100%",zIndex:99,
+        backgroundColor:"#FFF7ED",border:"1px solid #FDBA74",borderRadius:8,padding:"10px 14px",
+        marginTop:4,minWidth:220,boxShadow:"0 4px 12px rgba(0,0,0,0.1)"}},
+      /*#__PURE__*/React.createElement("div",{style:{fontSize:12,color:"#92400E",fontWeight:600,marginBottom:6}},
+        "⚠️ Este presupuesto venció o necesita recotizarse."),
+      /*#__PURE__*/React.createElement("div",{style:{fontSize:11,color:"#78350F",marginBottom:8}},
+        "Duplicálo para generar una nueva versión. El original quedará como Recotizado."),
+      /*#__PURE__*/React.createElement("button",{
+        type:"button",
+        onClick:function(){setDropId(null);if(confirm("¿Duplicar presupuesto #"+q.numero+"? El original quedará como Recotizado."))onDuplicate(q);},
+        style:{width:"100%",backgroundColor:"#F26B1D",color:"#fff",border:"none",borderRadius:6,
+          padding:"7px 12px",fontSize:12,fontWeight:700,cursor:"pointer"}},
+        "📋 Duplicar presupuesto")
+    ), dropId === q.id && effectiveStatus(q)!=="recotizar" && /*#__PURE__*/React.createElement("div", {
       onClick: e => e.stopPropagation(),
       style: {
         position: "absolute",
