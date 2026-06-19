@@ -3326,7 +3326,7 @@ function Tracker({
     rechazado: quotes.filter(q => q.status === "rechazado").length
   };
   const ingresos = quotes.filter(q => q.status === "aceptado").reduce((s, q) => s + calcSub(q.mdo) + calcSub(q.mat), 0);
-  const fmtD = d => d ? new Date(d + "T12:00:00").toLocaleDateString("es-AR", {
+  const fmtD = d => d ? new Date((d||"").slice(0,10) + "T12:00:00").toLocaleDateString("es-AR", {
     day: "2-digit",
     month: "2-digit",
     year: "2-digit"
