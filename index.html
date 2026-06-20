@@ -3293,6 +3293,8 @@ function Tracker({
     }
   }, [highlightId]);
   const [filter, setFilter] = useState("todos");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const [sortTr, setSortTr] = useState("num_desc");
   const [searchTr, setSearchTr] = useState("");
   const [searchDir, setSearchDir] = useState("");
@@ -3307,7 +3309,7 @@ function Tracker({
   });
   // unique client names for filter
   const clientNames = [...new Set(quotes.map(q => q.cliente.nombre).filter(Boolean))].sort();
-  const filtered = sorted.filter(q => filter === "todos" || effectiveStatus(q) === filter || q.status === filter).filter(q => !clientFilter || q.cliente.nombre === clientFilter).filter(q => !searchTr.trim() || (q.cliente.nombre || "").toLowerCase().includes(searchTr.toLowerCase()) || (q.cliente.administracion || "").toLowerCase().includes(searchTr.toLowerCase()) || (q.numero || "").includes(searchTr) || (q.referencia || "").toLowerCase().includes(searchTr.toLowerCase())).filter(q => !searchDir.trim() || [q.cliente.calle, q.cliente.numero, q.cliente.depto, q.cliente.entreCalles].filter(Boolean).join(" ").toLowerCase().includes(searchDir.toLowerCase())).filter(q => { if(!mesFilter&&!anoFilter) return true; const d=new Date(q.fecha||q.createdAt||0); return (!mesFilter||d.getMonth()===parseInt(mesFilter)-1)&&(!anoFilter||d.getFullYear()===parseInt(anoFilter)); });
+  const filtered = sorted.filter(q => filter === "todos" || q.status === filter || (filter === "recotizar" && isVencido(q)) || (filter === "recotizado" && q.status === "recotizado")).filter(q => !clientFilter || q.cliente.nombre === clientFilter).filter(q => !searchTr.trim() || (q.cliente.nombre || "").toLowerCase().includes(searchTr.toLowerCase()) || (q.cliente.administracion || "").toLowerCase().includes(searchTr.toLowerCase()) || (q.numero || "").includes(searchTr) || (q.referencia || "").toLowerCase().includes(searchTr.toLowerCase())).filter(q => !searchDir.trim() || [q.cliente.calle, q.cliente.numero, q.cliente.depto, q.cliente.entreCalles].filter(Boolean).join(" ").toLowerCase().includes(searchDir.toLowerCase())).filter(function(q){if(!dateFrom&&!dateTo)return true;var fd=(q.fecha||"").slice(0,10);return(!dateFrom||fd>=dateFrom)&&(!dateTo||fd<=dateTo);}).filter(q => { if(!mesFilter&&!anoFilter) return true; const d=new Date(q.fecha||q.createdAt||0); return (!mesFilter||d.getMonth()===parseInt(mesFilter)-1)&&(!anoFilter||d.getFullYear()===parseInt(anoFilter)); });
   // per-client stats when filter active
   const clientStats = clientFilter ? {
     total: filtered.length,
@@ -3323,7 +3325,8 @@ function Tracker({
     espera: quotes.filter(q => q.status === "espera" && !isVencido(q)).length,
     recotizar: quotes.filter(q => isVencido(q)).length,
     aceptado: quotes.filter(q => q.status === "aceptado").length,
-    rechazado: quotes.filter(q => q.status === "rechazado").length
+    rechazado: quotes.filter(q => q.status === "rechazado").length,
+    recotizado: quotes.filter(q => q.status === "recotizado").length
   };
   const ingresos = quotes.filter(q => q.status === "aceptado").reduce((s, q) => s + calcSub(q.mdo) + calcSub(q.mat), 0);
   const fmtD = d => d ? new Date((d||"").slice(0,10) + "T12:00:00").toLocaleDateString("es-AR", {
@@ -3362,6 +3365,10 @@ function Tracker({
     k: "recotizar",
     label: "Para recotizar",
     count: counts.recotizar
+  }, {
+    k: "recotizado",
+    label: "Recotizado",
+    count: counts.recotizado
   }, {
     k: "aceptado",
     label: "Aceptado",
@@ -3425,38 +3432,6 @@ function Tracker({
     }
   }, s.val)))), /*#__PURE__*/React.createElement("div", {
     style: {
-      backgroundColor: NAVY,
-      borderRadius: 10,
-      padding: "13px 20px",
-      display: "flex",
-      justifyContent: "space-between",
-      alignItems: "center",
-      marginBottom: 14
-    }
-  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: 10,
-      fontWeight: 700,
-      color: "rgba(255,255,255,0.4)",
-      textTransform: "uppercase",
-      letterSpacing: "0.1em",
-      marginBottom: 3
-    }
-  }, "Ingresos aceptados"), /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontFamily: "'Oswald',system-ui",
-      fontSize: 20,
-      fontWeight: 700,
-      color: "#fff",
-      fontVariantNumeric: "tabular-nums"
-    }
-  }, "$ ", fmt(ingresos))), /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: 11,
-      color: "rgba(255,255,255,0.25)"
-    }
-  }, counts.aceptado, " aceptado", counts.aceptado !== 1 ? "s" : "")), /*#__PURE__*/React.createElement("div", {
-    style: {
       display: "flex",
       gap: 6,
       flexWrap: "wrap",
@@ -3499,7 +3474,7 @@ function Tracker({
     value: searchDir,
     onChange: setSearchDir,
     placeholder: "Buscar por direcci\xF3n\u2026"
-  }), /*#__PURE__*/React.createElement(SortBar, {
+  }), /*#__PURE__*/React.createElement("div",{style:{display:"inline-flex",alignItems:"center",gap:4,marginLeft:4}}, /*#__PURE__*/React.createElement("input",{type:"date",value:dateFrom,onChange:function(e){setDateFrom(e.target.value);},title:"Desde",style:{border:"1px solid #E2E8F0",borderRadius:6,padding:"5px 8px",fontSize:12,color:"#475569",backgroundColor:"#fff"}}), /*#__PURE__*/React.createElement("span",{style:{fontSize:11,color:"#94A3B8"}},"\u2192"), /*#__PURE__*/React.createElement("input",{type:"date",value:dateTo,onChange:function(e){setDateTo(e.target.value);},title:"Hasta",style:{border:"1px solid #E2E8F0",borderRadius:6,padding:"5px 8px",fontSize:12,color:"#475569",backgroundColor:"#fff"}}), (dateFrom||dateTo)?/*#__PURE__*/React.createElement("button",{type:"button",onClick:function(){setDateFrom("");setDateTo("");},style:{background:"none",border:"none",color:"#94A3B8",cursor:"pointer",fontSize:14}},"\u2715"):null), /*#__PURE__*/React.createElement(SortBar, {
     value: sortTr,
     onChange: setSortTr,
     options: [{
