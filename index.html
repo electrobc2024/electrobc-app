@@ -5463,7 +5463,7 @@ function App() {
     },
     highlightId: trackerHighlight,
     onClearHighlight: () => setTrackerHighlight(null)
-  })), (view==="dashboard"||view==="movimientos") && /*#__PURE__*/React.createElement(Pane, null,
+  })), (view==="dashboard"||view==="movimientos") && /*#__PURE__*/React.createElement(Pane, {key:view},
     /*#__PURE__*/React.createElement(IngresosView, {
       quotes: quotes,
       egresos: egresos,
