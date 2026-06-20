@@ -5166,6 +5166,8 @@ function App() {
   const [pdfQuote, setPdfQuote] = useState(null);
   const [clientsFilter, setClientsFilter] = useState("");
   const [trackerHighlight, setTrackerHighlight] = useState(null);
+  const [egresos, setEgresos] = useState(() => { try { return JSON.parse(localStorage.getItem(EKEY)||"[]"); } catch(e){ return []; } });
+  const saveEgresos = async (list) => { setEgresos(list); localStorage.setItem(EKEY, JSON.stringify(list)); };
   React.useEffect(function(){window.__ebc_quotes=quotes;window.__ebc_highlight=function(id){setTrackerHighlight(id);setView("tracker");};},[quotes]);
   const quotesRef = useRef(quotes);
   useEffect(() => {
@@ -5317,6 +5319,9 @@ function App() {
   }, {
     id: "tracker",
     label: "Seguimiento"
+  }, {
+    id: "ingresos",
+    label: "💰 Ingresos"
   }];
   return /*#__PURE__*/React.createElement("div", {
     style: {
@@ -5462,7 +5467,11 @@ function App() {
     },
     highlightId: trackerHighlight,
     onClearHighlight: () => setTrackerHighlight(null)
-  })), pdfQuote && /*#__PURE__*/React.createElement(PdfOverlay, {
+  })), view === "ingresos" && /*#__PURE__*/React.createElement(IngresosView, {
+    quotes: quotes,
+    egresos: egresos,
+    onSaveEgresos: saveEgresos
+  }), pdfQuote && /*#__PURE__*/React.createElement(PdfOverlay, {
     quote: pdfQuote,
     onClose: () => { setPdfQuote(null); setQuote(mkQuote(nextN(quotesRef.current))); window.scrollTo(0,0); },
     onMarkSent: handleMarkSent
@@ -5567,6 +5576,349 @@ function MdoCalc({tipoCliente,updMdoWithCalc,clienteSeleccionado}){
     React.createElement('button',{type:'button',onMouseDown:e=>e.preventDefault(),onClick:aplicar,
       style:{width:'100%',backgroundColor:ORANGE,color:'#fff',border:'none',borderRadius:8,padding:'10px',fontSize:13,fontWeight:700,cursor:'pointer'}
     },'\u2713 Aplicar al presupuesto')
+  );
+}
+
+
+const EGRESO_CATS = [
+  {id:'sueldos', label:'\u{1F477} Sueldos', color:'#7C3AED'},
+  {id:'materiales', label:'\u{1F3EA} Materiales / Borello', color:'#DC2626'},
+  {id:'combustible', label:'\u26FD Combustible', color:'#EA580C'},
+  {id:'herramientas', label:'\u{1F527} Herramientas / Alquileres', color:'#0284C7'},
+  {id:'seguros', label:'\u{1F6E1} Seguros / Monotributo', color:'#059669'},
+  {id:'varios', label:'\u{1F355} Gastos varios', color:'#64748B'},
+  {id:'clientes', label:'\u{1F4E6} Compras para clientes', color:'#0369A1'},
+];
+
+function IngresosView({quotes, egresos, onSaveEgresos}) {
+  const [tab, setTab] = React.useState('dashboard');
+  const [showForm, setShowForm] = React.useState(false);
+  const [egForm, setEgForm] = React.useState({id:'',cat:'sueldos',desc:'',monto:'',fecha:'',medio:'efectivo'});
+  const [editId, setEditId] = React.useState(null);
+  const [mesVer, setMesVer] = React.useState('');
+  const [anoVer, setAnoVer] = React.useState(String(new Date().getFullYear()));
+
+  const fmt = n => (parseFloat(n)||0).toLocaleString('es-AR',{style:'currency',currency:'ARS',maximumFractionDigits:0});
+  const fmtN = n => (parseFloat(n)||0).toLocaleString('es-AR',{maximumFractionDigits:0});
+
+  // ── Data calculations ──────────────────────────────────────────────────────
+  // All cobros from quotes (pagos array)
+  const allCobros = React.useMemo(() => {
+    const cobros = [];
+    (quotes||[]).forEach(function(q) {
+      (q.pagos||[]).forEach(function(p) {
+        if(p.monto && parseFloat(p.monto) > 0) {
+          cobros.push({
+            qNumero: q.numero,
+            qCliente: q.cliente ? (q.cliente.administracion||q.cliente.nombre||'') : '',
+            monto: parseFloat(p.monto)||0,
+            fecha: (p.fecha||'').slice(0,10),
+            desc: p.desc || ('Pago presupuesto #'+q.numero),
+          });
+        }
+      });
+    });
+    return cobros;
+  }, [quotes]);
+
+  // Devengado = presupuestos aceptados
+  const aceptados = React.useMemo(() => (quotes||[]).filter(function(q){return q.status==='aceptado';}), [quotes]);
+  const totalDevengado = aceptados.reduce(function(s,q){return s+(parseFloat(q.mdo&&q.mdo.reduce(function(a,r){return a+(parseFloat(r.pu)||0)*(parseFloat(r.qty)||1);},0))||0)+(parseFloat(q.mat&&q.mat.reduce(function(a,r){return a+(parseFloat(r.pu)||0)*(parseFloat(r.qty)||1);},0))||0);},0);
+
+  // Filter by period
+  function inPeriod(fecha) {
+    if(!fecha) return false;
+    const fd = (fecha||'').slice(0,10);
+    const [y,m] = fd.split('-');
+    if(anoVer && y !== anoVer) return false;
+    if(mesVer && m !== mesVer) return false;
+    return true;
+  }
+
+  const cobrosFiltrados = allCobros.filter(function(c){return inPeriod(c.fecha);});
+  const egresosFiltrados = (egresos||[]).filter(function(e){return inPeriod(e.fecha);});
+  const totalCobrado = cobrosFiltrados.reduce(function(s,c){return s+c.monto;},0);
+  const totalEgresos = egresosFiltrados.reduce(function(s,e){return s+(parseFloat(e.monto)||0);},0);
+  const ganancia = totalCobrado - totalEgresos;
+
+  // By month for chart
+  const meses = ['01','02','03','04','05','06','07','08','09','10','11','12'];
+  const mesLabels = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  const chartData = meses.map(function(m,i) {
+    const ing = allCobros.filter(function(c){return c.fecha && c.fecha.slice(5,7)===m && (!anoVer||c.fecha.slice(0,4)===anoVer);}).reduce(function(s,c){return s+c.monto;},0);
+    const egr = (egresos||[]).filter(function(e){return e.fecha && e.fecha.slice(5,7)===m && (!anoVer||e.fecha.slice(0,4)===anoVer);}).reduce(function(s,e){return s+(parseFloat(e.monto)||0);},0);
+    return {mes:mesLabels[i], ing, egr, gan:ing-egr};
+  });
+  const maxChart = Math.max(...chartData.map(function(d){return Math.max(d.ing,d.egr);}), 1);
+
+  // By category
+  const porCat = EGRESO_CATS.map(function(cat){
+    const total = egresosFiltrados.filter(function(e){return e.cat===cat.id;}).reduce(function(s,e){return s+(parseFloat(e.monto)||0);},0);
+    return {...cat, total};
+  }).filter(function(c){return c.total>0;}).sort(function(a,b){return b.total-a.total;});
+
+  // ── Form ───────────────────────────────────────────────────────────────────
+  function handleSaveEgreso() {
+    if(!egForm.monto||!egForm.fecha){alert('Ingres\u00e1 monto y fecha.');return;}
+    const list = egresos||[];
+    if(editId) {
+      onSaveEgresos(list.map(function(e){return e.id===editId?{...egForm,id:editId}:e;}));
+    } else {
+      onSaveEgresos([...list, {...egForm, id:Math.random().toString(36).slice(2,9)}]);
+    }
+    setEgForm({id:'',cat:'sueldos',desc:'',monto:'',fecha:'',medio:'efectivo'});
+    setShowForm(false);
+    setEditId(null);
+  }
+
+  function handleEditEgreso(e) {
+    setEgForm({...e});
+    setEditId(e.id);
+    setShowForm(true);
+    setTab('egresos');
+  }
+
+  function handleDeleteEgreso(id) {
+    if(!confirm('\u00bfEliminar este egreso?')) return;
+    onSaveEgresos((egresos||[]).filter(function(e){return e.id!==id;}));
+  }
+
+  // ── Styles ─────────────────────────────────────────────────────────────────
+  const card = {backgroundColor:'#fff',borderRadius:12,border:'1px solid #E2E8F0',padding:'16px 20px'};
+  const inp = {border:'1px solid #E2E8F0',borderRadius:6,padding:'7px 10px',fontSize:13,width:'100%',backgroundColor:'#fff',boxSizing:'border-box'};
+  const anos = ['2024','2025','2026','2027'];
+
+  // ── Render ─────────────────────────────────────────────────────────────────
+  return React.createElement('div',{style:{maxWidth:1100,margin:'0 auto',padding:'0 16px 40px'}},
+    // Header
+    React.createElement('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20}},
+      React.createElement('div',null,
+        React.createElement('h1',{style:{fontFamily:"'Oswald',system-ui",fontSize:28,fontWeight:700,color:NAVY,margin:0}},'\u{1F4B0} Ingresos y Egresos'),
+        React.createElement('div',{style:{fontSize:12,color:'#94A3B8',marginTop:2}},'Flujo de caja real')
+      ),
+      React.createElement('div',{style:{display:'flex',gap:8,alignItems:'center'}},
+        React.createElement('select',{value:anoVer,onChange:function(e){setAnoVer(e.target.value);},style:{...inp,width:90}},
+          React.createElement('option',{value:''},'Todo'),
+          anos.map(function(a){return React.createElement('option',{key:a,value:a},a);})
+        ),
+        React.createElement('select',{value:mesVer,onChange:function(e){setMesVer(e.target.value);},style:{...inp,width:90}},
+          React.createElement('option',{value:''},'Todos los meses'),
+          meses.map(function(m,i){return React.createElement('option',{key:m,value:m},mesLabels[i]);})
+        )
+      )
+    ),
+
+    // Tabs
+    React.createElement('div',{style:{display:'flex',gap:4,marginBottom:20,borderBottom:'2px solid #E2E8F0',paddingBottom:0}},
+      ['dashboard','cobros','egresos'].map(function(t){
+        const labels={dashboard:'\u{1F4CA} Dashboard',cobros:'\u{1F4E5} Cobros',egresos:'\u{1F4E4} Egresos'};
+        return React.createElement('button',{
+          key:t,type:'button',
+          onClick:function(){setTab(t);setShowForm(false);},
+          style:{padding:'8px 16px',borderRadius:'8px 8px 0 0',fontSize:13,fontWeight:tab===t?700:500,
+            cursor:'pointer',border:'none',
+            backgroundColor:tab===t?NAVY:'transparent',
+            color:tab===t?'#fff':'#64748B',
+            borderBottom:tab===t?'2px solid '+NAVY:'2px solid transparent',
+            marginBottom:-2}
+        },labels[t]);
+      })
+    ),
+
+    // ── DASHBOARD TAB ────────────────────────────────────────────────────────
+    tab==='dashboard' && React.createElement('div',null,
+      // KPI cards
+      React.createElement('div',{style:{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:12,marginBottom:20}},
+        [
+          {label:'Cobrado'+(mesVer?' (mes)':anoVer?' (año)':''),val:fmt(totalCobrado),color:'#065F46',bg:'#ECFDF5',icon:'\u{1F4B5}'},
+          {label:'Egresos'+(mesVer?' (mes)':anoVer?' (año)':''),val:fmt(totalEgresos),color:'#991B1B',bg:'#FFF1F2',icon:'\u{1F4B8}'},
+          {label:'Ganancia neta',val:fmt(ganancia),color:ganancia>=0?'#065F46':'#991B1B',bg:ganancia>=0?'#ECFDF5':'#FFF1F2',icon:'\u{1F4C8}'},
+          {label:'Devengado total',val:fmt(totalDevengado),color:'#1D4ED8',bg:'#EFF6FF',icon:'\u{1F4CB}'},
+        ].map(function(k){
+          return React.createElement('div',{key:k.label,style:{...card,backgroundColor:k.bg,border:'1px solid '+k.color+'33'}},
+            React.createElement('div',{style:{fontSize:11,fontWeight:700,color:k.color,textTransform:'uppercase',letterSpacing:'0.07em',marginBottom:4}},k.icon+' '+k.label),
+            React.createElement('div',{style:{fontFamily:"'Oswald',system-ui",fontSize:22,fontWeight:700,color:k.color}},k.val)
+          );
+        })
+      ),
+
+      // Chart
+      React.createElement('div',{style:{...card,marginBottom:20}},
+        React.createElement('div',{style:{fontSize:13,fontWeight:700,color:NAVY,marginBottom:16}},'\u{1F4CA} Ingresos vs Egresos por mes '+(anoVer||'')),
+        React.createElement('div',{style:{display:'flex',gap:2,alignItems:'flex-end',height:140,padding:'0 4px'}},
+          chartData.map(function(d,i){
+            const ingH = Math.round((d.ing/maxChart)*120);
+            const egrH = Math.round((d.egr/maxChart)*120);
+            return React.createElement('div',{key:i,style:{flex:1,display:'flex',flexDirection:'column',alignItems:'center',gap:2}},
+              React.createElement('div',{style:{display:'flex',gap:2,alignItems:'flex-end',height:120}},
+                React.createElement('div',{title:'Cobrado: '+fmt(d.ing),style:{width:10,height:Math.max(ingH,1),backgroundColor:'#059669',borderRadius:'2px 2px 0 0',cursor:'default'}}),
+                React.createElement('div',{title:'Egresos: '+fmt(d.egr),style:{width:10,height:Math.max(egrH,1),backgroundColor:'#DC2626',borderRadius:'2px 2px 0 0',cursor:'default'}})
+              ),
+              React.createElement('div',{style:{fontSize:9,color:'#94A3B8',marginTop:2}},d.mes)
+            );
+          })
+        ),
+        React.createElement('div',{style:{display:'flex',gap:16,marginTop:8,justifyContent:'center'}},
+          React.createElement('div',{style:{display:'flex',alignItems:'center',gap:4,fontSize:11,color:'#64748B'}},
+            React.createElement('div',{style:{width:12,height:12,backgroundColor:'#059669',borderRadius:2}}),
+            'Cobrado'
+          ),
+          React.createElement('div',{style:{display:'flex',alignItems:'center',gap:4,fontSize:11,color:'#64748B'}},
+            React.createElement('div',{style:{width:12,height:12,backgroundColor:'#DC2626',borderRadius:2}}),
+            'Egresos'
+          )
+        )
+      ),
+
+      // Egresos por categoría + Ganancia GJF
+      React.createElement('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}},
+        // Categorías
+        React.createElement('div',{style:{...card}},
+          React.createElement('div',{style:{fontSize:13,fontWeight:700,color:NAVY,marginBottom:12}},'\u{1F4B8} Egresos por categoría'),
+          porCat.length===0
+            ? React.createElement('div',{style:{color:'#94A3B8',fontSize:12,textAlign:'center',padding:'20px 0'}},'Sin egresos en el período')
+            : porCat.map(function(cat){
+                const pct = totalEgresos>0?Math.round((cat.total/totalEgresos)*100):0;
+                return React.createElement('div',{key:cat.id,style:{marginBottom:10}},
+                  React.createElement('div',{style:{display:'flex',justifyContent:'space-between',fontSize:12,marginBottom:3}},
+                    React.createElement('span',{style:{color:'#475569'}},cat.label),
+                    React.createElement('span',{style:{fontWeight:600,color:cat.color}},fmt(cat.total))
+                  ),
+                  React.createElement('div',{style:{backgroundColor:'#F1F5F9',borderRadius:4,height:6}},
+                    React.createElement('div',{style:{width:pct+'%',height:6,backgroundColor:cat.color,borderRadius:4,transition:'width 0.3s'}})
+                  )
+                );
+              })
+        ),
+
+        // Ganancia GJF
+        React.createElement('div',{style:{...card}},
+          React.createElement('div',{style:{fontSize:13,fontWeight:700,color:NAVY,marginBottom:12}},'\u{1F91D} Distribución GJF'),
+          React.createElement('div',{style:{backgroundColor:'#F8FAFC',borderRadius:8,padding:'12px 14px',marginBottom:12}},
+            React.createElement('div',{style:{fontSize:11,color:'#94A3B8',fontWeight:700,textTransform:'uppercase',marginBottom:6}},'Ganancia neta del período'),
+            React.createElement('div',{style:{fontFamily:"'Oswald',system-ui",fontSize:24,fontWeight:700,color:ganancia>=0?'#065F46':'#DC2626'}},fmt(ganancia))
+          ),
+          React.createElement('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}},
+            ['G / J','F'].map(function(nombre){
+              return React.createElement('div',{key:nombre,style:{backgroundColor:'#EFF6FF',borderRadius:8,padding:'10px 12px',textAlign:'center'}},
+                React.createElement('div',{style:{fontSize:11,color:'#1D4ED8',fontWeight:700,marginBottom:4}},nombre),
+                React.createElement('div',{style:{fontFamily:"'Oswald',system-ui",fontSize:18,fontWeight:700,color:'#1D4ED8'}},fmt(ganancia/2))
+              );
+            })
+          ),
+          React.createElement('div',{style:{fontSize:10,color:'#94A3B8',marginTop:8,textAlign:'center'}},'División 50/50 — ajust\u00e1 manualmente seg\u00fan lo acordado')
+        )
+      )
+    ),
+
+    // ── COBROS TAB ───────────────────────────────────────────────────────────
+    tab==='cobros' && React.createElement('div',null,
+      React.createElement('div',{style:{fontSize:11,color:'#94A3B8',marginBottom:12}},'Pagos registrados en Seguimiento de Presupuestos'),
+      cobrosFiltrados.length===0
+        ? React.createElement('div',{style:{...card,textAlign:'center',color:'#94A3B8',padding:40}},'Sin cobros en el período seleccionado')
+        : React.createElement('table',{style:{width:'100%',borderCollapse:'collapse',backgroundColor:'#fff',borderRadius:12,overflow:'hidden',border:'1px solid #E2E8F0'}},
+            React.createElement('thead',null,
+              React.createElement('tr',{style:{backgroundColor:'#F8FAFC'}},
+                ['Fecha','Pres.','Cliente','Descripción','Monto'].map(function(h){
+                  return React.createElement('th',{key:h,style:{padding:'10px 14px',fontSize:11,fontWeight:700,color:'#94A3B8',textAlign:'left',textTransform:'uppercase',letterSpacing:'0.06em'}},h);
+                })
+              )
+            ),
+            React.createElement('tbody',null,
+              cobrosFiltrados.sort(function(a,b){return (b.fecha||'').localeCompare(a.fecha||'');}).map(function(c,i){
+                return React.createElement('tr',{key:i,style:{borderTop:'1px solid #F1F5F9',backgroundColor:i%2===0?'#fff':'#FAFAFA'}},
+                  React.createElement('td',{style:{padding:'9px 14px',fontSize:12,color:'#64748B'}},c.fecha||'—'),
+                  React.createElement('td',{style:{padding:'9px 14px',fontSize:12,fontWeight:700,color:ORANGE}},'#'+c.qNumero),
+                  React.createElement('td',{style:{padding:'9px 14px',fontSize:12,color:'#475569'}},c.qCliente),
+                  React.createElement('td',{style:{padding:'9px 14px',fontSize:12,color:'#64748B'}},c.desc),
+                  React.createElement('td',{style:{padding:'9px 14px',fontSize:13,fontWeight:700,color:'#065F46'}},fmt(c.monto))
+                );
+              })
+            )
+          )
+    ),
+
+    // ── EGRESOS TAB ──────────────────────────────────────────────────────────
+    tab==='egresos' && React.createElement('div',null,
+      // Form
+      React.createElement('div',{style:{...card,marginBottom:16}},
+        React.createElement('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:showForm?14:0}},
+          React.createElement('div',{style:{fontSize:13,fontWeight:700,color:NAVY}},editId?'Editar egreso':'Nuevo egreso'),
+          React.createElement('button',{
+            type:'button',
+            onClick:function(){setShowForm(!showForm);if(showForm){setEgForm({id:'',cat:'sueldos',desc:'',monto:'',fecha:'',medio:'efectivo'});setEditId(null);}},
+            style:{backgroundColor:showForm?'#F1F5F9':ORANGE,color:showForm?'#64748B':'#fff',border:'none',borderRadius:8,padding:'8px 16px',fontSize:13,fontWeight:700,cursor:'pointer'}
+          },showForm?'Cancelar':'+ Nuevo egreso')
+        ),
+        showForm && React.createElement('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:10}},
+          React.createElement('div',null,
+            React.createElement('div',{style:{fontSize:10,color:'#94A3B8',fontWeight:700,marginBottom:4}},'CATEGORÍA'),
+            React.createElement('select',{value:egForm.cat,onChange:function(e){setEgForm(function(f){return {...f,cat:e.target.value};});},style:inp},
+              EGRESO_CATS.map(function(c){return React.createElement('option',{key:c.id,value:c.id},c.label);})
+            )
+          ),
+          React.createElement('div',null,
+            React.createElement('div',{style:{fontSize:10,color:'#94A3B8',fontWeight:700,marginBottom:4}},'DESCRIPCIÓN'),
+            React.createElement('input',{type:'text',value:egForm.desc,onChange:function(e){setEgForm(function(f){return {...f,desc:e.target.value};});},placeholder:'Ej: Pago Borello semana 1',style:inp})
+          ),
+          React.createElement('div',null,
+            React.createElement('div',{style:{fontSize:10,color:'#94A3B8',fontWeight:700,marginBottom:4}},'MONTO'),
+            React.createElement('input',{type:'number',min:0,value:egForm.monto,onChange:function(e){setEgForm(function(f){return {...f,monto:e.target.value};});},placeholder:'0',style:inp})
+          ),
+          React.createElement('div',null,
+            React.createElement('div',{style:{fontSize:10,color:'#94A3B8',fontWeight:700,marginBottom:4}},'FECHA'),
+            React.createElement('input',{type:'date',value:egForm.fecha,onChange:function(e){setEgForm(function(f){return {...f,fecha:e.target.value};});},style:inp})
+          ),
+          React.createElement('div',null,
+            React.createElement('div',{style:{fontSize:10,color:'#94A3B8',fontWeight:700,marginBottom:4}},'MEDIO DE PAGO'),
+            React.createElement('select',{value:egForm.medio,onChange:function(e){setEgForm(function(f){return {...f,medio:e.target.value};});},style:inp},
+              React.createElement('option',{value:'efectivo'},'Efectivo'),
+              React.createElement('option',{value:'transferencia'},'Transferencia')
+            )
+          ),
+          React.createElement('div',{style:{display:'flex',alignItems:'flex-end'}},
+            React.createElement('button',{
+              type:'button',
+              onClick:handleSaveEgreso,
+              style:{width:'100%',backgroundColor:ORANGE,color:'#fff',border:'none',borderRadius:8,padding:'9px',fontSize:13,fontWeight:700,cursor:'pointer'}
+            },editId?'\u2713 Actualizar':'\u2713 Guardar egreso')
+          )
+        )
+      ),
+
+      // List
+      egresosFiltrados.length===0
+        ? React.createElement('div',{style:{...card,textAlign:'center',color:'#94A3B8',padding:40}},'Sin egresos en el período')
+        : React.createElement('table',{style:{width:'100%',borderCollapse:'collapse',backgroundColor:'#fff',borderRadius:12,overflow:'hidden',border:'1px solid #E2E8F0'}},
+            React.createElement('thead',null,
+              React.createElement('tr',{style:{backgroundColor:'#F8FAFC'}},
+                ['Fecha','Categoría','Descripción','Medio','Monto',''].map(function(h){
+                  return React.createElement('th',{key:h,style:{padding:'10px 14px',fontSize:11,fontWeight:700,color:'#94A3B8',textAlign:'left',textTransform:'uppercase',letterSpacing:'0.06em'}},h);
+                })
+              )
+            ),
+            React.createElement('tbody',null,
+              egresosFiltrados.sort(function(a,b){return (b.fecha||'').localeCompare(a.fecha||'');}).map(function(e,i){
+                const cat = EGRESO_CATS.find(function(c){return c.id===e.cat;}) || EGRESO_CATS[5];
+                return React.createElement('tr',{key:e.id,style:{borderTop:'1px solid #F1F5F9',backgroundColor:i%2===0?'#fff':'#FAFAFA'}},
+                  React.createElement('td',{style:{padding:'9px 14px',fontSize:12,color:'#64748B'}},e.fecha||'—'),
+                  React.createElement('td',{style:{padding:'9px 14px'}},
+                    React.createElement('span',{style:{fontSize:11,fontWeight:700,color:cat.color,backgroundColor:cat.color+'15',padding:'3px 8px',borderRadius:20}},cat.label)
+                  ),
+                  React.createElement('td',{style:{padding:'9px 14px',fontSize:12,color:'#475569'}},e.desc||'—'),
+                  React.createElement('td',{style:{padding:'9px 14px',fontSize:12,color:'#64748B',textTransform:'capitalize'}},e.medio||'—'),
+                  React.createElement('td',{style:{padding:'9px 14px',fontSize:13,fontWeight:700,color:'#DC2626'}},fmt(parseFloat(e.monto)||0)),
+                  React.createElement('td',{style:{padding:'9px 14px',display:'flex',gap:6}},
+                    React.createElement('button',{type:'button',onClick:function(){handleEditEgreso(e);},
+                      style:{background:'none',border:'1px solid #E2E8F0',borderRadius:5,padding:'3px 8px',fontSize:12,cursor:'pointer',color:'#475569'}},'\u270F\uFE0F'),
+                    React.createElement('button',{type:'button',onClick:function(){handleDeleteEgreso(e.id);},
+                      style:{background:'none',border:'1px solid #FECACA',borderRadius:5,padding:'3px 8px',fontSize:12,cursor:'pointer',color:'#DC2626'}},'\u2715')
+                  )
+                );
+              })
+            )
+          )
+    )
   );
 }
 
