@@ -3298,8 +3298,6 @@ function Tracker({
   const [sortTr, setSortTr] = useState("num_desc");
   const [searchTr, setSearchTr] = useState("");
   const [searchDir, setSearchDir] = useState("");
-  const [mesFilter, setMesFilter] = useState("");
-  const [anoFilter, setAnoFilter] = useState("");
   const sorted = [...quotes].sort((a, b) => {
     if (sortTr === "num_asc") return parseInt(a.numero || 0) - parseInt(b.numero || 0);
     if (sortTr === "num_desc") return parseInt(b.numero || 0) - parseInt(a.numero || 0);
@@ -3309,7 +3307,7 @@ function Tracker({
   });
   // unique client names for filter
   const clientNames = [...new Set(quotes.map(q => q.cliente.nombre).filter(Boolean))].sort();
-  const filtered = sorted.filter(q => filter === "todos" || q.status === filter || (filter === "recotizar" && isVencido(q)) || (filter === "recotizado" && q.status === "recotizado")).filter(q => !clientFilter || q.cliente.nombre === clientFilter).filter(q => !searchTr.trim() || (q.cliente.nombre || "").toLowerCase().includes(searchTr.toLowerCase()) || (q.cliente.administracion || "").toLowerCase().includes(searchTr.toLowerCase()) || (q.numero || "").includes(searchTr) || (q.referencia || "").toLowerCase().includes(searchTr.toLowerCase())).filter(q => !searchDir.trim() || [q.cliente.calle, q.cliente.numero, q.cliente.depto, q.cliente.entreCalles].filter(Boolean).join(" ").toLowerCase().includes(searchDir.toLowerCase())).filter(function(q){if(!dateFrom&&!dateTo)return true;var fd=(q.fecha||"").slice(0,10);return(!dateFrom||fd>=dateFrom)&&(!dateTo||fd<=dateTo);}).filter(q => { if(!mesFilter&&!anoFilter) return true; const d=new Date(q.fecha||q.createdAt||0); return (!mesFilter||d.getMonth()===parseInt(mesFilter)-1)&&(!anoFilter||d.getFullYear()===parseInt(anoFilter)); });
+  const filtered = sorted.filter(q => filter === "todos" || q.status === filter || (filter === "recotizar" && isVencido(q)) || (filter === "recotizado" && q.status === "recotizado")).filter(q => !clientFilter || q.cliente.nombre === clientFilter).filter(q => !searchTr.trim() || (q.cliente.nombre || "").toLowerCase().includes(searchTr.toLowerCase()) || (q.cliente.administracion || "").toLowerCase().includes(searchTr.toLowerCase()) || (q.numero || "").includes(searchTr) || (q.referencia || "").toLowerCase().includes(searchTr.toLowerCase())).filter(q => !searchDir.trim() || [q.cliente.calle, q.cliente.numero, q.cliente.depto, q.cliente.entreCalles].filter(Boolean).join(" ").toLowerCase().includes(searchDir.toLowerCase())).filter(function(q){if(!dateFrom&&!dateTo)return true;var fd=(q.fecha||"").slice(0,10);return(!dateFrom||fd>=dateFrom)&&(!dateTo||fd<=dateTo);});
   // per-client stats when filter active
   const clientStats = clientFilter ? {
     total: filtered.length,
