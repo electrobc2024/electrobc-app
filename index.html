@@ -5304,25 +5304,18 @@ function App() {
       color: "#94A3B8"
     }
   }, "Cargando\u2026");
-  const nav = [{
-    id: "form",
-    label: "Nuevo Presupuesto"
-  }, {
-    id: "clients",
-    label: "Clientes"
-  }, {
-    id: "catMdo",
-    label: "Mano de Obra"
-  }, {
-    id: "catMat",
-    label: "Materiales"
-  }, {
-    id: "tracker",
-    label: "Seguimiento"
-  }, {
-    id: "ingresos",
-    label: "💰 Ingresos"
-  }];
+  const navMain = [
+    {id:"form",    label:"📋 Nuevo Presupuesto"},
+    {id:"clients", label:"👤 Clientes"},
+    {id:"catMdo",  label:"👷 Mano de Obra"},
+    {id:"catMat",  label:"📦 Materiales"},
+    {id:"tracker", label:"📈 Seguimiento"},
+  ];
+  const navFin = [
+    {id:"movimientos", label:"💱 Ingresos / Egresos"},
+    {id:"dashboard",   label:"📊 Dashboard Financiero"},
+  ];
+  const nav = [...navMain, ...navFin];
   return /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
@@ -5375,27 +5368,30 @@ function App() {
       alignItems: "stretch",
       flex: 1
     }
-  }, nav.map(item => {
-    const a = view === item.id;
-    return /*#__PURE__*/React.createElement("button", {
-      key: item.id,
-      onClick: () => setView(item.id),
-      style: {
-        display: "flex",
-        alignItems: "center",
-        padding: "0 13px",
-        background: "none",
-        border: "none",
-        fontSize: 12,
-        fontWeight: a ? 700 : 400,
-        color: a ? "#fff" : "rgba(255,255,255,0.45)",
-        borderBottom: a ? `3px solid ${ORANGE}` : "3px solid transparent",
-        marginBottom: "-3px",
-        whiteSpace: "nowrap",
-        letterSpacing: "0.01em"
-      }
-    }, item.label);
-  })), /*#__PURE__*/React.createElement("div", {
+  }, (function(){
+    function nbtn(item,fin){
+      var a=view===item.id;
+      return React.createElement("button",{
+        key:item.id,
+        onClick:function(){setView(item.id);},
+        style:{
+          display:"flex",alignItems:"center",padding:"0 11px",
+          background:"none",border:"none",fontSize:12,
+          fontWeight:a?700:400,
+          color:a?"#fff":fin?"rgba(255,210,100,0.8)":"rgba(255,255,255,0.45)",
+          borderBottom:a?"3px solid "+ORANGE:"3px solid transparent",
+          marginBottom:"-3px",whiteSpace:"nowrap",letterSpacing:"0.01em",
+          cursor:"pointer"
+        }
+      },item.label);
+    }
+    return navMain.map(function(i){return nbtn(i,false);})
+      .concat([React.createElement("div",{key:"sep",style:{
+        width:1,height:18,backgroundColor:"rgba(255,255,255,0.25)",
+        alignSelf:"center",margin:"0 6px",flexShrink:0
+      }})])
+      .concat(navFin.map(function(i){return nbtn(i,true);}));
+  })()), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
       alignItems: "center"
@@ -5467,11 +5463,14 @@ function App() {
     },
     highlightId: trackerHighlight,
     onClearHighlight: () => setTrackerHighlight(null)
-  })), view === "ingresos" && /*#__PURE__*/React.createElement(IngresosView, {
-    quotes: quotes,
-    egresos: egresos,
-    onSaveEgresos: saveEgresos
-  }), pdfQuote && /*#__PURE__*/React.createElement(PdfOverlay, {
+  })), (view==="dashboard"||view==="movimientos") && /*#__PURE__*/React.createElement(Pane, null,
+    /*#__PURE__*/React.createElement(IngresosView, {
+      quotes: quotes,
+      egresos: egresos,
+      onSaveEgresos: saveEgresos,
+      activeTab: view,
+      setActiveTab: setView
+    })), pdfQuote && /*#__PURE__*/React.createElement(PdfOverlay, {
     quote: pdfQuote,
     onClose: () => { setPdfQuote(null); setQuote(mkQuote(nextN(quotesRef.current))); window.scrollTo(0,0); },
     onMarkSent: handleMarkSent
@@ -5590,8 +5589,8 @@ const EGRESO_CATS = [
   {id:'clientes', label:'\u{1F4E6} Compras para clientes', color:'#0369A1'},
 ];
 
-function IngresosView({quotes, egresos, onSaveEgresos}) {
-  const [tab, setTab] = React.useState('dashboard');
+function IngresosView({quotes, egresos, onSaveEgresos, activeTab, setActiveTab}) {
+  var tab = activeTab||'dashboard'; var setTab = setActiveTab||function(){};
   const [showForm, setShowForm] = React.useState(false);
   const [egForm, setEgForm] = React.useState({id:'',cat:'sueldos',desc:'',monto:'',fecha:'',medio:'efectivo'});
   const [editId, setEditId] = React.useState(null);
@@ -5659,7 +5658,7 @@ function IngresosView({quotes, egresos, onSaveEgresos}) {
 
   // ── Form ───────────────────────────────────────────────────────────────────
   function handleSaveEgreso() {
-    if(!egForm.monto||!egForm.fecha){alert('Ingres\u00e1 monto y fecha.');return;}
+    if(!egForm.cat||!egForm.desc.trim()||!egForm.monto||!egForm.fecha||!egForm.medio){alert('Complet\u00e1 todos los campos antes de guardar.');return;}
     const list = egresos||[];
     if(editId) {
       onSaveEgresos(list.map(function(e){return e.id===editId?{...egForm,id:editId}:e;}));
@@ -5689,7 +5688,7 @@ function IngresosView({quotes, egresos, onSaveEgresos}) {
   const anos = ['2024','2025','2026','2027'];
 
   // ── Render ─────────────────────────────────────────────────────────────────
-  return React.createElement('div',{style:{maxWidth:1100,margin:'0 auto',padding:'0 16px 40px'}},
+  return React.createElement('div',{style:{padding:'0 4px 40px'}},
     // Header
     React.createElement('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20}},
       React.createElement('div',null,
@@ -5708,22 +5707,7 @@ function IngresosView({quotes, egresos, onSaveEgresos}) {
       )
     ),
 
-    // Tabs
-    React.createElement('div',{style:{display:'flex',gap:4,marginBottom:20,borderBottom:'2px solid #E2E8F0',paddingBottom:0}},
-      ['dashboard','cobros','egresos'].map(function(t){
-        const labels={dashboard:'\u{1F4CA} Dashboard',cobros:'\u{1F4E5} Cobros',egresos:'\u{1F4E4} Egresos'};
-        return React.createElement('button',{
-          key:t,type:'button',
-          onClick:function(){setTab(t);setShowForm(false);},
-          style:{padding:'8px 16px',borderRadius:'8px 8px 0 0',fontSize:13,fontWeight:tab===t?700:500,
-            cursor:'pointer',border:'none',
-            backgroundColor:tab===t?NAVY:'transparent',
-            color:tab===t?'#fff':'#64748B',
-            borderBottom:tab===t?'2px solid '+NAVY:'2px solid transparent',
-            marginBottom:-2}
-        },labels[t]);
-      })
-    ),
+
 
     // ── DASHBOARD TAB ────────────────────────────────────────────────────────
     tab==='dashboard' && React.createElement('div',null,
@@ -5799,7 +5783,7 @@ function IngresosView({quotes, egresos, onSaveEgresos}) {
             React.createElement('div',{style:{fontFamily:"'Oswald',system-ui",fontSize:24,fontWeight:700,color:ganancia>=0?'#065F46':'#DC2626'}},fmt(ganancia))
           ),
           React.createElement('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}},
-            ['G / J','F'].map(function(nombre){
+            ['Guille','Fede'].map(function(nombre){
               return React.createElement('div',{key:nombre,style:{backgroundColor:'#EFF6FF',borderRadius:8,padding:'10px 12px',textAlign:'center'}},
                 React.createElement('div',{style:{fontSize:11,color:'#1D4ED8',fontWeight:700,marginBottom:4}},nombre),
                 React.createElement('div',{style:{fontFamily:"'Oswald',system-ui",fontSize:18,fontWeight:700,color:'#1D4ED8'}},fmt(ganancia/2))
@@ -5812,7 +5796,7 @@ function IngresosView({quotes, egresos, onSaveEgresos}) {
     ),
 
     // ── COBROS TAB ───────────────────────────────────────────────────────────
-    tab==='cobros' && React.createElement('div',null,
+    tab==='movimientos' && React.createElement('div',null,
       React.createElement('div',{style:{fontSize:11,color:'#94A3B8',marginBottom:12}},'Pagos registrados en Seguimiento de Presupuestos'),
       cobrosFiltrados.length===0
         ? React.createElement('div',{style:{...card,textAlign:'center',color:'#94A3B8',padding:40}},'Sin cobros en el período seleccionado')
@@ -5838,8 +5822,8 @@ function IngresosView({quotes, egresos, onSaveEgresos}) {
           )
     ),
 
-    // ── EGRESOS TAB ──────────────────────────────────────────────────────────
-    tab==='egresos' && React.createElement('div',null,
+    // ── EGRESOS (dentro de movimientos) ────────────────────────────────────────
+    tab==='movimientos' && React.createElement('div',{style:{marginTop:20}},
       // Form
       React.createElement('div',{style:{...card,marginBottom:16}},
         React.createElement('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:showForm?14:0}},
