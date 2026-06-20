@@ -5592,7 +5592,7 @@ const EGRESO_CATS = [
 function IngresosView({quotes, egresos, onSaveEgresos, activeTab, setActiveTab}) {
   var tab = activeTab||'dashboard'; var setTab = setActiveTab||function(){};
   const [showForm, setShowForm] = React.useState(false);
-  const [egForm, setEgForm] = React.useState({id:'',cat:'sueldos',desc:'',monto:'',fecha:'',medio:'efectivo'});
+  const [egForm, setEgForm] = React.useState({id:'',tipo:'egreso',cat:'sueldos',desc:'',monto:'',fecha:'',medio:'efectivo'});
   const [editId, setEditId] = React.useState(null);
   const [mesVer, setMesVer] = React.useState('');
   const [anoVer, setAnoVer] = React.useState(String(new Date().getFullYear()));
@@ -5658,14 +5658,14 @@ function IngresosView({quotes, egresos, onSaveEgresos, activeTab, setActiveTab})
 
   // ── Form ───────────────────────────────────────────────────────────────────
   function handleSaveEgreso() {
-    if(!egForm.cat||!egForm.desc.trim()||!egForm.monto||!egForm.fecha||!egForm.medio){alert('Complet\u00e1 todos los campos antes de guardar.');return;}
+    if((!egForm.cat&&egForm.tipo==='egreso')||!egForm.desc.trim()||!egForm.monto||!egForm.fecha||!egForm.medio){alert('Complet\u00e1 todos los campos antes de guardar.');return;}
     const list = egresos||[];
     if(editId) {
       onSaveEgresos(list.map(function(e){return e.id===editId?{...egForm,id:editId}:e;}));
     } else {
       onSaveEgresos([...list, {...egForm, id:Math.random().toString(36).slice(2,9)}]);
     }
-    setEgForm({id:'',cat:'sueldos',desc:'',monto:'',fecha:'',medio:'efectivo'});
+    setEgForm({id:'',tipo:'egreso',cat:'sueldos',desc:'',monto:'',fecha:'',medio:'efectivo'});
     setShowForm(false);
     setEditId(null);
   }
@@ -5688,7 +5688,7 @@ function IngresosView({quotes, egresos, onSaveEgresos, activeTab, setActiveTab})
   const anos = ['2024','2025','2026','2027'];
 
   // ── Render ─────────────────────────────────────────────────────────────────
-  return React.createElement('div',{style:{padding:'16px 20px 48px'}},
+  return React.createElement('div',{style:{padding:'24px 20px 48px'}},
     // Header
     React.createElement('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20}},
       React.createElement('div',null,
@@ -5803,7 +5803,7 @@ function IngresosView({quotes, egresos, onSaveEgresos, activeTab, setActiveTab})
         : React.createElement('table',{style:{width:'100%',borderCollapse:'collapse',backgroundColor:'#fff',borderRadius:12,overflow:'hidden',border:'1px solid #E2E8F0'}},
             React.createElement('thead',null,
               React.createElement('tr',{style:{backgroundColor:'#F8FAFC'}},
-                ['Fecha','Pres.','Cliente','Descripción','Monto'].map(function(h){
+                ['Fecha','Tipo','Pres.','Cliente','Descripción','Monto'].map(function(h){
                   return React.createElement('th',{key:h,style:{padding:'10px 14px',fontSize:11,fontWeight:700,color:'#94A3B8',textAlign:'left',textTransform:'uppercase',letterSpacing:'0.06em'}},h);
                 })
               )
@@ -5827,15 +5827,32 @@ function IngresosView({quotes, egresos, onSaveEgresos, activeTab, setActiveTab})
       // Form
       React.createElement('div',{style:{...card,marginBottom:16}},
         React.createElement('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:showForm?14:0}},
-          React.createElement('div',{style:{fontSize:13,fontWeight:700,color:NAVY}},editId?'Editar egreso':'Nuevo egreso'),
+          React.createElement('div',{style:{fontSize:13,fontWeight:700,color:NAVY}},editId?('Editar '+(egForm.tipo==='ingreso'?'ingreso':'egreso')):'Nuevo movimiento'),
           React.createElement('button',{
             type:'button',
-            onClick:function(){setShowForm(!showForm);if(showForm){setEgForm({id:'',cat:'sueldos',desc:'',monto:'',fecha:'',medio:'efectivo'});setEditId(null);}},
+            onClick:function(){setShowForm(!showForm);if(showForm){setEgForm({id:'',tipo:'egreso',cat:'sueldos',desc:'',monto:'',fecha:'',medio:'efectivo'});setEditId(null);}},
             style:{backgroundColor:showForm?'#F1F5F9':ORANGE,color:showForm?'#64748B':'#fff',border:'none',borderRadius:8,padding:'8px 16px',fontSize:13,fontWeight:700,cursor:'pointer'}
-          },showForm?'Cancelar':'+ Nuevo egreso')
+          },showForm?'Cancelar':'+ Nuevo movimiento')
         ),
         showForm && React.createElement('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:10}},
           React.createElement('div',null,
+            React.createElement('div',{style:{fontSize:10,color:'#94A3B8',fontWeight:700,marginBottom:4}},'TIPO'),
+            React.createElement('div',{style:{display:'flex',gap:6}},
+              React.createElement('button',{type:'button',
+                onClick:function(){setEgForm(function(f){return {...f,tipo:'egreso'};});},
+                style:{flex:1,padding:'7px',borderRadius:6,border:'1.5px solid '+(egForm.tipo==='egreso'?'#DC2626':'#E2E8F0'),
+                  backgroundColor:egForm.tipo==='egreso'?'#FFF1F2':'#fff',
+                  color:egForm.tipo==='egreso'?'#DC2626':'#94A3B8',fontSize:12,fontWeight:700,cursor:'pointer'}
+              },'📤 Egreso'),
+              React.createElement('button',{type:'button',
+                onClick:function(){setEgForm(function(f){return {...f,tipo:'ingreso'};});},
+                style:{flex:1,padding:'7px',borderRadius:6,border:'1.5px solid '+(egForm.tipo==='ingreso'?'#059669':'#E2E8F0'),
+                  backgroundColor:egForm.tipo==='ingreso'?'#ECFDF5':'#fff',
+                  color:egForm.tipo==='ingreso'?'#059669':'#94A3B8',fontSize:12,fontWeight:700,cursor:'pointer'}
+              },'📥 Ingreso')
+            )
+          ),
+          egForm.tipo==='egreso' && React.createElement('div',null,
             React.createElement('div',{style:{fontSize:10,color:'#94A3B8',fontWeight:700,marginBottom:4}},'CATEGORÍA'),
             React.createElement('select',{value:egForm.cat,onChange:function(e){setEgForm(function(f){return {...f,cat:e.target.value};});},style:inp},
               EGRESO_CATS.map(function(c){return React.createElement('option',{key:c.id,value:c.id},c.label);})
