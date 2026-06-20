@@ -5635,8 +5635,12 @@ function IngresosView({quotes, egresos, onSaveEgresos, activeTab, setActiveTab})
   }
 
   const cobrosFiltrados = allCobros.filter(function(c){return inPeriod(c.fecha);});
-  const egresosFiltrados = (egresos||[]).filter(function(e){return inPeriod(e.fecha);});
-  const totalCobrado = cobrosFiltrados.reduce(function(s,c){return s+c.monto;},0);
+  const egresosFiltrados = (egresos||[]).filter(function(e){return inPeriod(e.fecha) && e.tipo!=='ingreso';});
+  const ingresosManuales = (egresos||[]).filter(function(e){return inPeriod(e.fecha) && e.tipo==='ingreso';});
+  const allCobrosCombinados = cobrosFiltrados.concat(ingresosManuales.map(function(e){
+    return {qNumero:'',qCliente:'',monto:parseFloat(e.monto)||0,fecha:e.fecha,desc:e.desc,manual:true};
+  }));
+  const totalCobrado = allCobrosCombinados.reduce(function(s,c){return s+c.monto;},0);
   const totalEgresos = egresosFiltrados.reduce(function(s,e){return s+(parseFloat(e.monto)||0);},0);
   const ganancia = totalCobrado - totalEgresos;
 
@@ -5798,7 +5802,7 @@ function IngresosView({quotes, egresos, onSaveEgresos, activeTab, setActiveTab})
     // ── COBROS TAB ───────────────────────────────────────────────────────────
     tab==='movimientos' && React.createElement('div',null,
       React.createElement('div',{style:{fontSize:11,color:'#94A3B8',marginBottom:12}},'Pagos registrados en Seguimiento de Presupuestos'),
-      cobrosFiltrados.length===0
+      allCobrosCombinados.length===0
         ? React.createElement('div',{style:{...card,textAlign:'center',color:'#94A3B8',padding:40}},'Sin cobros en el período seleccionado')
         : React.createElement('table',{style:{width:'100%',borderCollapse:'collapse',backgroundColor:'#fff',borderRadius:12,overflow:'hidden',border:'1px solid #E2E8F0'}},
             React.createElement('thead',null,
@@ -5809,11 +5813,11 @@ function IngresosView({quotes, egresos, onSaveEgresos, activeTab, setActiveTab})
               )
             ),
             React.createElement('tbody',null,
-              cobrosFiltrados.sort(function(a,b){return (b.fecha||'').localeCompare(a.fecha||'');}).map(function(c,i){
+              allCobrosCombinados.sort(function(a,b){return (b.fecha||'').localeCompare(a.fecha||'');}).map(function(c,i){
                 return React.createElement('tr',{key:i,style:{borderTop:'1px solid #F1F5F9',backgroundColor:i%2===0?'#fff':'#FAFAFA'}},
                   React.createElement('td',{style:{padding:'9px 14px',fontSize:12,color:'#64748B'}},c.fecha||'—'),
-                  React.createElement('td',{style:{padding:'9px 14px'}},React.createElement('span',{style:{fontSize:10,fontWeight:700,color:'#059669',backgroundColor:'#ECFDF5',padding:'2px 8px',borderRadius:20}},'💵 Cobro')),
-React.createElement('td',{style:{padding:'9px 14px',fontSize:12,fontWeight:700,color:ORANGE}},'#'+c.qNumero),
+                  React.createElement('td',{style:{padding:'9px 14px'}},React.createElement('span',{style:{fontSize:10,fontWeight:700,color:'#059669',backgroundColor:'#ECFDF5',padding:'2px 8px',borderRadius:20}},c.manual?'💰 Ingreso':'💵 Cobro')),
+React.createElement('td',{style:{padding:'9px 14px',fontSize:12,fontWeight:700,color:ORANGE}},c.qNumero?'#'+c.qNumero:'—'),
                   React.createElement('td',{style:{padding:'9px 14px',fontSize:12,color:'#475569'}},c.qCliente),
                   React.createElement('td',{style:{padding:'9px 14px',fontSize:12,color:'#64748B'}},c.desc),
                   React.createElement('td',{style:{padding:'9px 14px',fontSize:13,fontWeight:700,color:'#065F46'}},fmt(c.monto))
