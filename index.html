@@ -5656,7 +5656,7 @@ function IngresosView({quotes, egresos, onSaveEgresos, activeTab, setActiveTab})
   const ganancia = totalCobrado - totalEgresos;
 
   // By month for chart
-  const meses = ['01','02','03','04','05','06','07','08','09','10','11','12'];
+  // meses is dynamic (defined above)
   const mesLabels = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
   const chartData = meses.map(function(m,i) {
     const ing = allCobros.filter(function(c){return c.fecha && c.fecha.slice(5,7)===m && (anosVer.length===0||anosVer.indexOf(c.fecha.slice(0,4))>=0);}).reduce(function(s,c){return s+c.monto;},0);
