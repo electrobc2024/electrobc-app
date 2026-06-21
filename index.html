@@ -5463,13 +5463,14 @@ function App() {
     },
     highlightId: trackerHighlight,
     onClearHighlight: () => setTrackerHighlight(null)
-  })), (view==="dashboard"||view==="movimientos") && /*#__PURE__*/React.createElement(IngresosView, {
-    quotes: quotes,
-    egresos: egresos,
-    onSaveEgresos: saveEgresos,
-    activeTab: view,
-    setActiveTab: setView
-  }), pdfQuote && /*#__PURE__*/React.createElement(PdfOverlay, {
+  })), (view==="dashboard"||view==="movimientos") && /*#__PURE__*/React.createElement(Pane, null,
+    /*#__PURE__*/React.createElement(IngresosView, {
+      quotes: quotes,
+      egresos: egresos,
+      onSaveEgresos: saveEgresos,
+      activeTab: view,
+      setActiveTab: setView
+    })), pdfQuote && /*#__PURE__*/React.createElement(PdfOverlay, {
     quote: pdfQuote,
     onClose: () => { setPdfQuote(null); setQuote(mkQuote(nextN(quotesRef.current))); window.scrollTo(0,0); },
     onMarkSent: handleMarkSent
@@ -5692,7 +5693,7 @@ function IngresosView({quotes, egresos, onSaveEgresos, activeTab, setActiveTab})
   const anos = ['2024','2025','2026'];
 
   // ── Render ─────────────────────────────────────────────────────────────────
-  return React.createElement('div',{style:{padding:'16px 20px 48px',overflowY:'auto',maxHeight:'calc(100vh - 48px)',alignSelf:'flex-start',width:'100%',boxSizing:'border-box'}},
+  return React.createElement('div',{style:{padding:'16px 20px 48px'}},
     // Header
     React.createElement('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}},
       React.createElement('div',null,
