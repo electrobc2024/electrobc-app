@@ -5749,8 +5749,10 @@ function IngresosView({quotes, egresos, onSaveEgresos, activeTab, setActiveTab})
   // meses defined dynamically above with anos
 
   const chartData = meses.map(function(m,i) {
-    const ing = allCobros.filter(function(c){return c.fecha && c.fecha.slice(5,7)===m && (anosVer.length===0||anosVer.indexOf(c.fecha.slice(0,4))>=0);}).reduce(function(s,c){return s+c.monto;},0);
-    const egr = (egresos||[]).filter(function(e){return e.fecha && e.fecha.slice(5,7)===m && (anosVer.length===0||anosVer.indexOf(e.fecha.slice(0,4))>=0);}).reduce(function(s,e){return s+(parseFloat(e.monto)||0);},0);
+    const ingCobros = allCobros.filter(function(c){return c.fecha && c.fecha.slice(5,7)===m && (anosVer.length===0||anosVer.indexOf(c.fecha.slice(0,4))>=0);}).reduce(function(s,c){return s+c.monto;},0);
+    const ingManual = (egresos||[]).filter(function(e){return e.tipo==='ingreso' && e.fecha && e.fecha.slice(5,7)===m && (anosVer.length===0||anosVer.indexOf(e.fecha.slice(0,4))>=0);}).reduce(function(s,e){return s+(parseFloat(e.monto)||0);},0);
+    const ing = ingCobros + ingManual;
+    const egr = (egresos||[]).filter(function(e){return e.tipo!=='ingreso' && e.fecha && e.fecha.slice(5,7)===m && (anosVer.length===0||anosVer.indexOf(e.fecha.slice(0,4))>=0);}).reduce(function(s,e){return s+(parseFloat(e.monto)||0);},0);
     return {mes:mesLabels[i], ing, egr, gan:ing-egr};
   });
   const maxChart = Math.max(...chartData.map(function(d){return Math.max(d.ing,d.egr);}), 1);
