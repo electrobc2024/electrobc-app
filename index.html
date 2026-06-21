@@ -5690,38 +5690,37 @@ function IngresosView({quotes, egresos, onSaveEgresos, activeTab, setActiveTab})
   // ── Styles ─────────────────────────────────────────────────────────────────
   const card = {backgroundColor:'#fff',borderRadius:12,border:'1px solid #E2E8F0',padding:'16px 20px'};
   const inp = {border:'1px solid #E2E8F0',borderRadius:6,padding:'7px 10px',fontSize:13,width:'100%',backgroundColor:'#fff',boxSizing:'border-box'};
-  const anos = ['2024','2025','2026','2027'];
+  const anos = ['2024','2025','2026'];
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return React.createElement('div',{style:{padding:'48px 20px 48px'}},
     // Header
-    React.createElement('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16,position:'sticky',top:0,backgroundColor:'#F1F5F9',zIndex:10,paddingTop:8,paddingBottom:8}},
+    React.createElement('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16,position:'sticky',top:0,backgroundColor:NAVY,zIndex:10,borderRadius:10,padding:'12px 16px',marginBottom:4,paddingTop:8,paddingBottom:12}},
       React.createElement('div',null,
         React.createElement('h1',{style:{fontFamily:"'Oswald',system-ui",fontSize:28,fontWeight:700,color:NAVY,margin:0}},'\u{1F4B0} Ingresos y Egresos'),
         React.createElement('div',{style:{fontSize:12,color:'#94A3B8',marginTop:2}},'Flujo de caja real')
       ),
       React.createElement('div',{style:{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap'}},
-        React.createElement('div',{style:{display:'flex',flexDirection:'column',gap:2}},
-          React.createElement('div',{style:{fontSize:10,color:'#94A3B8',fontWeight:700}},'AÑO'),
-          React.createElement('select',{multiple:true,value:anosVer,
-            onChange:function(e){var sel=Array.from(e.target.selectedOptions).map(function(o){return o.value;});setAnosVer(sel);},
-            style:{border:'1px solid #E2E8F0',borderRadius:6,padding:'4px 8px',fontSize:12,color:'#475569',backgroundColor:'#fff',minWidth:80,height:80}},
-            anos.map(function(a){return React.createElement('option',{key:a,value:a},a);})
+        React.createElement('div',{style:{display:'flex',flexDirection:'column',gap:6,alignItems:'flex-end'}},
+          React.createElement('div',{style:{display:'flex',gap:4,alignItems:'center'}},
+            React.createElement('span',{style:{fontSize:10,color:'#94A3B8',fontWeight:700,marginRight:4}},'AÑO'),
+            anos.map(function(a){var act=anosVer.indexOf(a)>=0;return React.createElement('button',{key:a,type:'button',
+              onClick:function(){setAnosVer(act?anosVer.filter(function(x){return x!==a;}):[].concat(anosVer,[a]));},
+              style:{padding:'4px 12px',borderRadius:20,fontSize:12,fontWeight:act?700:400,cursor:'pointer',
+                border:'1.5px solid '+(act?NAVY:'#E2E8F0'),backgroundColor:act?NAVY:'#fff',color:act?'#fff':'#64748B'}},a);})
+          ),
+          React.createElement('div',{style:{display:'flex',gap:3,flexWrap:'wrap',justifyContent:'flex-end',alignItems:'center'}},
+            React.createElement('span',{style:{fontSize:10,color:'#94A3B8',fontWeight:700,marginRight:4}},'MES'),
+            meses.map(function(m,i){var act=mesesVer.indexOf(m)>=0;return React.createElement('button',{key:m,type:'button',
+              onClick:function(){setMesesVer(act?mesesVer.filter(function(x){return x!==m;}):[].concat(mesesVer,[m]));},
+              style:{padding:'4px 10px',borderRadius:20,fontSize:11,fontWeight:act?700:400,cursor:'pointer',
+                border:'1.5px solid '+(act?NAVY:'#E2E8F0'),backgroundColor:act?NAVY:'#fff',color:act?'#fff':'#64748B'}},mesLabels[i]);}),
+            (anosVer.length>0||mesesVer.length>0)&&React.createElement('button',{type:'button',
+              onClick:function(){setAnosVer([]);setMesesVer([]);},
+              style:{padding:'4px 8px',borderRadius:20,fontSize:11,cursor:'pointer',
+                border:'1.5px solid #E2E8F0',backgroundColor:'#fff',color:'#94A3B8'}},'✕ Limpiar')
           )
-        ),
-        React.createElement('div',{style:{display:'flex',flexDirection:'column',gap:2}},
-          React.createElement('div',{style:{fontSize:10,color:'#94A3B8',fontWeight:700}},'MES'),
-          React.createElement('select',{multiple:true,value:mesesVer,
-            onChange:function(e){var sel=Array.from(e.target.selectedOptions).map(function(o){return o.value;});setMesesVer(sel);},
-            style:{border:'1px solid #E2E8F0',borderRadius:6,padding:'4px 8px',fontSize:12,color:'#475569',backgroundColor:'#fff',minWidth:100,height:80}},
-            meses.map(function(m,i){return React.createElement('option',{key:m,value:m},mesLabels[i]);})
-          )
-        ),
-        (anosVer.length>0||mesesVer.length>0) && React.createElement('button',{
-          type:'button',
-          onClick:function(){setAnosVer([]);setMesesVer([]);},
-          style:{border:'none',background:'none',color:'#94A3B8',cursor:'pointer',fontSize:13,alignSelf:'flex-end',paddingBottom:4}
-        },'✕ Limpiar')
+        )
       )
     ),
 
