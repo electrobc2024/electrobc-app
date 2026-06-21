@@ -5731,8 +5731,8 @@ function IngresosView({quotes, egresos, onSaveEgresos, activeTab, setActiveTab})
       // KPI cards
       React.createElement('div',{style:{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:12,marginBottom:20}},
         [
-          {label:'Cobrado'+(mesVer?' (mes)':anoVer?' (año)':''),val:fmt(totalCobrado),color:'#065F46',bg:'#ECFDF5',icon:'\u{1F4B5}'},
-          {label:'Egresos'+(mesVer?' (mes)':anoVer?' (año)':''),val:fmt(totalEgresos),color:'#991B1B',bg:'#FFF1F2',icon:'\u{1F4B8}'},
+          {label:'Cobrado'+(mesesVer?' (mes)':anosVer?' (año)':''),val:fmt(totalCobrado),color:'#065F46',bg:'#ECFDF5',icon:'\u{1F4B5}'},
+          {label:'Egresos'+(mesesVer?' (mes)':anosVer?' (año)':''),val:fmt(totalEgresos),color:'#991B1B',bg:'#FFF1F2',icon:'\u{1F4B8}'},
           {label:'Ganancia neta',val:fmt(ganancia),color:ganancia>=0?'#065F46':'#991B1B',bg:ganancia>=0?'#ECFDF5':'#FFF1F2',icon:'\u{1F4C8}'},
           {label:'Devengado total',val:fmt(totalDevengado),color:'#1D4ED8',bg:'#EFF6FF',icon:'\u{1F4CB}'},
         ].map(function(k){
