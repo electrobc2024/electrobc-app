@@ -5699,28 +5699,7 @@ function IngresosView({quotes, egresos, onSaveEgresos, activeTab, setActiveTab})
         React.createElement('h1',{style:{fontFamily:"'Oswald',system-ui",fontSize:28,fontWeight:700,color:NAVY,margin:0}},'\u{1F4B0} Ingresos y Egresos'),
         React.createElement('div',{style:{fontSize:12,color:'#94A3B8',marginTop:2}},'Flujo de caja real')
       ),
-      React.createElement('div',{style:{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap'}},
-        React.createElement('div',{style:{display:'flex',flexDirection:'column',gap:6,alignItems:'flex-end'}},
-          React.createElement('div',{style:{display:'flex',gap:4,alignItems:'center'}},
-            React.createElement('span',{style:{fontSize:10,color:'#94A3B8',fontWeight:700,marginRight:4}},'AÑO'),
-            anos.map(function(a){var act=anosVer.indexOf(a)>=0;return React.createElement('button',{key:a,type:'button',
-              onClick:function(){setAnosVer(act?anosVer.filter(function(x){return x!==a;}):[].concat(anosVer,[a]));},
-              style:{padding:'4px 12px',borderRadius:20,fontSize:12,fontWeight:act?700:400,cursor:'pointer',
-                border:'1.5px solid '+(act?NAVY:'#E2E8F0'),backgroundColor:act?NAVY:'#fff',color:act?'#fff':'#64748B'}},a);})
-          ),
-          React.createElement('div',{style:{display:'flex',gap:3,flexWrap:'wrap',justifyContent:'flex-end',alignItems:'center'}},
-            React.createElement('span',{style:{fontSize:10,color:'#94A3B8',fontWeight:700,marginRight:4}},'MES'),
-            meses.map(function(m,i){var act=mesesVer.indexOf(m)>=0;return React.createElement('button',{key:m,type:'button',
-              onClick:function(){setMesesVer(act?mesesVer.filter(function(x){return x!==m;}):[].concat(mesesVer,[m]));},
-              style:{padding:'4px 10px',borderRadius:20,fontSize:11,fontWeight:act?700:400,cursor:'pointer',
-                border:'1.5px solid '+(act?NAVY:'#E2E8F0'),backgroundColor:act?NAVY:'#fff',color:act?'#fff':'#64748B'}},mesLabels[i]);}),
-            (anosVer.length>0||mesesVer.length>0)&&React.createElement('button',{type:'button',
-              onClick:function(){setAnosVer([]);setMesesVer([]);},
-              style:{padding:'4px 8px',borderRadius:20,fontSize:11,cursor:'pointer',
-                border:'1.5px solid #E2E8F0',backgroundColor:'#fff',color:'#94A3B8'}},'✕ Limpiar')
-          )
-        )
-      )
+
     ),
 
 
@@ -5813,6 +5792,16 @@ function IngresosView({quotes, egresos, onSaveEgresos, activeTab, setActiveTab})
 
     // ── COBROS TAB ───────────────────────────────────────────────────────────
     tab==='movimientos' && React.createElement('div',null,
+      React.createElement('div',{style:{display:'flex',gap:6,flexWrap:'wrap',alignItems:'center',marginBottom:10}},
+        React.createElement('span',{style:{fontSize:11,color:'#94A3B8',fontWeight:700}},'AÑO:'),
+        anos.map(function(a){var act=anosVer.indexOf(a)>=0;return React.createElement('button',{key:a,type:'button',onClick:function(){setAnosVer(act?anosVer.filter(function(x){return x!==a;}):[].concat(anosVer,[a]));},
+          style:{padding:'4px 12px',borderRadius:20,fontSize:12,fontWeight:act?700:400,cursor:'pointer',border:'1.5px solid '+(act?NAVY:'#E2E8F0'),backgroundColor:act?NAVY:'#fff',color:act?'#fff':'#64748B'}},a);}),
+        React.createElement('span',{style:{fontSize:11,color:'#94A3B8',fontWeight:700,marginLeft:4}},'MES:'),
+        meses.map(function(m,i){var act=mesesVer.indexOf(m)>=0;return React.createElement('button',{key:m,type:'button',onClick:function(){setMesesVer(act?mesesVer.filter(function(x){return x!==m;}):[].concat(mesesVer,[m]));},
+          style:{padding:'4px 10px',borderRadius:20,fontSize:11,fontWeight:act?700:400,cursor:'pointer',border:'1.5px solid '+(act?NAVY:'#E2E8F0'),backgroundColor:act?NAVY:'#fff',color:act?'#fff':'#64748B'}},mesLabels[i]);}),
+        (anosVer.length>0||mesesVer.length>0)?React.createElement('button',{type:'button',onClick:function(){setAnosVer([]);setMesesVer([]);},
+          style:{padding:'4px 8px',borderRadius:20,fontSize:11,cursor:'pointer',border:'1.5px solid #E2E8F0',backgroundColor:'#fff',color:'#94A3B8'}},'✕ Limpiar'):null
+      ),
       React.createElement('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}},
         React.createElement('div',{style:{fontWeight:700,fontSize:14,color:NAVY}},'Movimientos del período'),
         React.createElement('button',{type:'button',
