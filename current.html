@@ -75,7 +75,6 @@ const STATUS_MAP = {
     bg: "#FFF7ED",
     br: "#FDBA74"
   },
-  recotizado: { label: "Recotizado", fg: "#6B7280", bg: "#F9FAFB", br: "#D1D5DB" },
   aceptado: {
     label: "Aceptado",
     fg: "#065F46",
@@ -316,8 +315,7 @@ const validateClient = f => {
   // All types: at least one phone
   if (!(f.telefono || "").trim() && !(f.telefonoAdm || "").trim()) e.push("Al menos un teléfono requerido");
   // All types: address
-  if (!(f.calle || "").trim()) e.push("Calle requerida");
-  if (!(f.numero || "").trim()) e.push("Número requerido");
+  if (!(f.calle || "").trim()) e.push("Dirección requerida");
   if (tipo === "particular") {
     if (!(f.nombre || "").trim()) e.push("Nombre y Apellido requerido");
   } else if (tipo === "admin") {
@@ -405,7 +403,7 @@ const Badge = ({
       color: c.fg,
       border: `1px solid ${c.br}`
     }
-  }, c.label, q && q.recotizadoPor && /*#__PURE__*/React.createElement("span",{style:{marginLeft:4,fontSize:9,fontWeight:600,cursor:"pointer",textDecoration:"underline"},onClick:function(e){e.stopPropagation();var targetQ=window.__ebc_quotes&&window.__ebc_quotes.find(function(x){return x.numero===q.recotizadoPor;});if(targetQ&&window.__ebc_highlight){window.__ebc_highlight(targetQ.id);}}},"→ #"+q.recotizadoPor),q && isVencido(q) && /*#__PURE__*/React.createElement("span", {
+  }, c.label, q && isVencido(q) && /*#__PURE__*/React.createElement("span", {
     style: {
       marginLeft: 4,
       fontSize: 9
@@ -597,17 +595,6 @@ const Pane = ({
   style: {
     position: "absolute",
     inset: 0,
-    overflowY: "auto",
-    padding: "16px 20px 48px"
-  }
-}, children);
-const IngresosPane = ({children}) => /*#__PURE__*/React.createElement("div", {
-  style: {
-    position: "absolute",
-    top: "56px",
-    left: 0,
-    right: 0,
-    bottom: 0,
     overflowY: "auto",
     padding: "16px 20px 48px"
   }
@@ -2782,7 +2769,7 @@ function PrintDoc({
       color: "#64748B",
       marginTop: 2
     }
-  }, new Date((q.fecha||"").slice(0,10) + "T12:00:00").toLocaleDateString("es-AR", {
+  }, new Date(q.fecha + "T12:00:00").toLocaleDateString("es-AR", {
     day: "2-digit",
     month: "long",
     year: "numeric"
@@ -3082,7 +3069,7 @@ function PdfOverlay({
       zIndex: 9999,
       display: "flex",
       flexDirection: "column",
-      alignItems: "flex-start",
+      alignItems: "center",
       overflowY: "auto",
       padding: "20px 16px"
     }
@@ -3277,7 +3264,6 @@ function Tracker({
   onEdit,
   onSaveInline,
   onDelete,
-  onDuplicate,
   onStatusChange,
   onUpdatePagos,
   setPrintQuote,
@@ -3304,8 +3290,6 @@ function Tracker({
     }
   }, [highlightId]);
   const [filter, setFilter] = useState("todos");
-  const [dateFrom, setDateFrom] = useState("");
-  const [dateTo, setDateTo] = useState("");
   const [sortTr, setSortTr] = useState("num_desc");
   const [searchTr, setSearchTr] = useState("");
   const [searchDir, setSearchDir] = useState("");
@@ -3318,7 +3302,7 @@ function Tracker({
   });
   // unique client names for filter
   const clientNames = [...new Set(quotes.map(q => q.cliente.nombre).filter(Boolean))].sort();
-  const filtered = sorted.filter(q => filter === "todos" || q.status === filter || (filter === "recotizar" && isVencido(q)) || (filter === "recotizado" && q.status === "recotizado")).filter(q => !clientFilter || q.cliente.nombre === clientFilter).filter(q => !searchTr.trim() || (q.cliente.nombre || "").toLowerCase().includes(searchTr.toLowerCase()) || (q.cliente.administracion || "").toLowerCase().includes(searchTr.toLowerCase()) || (q.numero || "").includes(searchTr) || (q.referencia || "").toLowerCase().includes(searchTr.toLowerCase())).filter(q => !searchDir.trim() || [q.cliente.calle, q.cliente.numero, q.cliente.depto, q.cliente.entreCalles].filter(Boolean).join(" ").toLowerCase().includes(searchDir.toLowerCase())).filter(function(q){if(!dateFrom&&!dateTo)return true;var fd=(q.fecha||"").slice(0,10);return(!dateFrom||fd>=dateFrom)&&(!dateTo||fd<=dateTo);});
+  const filtered = sorted.filter(q => filter === "todos" || effectiveStatus(q) === filter || q.status === filter).filter(q => !clientFilter || q.cliente.nombre === clientFilter).filter(q => !searchTr.trim() || (q.cliente.nombre || "").toLowerCase().includes(searchTr.toLowerCase()) || (q.cliente.administracion || "").toLowerCase().includes(searchTr.toLowerCase()) || (q.numero || "").includes(searchTr) || (q.referencia || "").toLowerCase().includes(searchTr.toLowerCase())).filter(q => !searchDir.trim() || [q.cliente.calle, q.cliente.numero, q.cliente.depto, q.cliente.entreCalles].filter(Boolean).join(" ").toLowerCase().includes(searchDir.toLowerCase()));
   // per-client stats when filter active
   const clientStats = clientFilter ? {
     total: filtered.length,
@@ -3334,11 +3318,10 @@ function Tracker({
     espera: quotes.filter(q => q.status === "espera" && !isVencido(q)).length,
     recotizar: quotes.filter(q => isVencido(q)).length,
     aceptado: quotes.filter(q => q.status === "aceptado").length,
-    rechazado: quotes.filter(q => q.status === "rechazado").length,
-    recotizado: quotes.filter(q => q.status === "recotizado").length
+    rechazado: quotes.filter(q => q.status === "rechazado").length
   };
   const ingresos = quotes.filter(q => q.status === "aceptado").reduce((s, q) => s + calcSub(q.mdo) + calcSub(q.mat), 0);
-  const fmtD = d => d ? new Date((d||"").slice(0,10) + "T12:00:00").toLocaleDateString("es-AR", {
+  const fmtD = d => d ? new Date(d + "T12:00:00").toLocaleDateString("es-AR", {
     day: "2-digit",
     month: "2-digit",
     year: "2-digit"
@@ -3374,10 +3357,6 @@ function Tracker({
     k: "recotizar",
     label: "Para recotizar",
     count: counts.recotizar
-  }, {
-    k: "recotizado",
-    label: "Recotizado",
-    count: counts.recotizado
   }, {
     k: "aceptado",
     label: "Aceptado",
@@ -3441,6 +3420,38 @@ function Tracker({
     }
   }, s.val)))), /*#__PURE__*/React.createElement("div", {
     style: {
+      backgroundColor: NAVY,
+      borderRadius: 10,
+      padding: "13px 20px",
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: 14
+    }
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 10,
+      fontWeight: 700,
+      color: "rgba(255,255,255,0.4)",
+      textTransform: "uppercase",
+      letterSpacing: "0.1em",
+      marginBottom: 3
+    }
+  }, "Ingresos aceptados"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontFamily: "'Oswald',system-ui",
+      fontSize: 20,
+      fontWeight: 700,
+      color: "#fff",
+      fontVariantNumeric: "tabular-nums"
+    }
+  }, "$ ", fmt(ingresos))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 11,
+      color: "rgba(255,255,255,0.25)"
+    }
+  }, counts.aceptado, " aceptado", counts.aceptado !== 1 ? "s" : "")), /*#__PURE__*/React.createElement("div", {
+    style: {
       display: "flex",
       gap: 6,
       flexWrap: "wrap",
@@ -3483,7 +3494,7 @@ function Tracker({
     value: searchDir,
     onChange: setSearchDir,
     placeholder: "Buscar por direcci\xF3n\u2026"
-  }), /*#__PURE__*/React.createElement("div",{style:{display:"inline-flex",alignItems:"center",gap:4,marginLeft:4}}, /*#__PURE__*/React.createElement("input",{type:"date",value:dateFrom,onChange:function(e){setDateFrom(e.target.value);},title:"Desde",style:{border:"1px solid #E2E8F0",borderRadius:6,padding:"5px 8px",fontSize:12,color:"#475569",backgroundColor:"#fff"}}), /*#__PURE__*/React.createElement("span",{style:{fontSize:11,color:"#94A3B8"}},"\u2192"), /*#__PURE__*/React.createElement("input",{type:"date",value:dateTo,onChange:function(e){setDateTo(e.target.value);},title:"Hasta",style:{border:"1px solid #E2E8F0",borderRadius:6,padding:"5px 8px",fontSize:12,color:"#475569",backgroundColor:"#fff"}}), (dateFrom||dateTo)?/*#__PURE__*/React.createElement("button",{type:"button",onClick:function(){setDateFrom("");setDateTo("");},style:{background:"none",border:"none",color:"#94A3B8",cursor:"pointer",fontSize:14}},"\u2715"):null), /*#__PURE__*/React.createElement(SortBar, {
+  }), /*#__PURE__*/React.createElement(SortBar, {
     value: sortTr,
     onChange: setSortTr,
     options: [{
@@ -3761,22 +3772,7 @@ function Tracker({
         fontSize: 9,
         color: "#94A3B8"
       }
-    }, "\u25BE")), dropId === q.id && effectiveStatus(q)==="recotizar" && /*#__PURE__*/React.createElement("div",{
-      onClick:e=>e.stopPropagation(),
-      style:{position:"absolute",left:"50%",transform:"translateX(-50%)",top:"100%",zIndex:99,
-        backgroundColor:"#FFF7ED",border:"1px solid #FDBA74",borderRadius:8,padding:"10px 14px",
-        marginTop:4,minWidth:220,boxShadow:"0 4px 12px rgba(0,0,0,0.1)"}},
-      /*#__PURE__*/React.createElement("div",{style:{fontSize:12,color:"#92400E",fontWeight:600,marginBottom:6}},
-        "⚠️ Este presupuesto venció o necesita recotizarse."),
-      /*#__PURE__*/React.createElement("div",{style:{fontSize:11,color:"#78350F",marginBottom:8}},
-        "Duplicálo para generar una nueva versión. El original quedará como Recotizado."),
-      /*#__PURE__*/React.createElement("button",{
-        type:"button",
-        onClick:function(){setDropId(null);if(confirm("¿Duplicar presupuesto #"+q.numero+"? El original quedará como Recotizado."))onDuplicate(q);},
-        style:{width:"100%",backgroundColor:"#F26B1D",color:"#fff",border:"none",borderRadius:6,
-          padding:"7px 12px",fontSize:12,fontWeight:700,cursor:"pointer"}},
-        "📋 Duplicar presupuesto")
-    ), dropId === q.id && effectiveStatus(q)!=="recotizar" && /*#__PURE__*/React.createElement("div", {
+    }, "\u25BE")), dropId === q.id && /*#__PURE__*/React.createElement("div", {
       onClick: e => e.stopPropagation(),
       style: {
         position: "absolute",
@@ -3888,17 +3884,6 @@ function Tracker({
         color: editInlineId === q.id ? ORANGE : "#475569"
       }
     }, "\u270F\uFE0F"), /*#__PURE__*/React.createElement("button", {
-      title: "Duplicar",
-      onClick: function() { if(confirm("¿Duplicar presupuesto #"+q.numero+"? El original quedará como Recotizado.")) onDuplicate(q); },
-      style: {
-        background: "none",
-        border: "1px solid #BAE6FD",
-        borderRadius: 5,
-        padding: "4px 8px",
-        fontSize: 11,
-        color: "#0369A1"
-      }
-    }, "📋"), /*#__PURE__*/React.createElement("button", {
       onClick: () => onDelete(q.id),
       style: {
         background: "none",
@@ -4479,27 +4464,7 @@ function QuoteForm({
     [f]: v
   }));
   React.useEffect(function(){setTouch({});setErrors([]);},[quote.numero]);
-  const [viaticosKm, setViaticosKm] = React.useState(0);
-  const [precioPorKm, setPrecioPorKm] = React.useState(10000);
-  const viaticosTotal = (parseFloat(viaticosKm)||0) * (parseFloat(precioPorKm)||10000);
-  const [viaticosLoading, setViaticosLoading] = React.useState(false);
-  const calcDistancia = async () => {
-    const addr = [quote.cliente.calle, quote.cliente.numero].filter(Boolean).join(" ");
-    if(!addr.trim()){alert("Ingresá la dirección primero.");return;}
-    setViaticosLoading(true);
-    try {
-      const dest = encodeURIComponent(addr + ", La Plata, Buenos Aires, Argentina");
-      const geoRes = await fetch("https://nominatim.openstreetmap.org/search?q="+dest+"&format=json&limit=1");
-      const geoData = await geoRes.json();
-      if(!geoData.length){alert("No se encontró la dirección.");setViaticosLoading(false);return;}
-      const dLon = parseFloat(geoData[0].lon), dLat = parseFloat(geoData[0].lat);
-      const rRes = await fetch("https://router.project-osrm.org/route/v1/driving/-57.9531,-34.9214;"+dLon+","+dLat+"?overview=false");
-      const rData = await rRes.json();
-      if(rData.code==="Ok"&&rData.routes.length){var km=Math.round(rData.routes[0].distance/100)/10;if(km>0&&km<200){setViaticosKm(km);}else{setViaticosKm(0);alert("No se pudo calcular la distancia. Ingresá los km manualmente.");}}else{setViaticosKm(0);alert("No se pudo calcular. Ingresá los km manualmente.");}
-    }catch(e){alert("Error al calcular distancia.");}
-    setViaticosLoading(false);
-  };
-const updCli = (f, v) => {
+  const updCli = (f, v) => {
     setTouch(t => ({
       ...t,
       [f]: true
@@ -4523,7 +4488,7 @@ const updCli = (f, v) => {
   })), [setQuote]);
   const subMdo = calcSub(quote.mdo),
     subMat = calcSub(quote.mat),
-    total = subMdo + subMat + viaticosTotal;
+    total = subMdo + subMat;
   const submit = status => {
     if (!quote) {
       setErrors(["Error: formulario no iniciado"]);
@@ -4535,9 +4500,6 @@ const updCli = (f, v) => {
     } catch (e) {
       errs = [];
     }
-    // Validate MdO is not empty
-    const subMdoVal = (quote.mdo||[]).reduce((s,r)=>s+(parseFloat(r.pu)||0)*(parseFloat(r.qty)||1),0);
-    if(subMdoVal===0) errs.push("El costo de Mano de Obra no puede ser $0. Usá la calculadora o ingresá los valores manualmente.");
     if (errs.length) {
       setErrors(errs);
       setTouch({
@@ -4553,8 +4515,6 @@ const updCli = (f, v) => {
   };
   const [addrOptions, setAddrOptions] = useState([]); // addresses from past quotes for selected client
   const [selectedClientId, setSelectedClientId] = useState("");
-  const [clientSearch, setClientSearch] = useState("");
-  const [showClientDrop, setShowClientDrop] = useState(false);
   const pickClient = id => {
     setSelectedClientId(id);
     if (!id) {
@@ -4780,35 +4740,24 @@ const updCli = (f, v) => {
     style: {
       marginBottom: 14
     }
-  }, /*#__PURE__*/React.createElement(Lbl, null, "Cargar cliente guardado"), /*#__PURE__*/React.createElement("div", {style:{position:"relative",width:"100%"}},
-    /*#__PURE__*/React.createElement("input", {
-      type: "text",
-      value: clientSearch,
-      onChange: function(e) { setClientSearch(e.target.value); setShowClientDrop(true); },
-      onFocus: function() { setShowClientDrop(true); },
-      onBlur: function() { setTimeout(function(){setShowClientDrop(false);}, 200); },
-      placeholder: selectedClientId ? (clients.find(function(c){return c.id===selectedClientId;}) ? ((clients.find(function(c){return c.id===selectedClientId;}).nombre)||'') + (clients.find(function(c){return c.id===selectedClientId;}).administracion ? ' (' + clients.find(function(c){return c.id===selectedClientId;}).administracion + ')' : '') : "— Buscar cliente —") : "— Buscar o completar manualmente —",
-      style: {width:"100%",border:"1px solid #E2E8F0",borderRadius:7,padding:"8px 11px",fontSize:13,color:"#1E293B",backgroundColor:"#fff",boxSizing:"border-box"}
-    }),
-    showClientDrop && /*#__PURE__*/React.createElement("div", {
-      style: {position:"absolute",top:"100%",left:0,right:0,backgroundColor:"#fff",border:"1px solid #E2E8F0",borderRadius:7,boxShadow:"0 4px 12px rgba(0,0,0,0.1)",zIndex:50,maxHeight:200,overflowY:"auto",marginTop:2}
-    },
-      /*#__PURE__*/React.createElement("div", {
-        onMouseDown: function() { setClientSearch(""); pickClient(""); setShowClientDrop(false); },
-        style: {padding:"8px 12px",fontSize:13,color:"#94A3B8",cursor:"pointer",borderBottom:"1px solid #F1F5F9"}
-      }, "— Completar manualmente —"),
-      [...clients].filter(function(c){
-        var q = clientSearch.toLowerCase();
-        return !q || (c.nombre||"").toLowerCase().includes(q) || (c.administracion||"").toLowerCase().includes(q) || (c.empresa||"").toLowerCase().includes(q);
-      }).sort(function(a,b){return (a.nombre||"").localeCompare(b.nombre||"");}).map(function(c){
-        return /*#__PURE__*/React.createElement("div", {
-          key: c.id,
-          onMouseDown: function() { pickClient(c.id); setClientSearch(""); setShowClientDrop(false); },
-          style: {padding:"8px 12px",fontSize:13,color:"#1E293B",cursor:"pointer",backgroundColor:selectedClientId===c.id?"#F0F4FF":"#fff"}
-        }, c.nombre, c.administracion?" ("+c.administracion+")":"", c.empresa?" · "+c.empresa:"")
-      })
-    )
-  ), addrOptions.length > 0 && /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement(Lbl, null, "Cargar cliente guardado"), /*#__PURE__*/React.createElement("select", {
+    value: selectedClientId,
+    onChange: e => pickClient(e.target.value),
+    style: {
+      width: "100%",
+      border: "1px solid #E2E8F0",
+      borderRadius: 7,
+      padding: "8px 11px",
+      fontSize: 13,
+      color: "#1E293B",
+      backgroundColor: "#fff"
+    }
+  }, /*#__PURE__*/React.createElement("option", {
+    value: ""
+  }, "\u2014 Completar manualmente \u2014"), [...clients].sort((a, b) => (a.nombre || "").localeCompare(b.nombre || "")).map(c => /*#__PURE__*/React.createElement("option", {
+    key: c.id,
+    value: c.id
+  }, c.nombre, c.administracion ? " (" + c.administracion + ")" : "", c.empresa ? " · " + c.empresa : ""))), addrOptions.length > 0 && /*#__PURE__*/React.createElement("div", {
     style: {
       marginTop: 8
     }
@@ -4961,7 +4910,7 @@ const updCli = (f, v) => {
       color: "#EF4444",
       marginTop: 4
     }
-  }, clientSaveErr))), /*#__PURE__*/React.createElement("div",{style:{marginBottom:12,padding:"12px 16px",backgroundColor:"#F8FAFC",border:"1px solid #E2E8F0",borderRadius:10}}, /*#__PURE__*/React.createElement("div",{style:{fontSize:10,fontWeight:700,color:"#94A3B8",textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:8}},"TIPO DE CLIENTE"), /*#__PURE__*/React.createElement("div",{style:{display:"flex",gap:6}}, /*#__PURE__*/React.createElement("button",{key:"particular",type:"button",onMouseDown:function(e){e.preventDefault();},onClick:function(){if(!clientFromList)updCli("tipo","particular");},style:{padding:"6px 12px",borderRadius:8,fontSize:11,fontWeight:700,cursor:clientFromList?"default":"pointer",border:"1.5px solid "+(quote.cliente.tipo==="particular"?"#F26B1D":"#E2E8F0"),backgroundColor:quote.cliente.tipo==="particular"?"#F26B1D":"#fff",color:quote.cliente.tipo==="particular"?"#fff":"#94A3B8",opacity:clientFromList&&quote.cliente.tipo!=="particular"?0.5:1}},"👤 Particular"),/*#__PURE__*/React.createElement("button",{key:"admin",type:"button",onMouseDown:function(e){e.preventDefault();},onClick:function(){if(!clientFromList)updCli("tipo","admin");},style:{padding:"6px 12px",borderRadius:8,fontSize:11,fontWeight:700,cursor:clientFromList?"default":"pointer",border:"1.5px solid "+(quote.cliente.tipo==="admin"?"#F26B1D":"#E2E8F0"),backgroundColor:quote.cliente.tipo==="admin"?"#F26B1D":"#fff",color:quote.cliente.tipo==="admin"?"#fff":"#94A3B8",opacity:clientFromList&&quote.cliente.tipo!=="admin"?0.5:1}},"🏢 Admin"),/*#__PURE__*/React.createElement("button",{key:"empresa",type:"button",onMouseDown:function(e){e.preventDefault();},onClick:function(){if(!clientFromList)updCli("tipo","empresa");},style:{padding:"6px 12px",borderRadius:8,fontSize:11,fontWeight:700,cursor:clientFromList?"default":"pointer",border:"1.5px solid "+(quote.cliente.tipo==="empresa"?"#F26B1D":"#E2E8F0"),backgroundColor:quote.cliente.tipo==="empresa"?"#F26B1D":"#fff",color:quote.cliente.tipo==="empresa"?"#fff":"#94A3B8",opacity:clientFromList&&quote.cliente.tipo!=="empresa"?0.5:1}},"🏗 Empresa"),/*#__PURE__*/React.createElement("button",{key:"licitacion",type:"button",onMouseDown:function(e){e.preventDefault();},onClick:function(){if(!clientFromList)updCli("tipo","licitacion");},style:{padding:"6px 12px",borderRadius:8,fontSize:11,fontWeight:700,cursor:clientFromList?"default":"pointer",border:"1.5px solid "+(quote.cliente.tipo==="licitacion"?"#F26B1D":"#E2E8F0"),backgroundColor:quote.cliente.tipo==="licitacion"?"#F26B1D":"#fff",color:quote.cliente.tipo==="licitacion"?"#fff":"#94A3B8",opacity:clientFromList&&quote.cliente.tipo!=="licitacion"?0.5:1}},"📋 Licitación"))), /*#__PURE__*/React.createElement("div",{style:{backgroundColor:"#F0F9FF",border:"1px solid #BAE6FD",borderRadius:10,padding:"14px 16px",marginBottom:16}},/*#__PURE__*/React.createElement("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}},/*#__PURE__*/React.createElement("div",{style:{fontSize:11,fontWeight:700,color:"#0369A1",textTransform:"uppercase"}},"Viáticos / Traslado"),/*#__PURE__*/React.createElement("div",{style:{fontSize:11,color:"#64748B"}},"(no aparece en el PDF)")),/*#__PURE__*/React.createElement("div",{style:{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap",marginTop:8}},/*#__PURE__*/React.createElement("input",{type:"number",min:0,step:0.1,value:viaticosKm,readOnly:true,style:{border:"1px solid #BAE6FD",borderRadius:6,padding:"7px 10px",fontSize:13,width:70,backgroundColor:"#F0F9FF",color:"#0369A1",fontWeight:600},placeholder:"km"}),/*#__PURE__*/React.createElement("span",{style:{fontSize:13,color:"#475569"}},"km × $"),/*#__PURE__*/React.createElement("input",{type:"number",min:0,step:1000,value:precioPorKm,onChange:e=>setPrecioPorKm(e.target.value),style:{border:"1px solid #BAE6FD",borderRadius:6,padding:"7px 10px",fontSize:13,width:90,backgroundColor:"#fff"},placeholder:"$/km"}),/*#__PURE__*/React.createElement("span",{style:{fontSize:13,color:"#475569"}},"="),/*#__PURE__*/React.createElement("span",{style:{fontFamily:"'Oswald',system-ui",fontWeight:700,fontSize:15,color:"#0369A1"}},"$ "+viaticosTotal.toLocaleString("es-AR")),/*#__PURE__*/React.createElement("button",{type:"button",onMouseDown:e=>e.preventDefault(),onClick:calcDistancia,disabled:viaticosLoading,style:{background:"none",border:"1px solid #BAE6FD",borderRadius:6,padding:"6px 12px",fontSize:11,color:"#0369A1",cursor:"pointer",fontWeight:600,marginLeft:"auto"}},viaticosLoading?"Calculando...":"Calcular desde Plaza Moreno"))),/*#__PURE__*/React.createElement(CardBox, {
+  }, clientSaveErr))), /*#__PURE__*/React.createElement(MdoCalc,{key:quote.numero,tipoCliente:quote.cliente.tipo,updMdoWithCalc:function(ct){var rows=(quote.mdo||[]).filter(function(r){return r.desc&&r.desc.trim();});if(rows.length===0){updMdo([{id:(Math.random().toString(36).slice(2,9)),catId:"",desc:"Mano de obra",pu:String(Math.round(ct)),qty:1}]);}else{var pe=Math.round(ct/rows.length);var rem=Math.round(ct-pe*rows.length);var fc=0;updMdo((quote.mdo||[]).map(function(r){if(!r.desc||!r.desc.trim())return r;fc++;return Object.assign({},r,{pu:String(pe+(fc===rows.length?rem:0)),qty:1});}));}}}),/*#__PURE__*/React.createElement(CardBox, {
     title: "Costo de Mano de Obra",
     required: true
   }, /*#__PURE__*/React.createElement(ItemsTable, {
@@ -4990,7 +4939,7 @@ const updCli = (f, v) => {
         } : c)
       });
     }
-  })), /*#__PURE__*/React.createElement(MdoCalc,{key:quote.numero,tipoCliente:quote.cliente.tipo,clienteSeleccionado:clientFromList,updMdoWithCalc:function(ct){var rows=(quote.mdo||[]).filter(function(r){return r.desc&&r.desc.trim();});if(rows.length===0){updMdo([{id:(Math.random().toString(36).slice(2,9)),catId:"",desc:"Mano de obra",pu:String(Math.round(ct)),qty:1}]);}else{var pe=Math.round(ct/rows.length);var rem=Math.round(ct-pe*rows.length);var fc=0;updMdo((quote.mdo||[]).map(function(r){if(!r.desc||!r.desc.trim())return r;fc++;return Object.assign({},r,{pu:String(pe+(fc===rows.length?rem:0)),qty:1});}));}}}),/*#__PURE__*/React.createElement(CardBox, {
+  })), /*#__PURE__*/React.createElement(CardBox, {
     title: "Costo de Materiales"
   }, /*#__PURE__*/React.createElement(ItemsTable, {
     rows: quote.mat,
@@ -5190,9 +5139,6 @@ function App() {
   const [pdfQuote, setPdfQuote] = useState(null);
   const [clientsFilter, setClientsFilter] = useState("");
   const [trackerHighlight, setTrackerHighlight] = useState(null);
-  const [egresos, setEgresos] = useState(() => { try { return JSON.parse(localStorage.getItem(EKEY)||"[]"); } catch(e){ return []; } });
-  const saveEgresos = async (list) => { setEgresos(list); localStorage.setItem(EKEY, JSON.stringify(list)); };
-  React.useEffect(function(){window.__ebc_quotes=quotes;window.__ebc_highlight=function(id){setTrackerHighlight(id);setView("tracker");};},[quotes]);
   const quotesRef = useRef(quotes);
   useEffect(() => {
     setupGlobalNav();
@@ -5266,15 +5212,6 @@ function App() {
     if (!confirm("¿Eliminar?")) return;
     await persist(quotes.filter(q => q.id !== id));
   }, [quotes, persist]);
-  const handleDuplicate = useCallback(async function(orig) {
-    var cur = quotesRef.current;
-    var maxN = cur.reduce(function(m,q){return Math.max(m,parseInt(q.numero||0));},0);
-    var nextNum = String(maxN+1).padStart(4,"0");
-    var newId = Math.random().toString(36).slice(2,9);
-    var dup = Object.assign({},orig,{id:newId,numero:nextNum,status:"generado",fecha:new Date().toISOString(),pagos:[],esperaDesde:null,recotizadoDe:orig.numero});
-    var upd = cur.map(function(x){return x.id===orig.id?Object.assign({},x,{status:"recotizado",recotizadoPor:nextNum}):x;});
-    await persist(upd.concat([dup]));
-  }, [quotesRef, persist]);
   const handleStatus = useCallback(async (id, status) => {
     const extra = status === "espera" ? {
       esperaDesde: new Date().toISOString()
@@ -5328,18 +5265,22 @@ function App() {
       color: "#94A3B8"
     }
   }, "Cargando\u2026");
-  const navMain = [
-    {id:"form",    label:"📋 Nuevo Presupuesto"},
-    {id:"clients", label:"👤 Clientes"},
-    {id:"catMdo",  label:"👷 Mano de Obra"},
-    {id:"catMat",  label:"📦 Materiales"},
-    {id:"tracker", label:"📈 Seguimiento de Presupuestos"},
-  ];
-  const navFin = [
-    {id:"movimientos", label:"💱 Cargar Ingresos / Egresos"},
-    {id:"dashboard",   label:"📊 Dashboard Financiero"},
-  ];
-  const nav = [...navMain, ...navFin];
+  const nav = [{
+    id: "form",
+    label: "Nuevo Presupuesto"
+  }, {
+    id: "clients",
+    label: "Clientes"
+  }, {
+    id: "catMdo",
+    label: "Mano de Obra"
+  }, {
+    id: "catMat",
+    label: "Materiales"
+  }, {
+    id: "tracker",
+    label: "Seguimiento"
+  }];
   return /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
@@ -5392,30 +5333,27 @@ function App() {
       alignItems: "stretch",
       flex: 1
     }
-  }, (function(){
-    function nbtn(item,fin){
-      var a=view===item.id;
-      return React.createElement("button",{
-        key:item.id,
-        onClick:function(){setView(item.id);},
-        style:{
-          display:"flex",alignItems:"center",padding:"0 11px",
-          background:"none",border:"none",fontSize:12,
-          fontWeight:a?700:400,
-          color:a?"#fff":fin?"rgba(255,210,100,0.8)":"rgba(255,255,255,0.45)",
-          borderBottom:a?"3px solid "+ORANGE:"3px solid transparent",
-          marginBottom:"-3px",whiteSpace:"nowrap",letterSpacing:"0.01em",
-          cursor:"pointer"
-        }
-      },item.label);
-    }
-    return navMain.map(function(i){return nbtn(i,false);})
-      .concat([React.createElement("div",{key:"sep",style:{
-        width:1,height:18,backgroundColor:"rgba(255,255,255,0.25)",
-        alignSelf:"center",margin:"0 6px",flexShrink:0
-      }})])
-      .concat(navFin.map(function(i){return nbtn(i,true);}));
-  })()), /*#__PURE__*/React.createElement("div", {
+  }, nav.map(item => {
+    const a = view === item.id;
+    return /*#__PURE__*/React.createElement("button", {
+      key: item.id,
+      onClick: () => setView(item.id),
+      style: {
+        display: "flex",
+        alignItems: "center",
+        padding: "0 13px",
+        background: "none",
+        border: "none",
+        fontSize: 12,
+        fontWeight: a ? 700 : 400,
+        color: a ? "#fff" : "rgba(255,255,255,0.45)",
+        borderBottom: a ? `3px solid ${ORANGE}` : "3px solid transparent",
+        marginBottom: "-3px",
+        whiteSpace: "nowrap",
+        letterSpacing: "0.01em"
+      }
+    }, item.label);
+  })), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
       alignItems: "center"
@@ -5477,7 +5415,6 @@ function App() {
     onEdit: handleEdit,
     onSaveInline: handleSaveInline,
     onDelete: handleDelete,
-    onDuplicate: handleDuplicate,
     onStatusChange: handleStatus,
     onUpdatePagos: handlePagos,
     setPrintQuote: q => setPdfQuote(q),
@@ -5487,13 +5424,7 @@ function App() {
     },
     highlightId: trackerHighlight,
     onClearHighlight: () => setTrackerHighlight(null)
-  })), (view==="dashboard"||view==="movimientos") && /*#__PURE__*/React.createElement(IngresosView, {
-    quotes: quotes,
-    egresos: egresos,
-    onSaveEgresos: saveEgresos,
-    activeTab: view,
-    setActiveTab: setView
-  }), pdfQuote && /*#__PURE__*/React.createElement(PdfOverlay, {
+  })), pdfQuote && /*#__PURE__*/React.createElement(PdfOverlay, {
     quote: pdfQuote,
     onClose: () => { setPdfQuote(null); setQuote(mkQuote(nextN(quotesRef.current))); window.scrollTo(0,0); },
     onMarkSent: handleMarkSent
@@ -5505,7 +5436,7 @@ const ALLOWED_NEXT={generado:['revision'],revision:['espera'],espera:['aceptado'
 function canTransition(from,to){return(ALLOWED_NEXT[from]||[]).includes(to);}
 
 const MDO_CONFIG={particular:{boca:50000,horaGF:60000,horaAyudante:5000},admin:{boca:50000,horaGF:60000,horaAyudante:5000},empresa:{boca:40000,horaGF:48000,horaAyudante:4000},licitacion:{boca:104220,horaGF:52201,horaAyudante:40709}};
-function MdoCalc({tipoCliente,updMdoWithCalc,clienteSeleccionado}){
+function MdoCalc({tipoCliente,updMdoWithCalc}){
   const [open,setOpen]=React.useState(true);
   const [tipoLocal,setTipoLocal]=React.useState(Array.isArray(tipoCliente)?tipoCliente[0]:(tipoCliente||'particular'));
   React.useEffect(()=>{const t=Array.isArray(tipoCliente)?tipoCliente[0]:(tipoCliente||'particular');if(t&&t!=='particular')setTipoLocal(t);},[tipoCliente]);
@@ -5546,7 +5477,12 @@ function MdoCalc({tipoCliente,updMdoWithCalc,clienteSeleccionado}){
       React.createElement('div',{style:{fontSize:11,fontWeight:700,color:ORANGE,textTransform:'uppercase'}},'\u{1F9EE} Calculadora MdO'),
       React.createElement('button',{type:'button',onMouseDown:e=>e.preventDefault(),onClick:()=>setOpen(false),style:{background:'none',border:'none',color:'#94A3B8',cursor:'pointer',fontSize:14}},'\u2715')
     ),
-    
+    React.createElement('div',{style:{display:'flex',gap:6,marginBottom:12}},
+      tipos.map(t=>React.createElement('button',{key:t,type:'button',onMouseDown:e=>e.preventDefault(),onClick:()=>setTipoLocal(t),
+        style:{flex:1,padding:'7px 4px',borderRadius:8,fontSize:11,fontWeight:700,cursor:'pointer',
+          border:'1.5px solid '+(tipo===t?ORANGE:'#E2E8F0'),backgroundColor:tipo===t?ORANGE:'#fff',color:tipo===t?'#fff':'#94A3B8'}
+      },tLbls[t]))
+    ),
     React.createElement('div',{style:{marginBottom:12}},
       React.createElement('div',{style:{fontSize:10,color:'#94A3B8',fontWeight:700,marginBottom:6}},'COMPLEJIDAD / RIESGO'),
       React.createElement('div',{style:{display:'flex',gap:6}},
@@ -5598,339 +5534,6 @@ function MdoCalc({tipoCliente,updMdoWithCalc,clienteSeleccionado}){
     React.createElement('button',{type:'button',onMouseDown:e=>e.preventDefault(),onClick:aplicar,
       style:{width:'100%',backgroundColor:ORANGE,color:'#fff',border:'none',borderRadius:8,padding:'10px',fontSize:13,fontWeight:700,cursor:'pointer'}
     },'\u2713 Aplicar al presupuesto')
-  );
-}
-
-
-const EGRESO_CATS = [
-  {id:'sueldos', label:'\u{1F477} Sueldos', color:'#7C3AED'},
-  {id:'materiales', label:'\u{1F3EA} Materiales / Borello', color:'#DC2626'},
-  {id:'combustible', label:'\u26FD Combustible', color:'#EA580C'},
-  {id:'herramientas', label:'\u{1F527} Herramientas / Alquileres', color:'#0284C7'},
-  {id:'seguros', label:'\u{1F6E1} Seguros / Monotributo', color:'#059669'},
-  {id:'varios', label:'\u{1F355} Gastos varios', color:'#64748B'},
-  {id:'clientes', label:'\u{1F4E6} Compras para clientes', color:'#0369A1'},
-];
-
-function IngresosView({quotes, egresos, onSaveEgresos, activeTab, setActiveTab}) {
-  var _now = new Date();
-  var _curYear = _now.getFullYear();
-  var _curMonth = _now.getMonth() + 1;
-  var anos = Array.from({length: _curYear - 2025}, function(_,i){return String(2026+i);});
-  var meses = ['01','02','03','04','05','06','07','08','09','10','11','12'].slice(0, _curYear > 2026 ? 12 : _curMonth);
-  var mesLabels = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'].slice(0, _curYear > 2026 ? 12 : _curMonth);
-  var tab = activeTab||'dashboard'; var setTab = setActiveTab||function(){};
-  const [showForm, setShowForm] = React.useState(false);
-  const [tipoFilter, setTipoFilter] = React.useState('todos');
-  const [egForm, setEgForm] = React.useState({id:'',tipo:'egreso',cat:'sueldos',desc:'',monto:'',fecha:'',medio:'efectivo'});
-  const [editId, setEditId] = React.useState(null);
-  const [mesesVer, setMesesVer] = React.useState([]);
-  const [anosVer, setAnosVer] = React.useState([String(new Date().getFullYear())]);
-
-  const fmt = n => (parseFloat(n)||0).toLocaleString('es-AR',{style:'currency',currency:'ARS',maximumFractionDigits:0});
-  const fmtN = n => (parseFloat(n)||0).toLocaleString('es-AR',{maximumFractionDigits:0});
-
-  // ── Data calculations ──────────────────────────────────────────────────────
-  // All cobros from quotes (pagos array)
-  const allCobros = React.useMemo(() => {
-    const cobros = [];
-    (quotes||[]).forEach(function(q) {
-      (q.pagos||[]).forEach(function(p) {
-        if(p.monto && parseFloat(p.monto) > 0) {
-          cobros.push({
-            qNumero: q.numero,
-            qCliente: q.cliente ? (q.cliente.administracion||q.cliente.nombre||'') : '',
-            monto: parseFloat(p.monto)||0,
-            fecha: (p.fecha||'').slice(0,10),
-            desc: p.desc || ('Pago presupuesto #'+q.numero),
-          });
-        }
-      });
-    });
-    return cobros;
-  }, [quotes]);
-
-  // Devengado = presupuestos aceptados
-  const aceptados = React.useMemo(() => (quotes||[]).filter(function(q){return q.status==='aceptado';}), [quotes]);
-  const totalDevengado = aceptados.reduce(function(s,q){return s+(parseFloat(q.mdo&&q.mdo.reduce(function(a,r){return a+(parseFloat(r.pu)||0)*(parseFloat(r.qty)||1);},0))||0)+(parseFloat(q.mat&&q.mat.reduce(function(a,r){return a+(parseFloat(r.pu)||0)*(parseFloat(r.qty)||1);},0))||0);},0);
-
-  // Filter by period
-  function inPeriod(fecha) {
-    if(!fecha) return false;
-    var fd=(fecha||'').slice(0,10);
-    var parts=fd.split('-'); var y=parts[0]; var m=parts[1];
-    if(anosVer.length>0 && anosVer.indexOf(y)<0) return false;
-    if(mesesVer.length>0 && mesesVer.indexOf(m)<0) return false;
-    return true;
-  }
-
-  const cobrosFiltrados = allCobros.filter(function(c){return inPeriod(c.fecha);});
-  const egresosFiltrados = (egresos||[]).filter(function(e){return inPeriod(e.fecha) && e.tipo!=='ingreso';});
-  const ingresosManuales = (egresos||[]).filter(function(e){return inPeriod(e.fecha) && e.tipo==='ingreso';});
-  const allCobrosCombinados = cobrosFiltrados.concat(ingresosManuales.map(function(e){
-    return {qNumero:'',qCliente:'',monto:parseFloat(e.monto)||0,fecha:e.fecha,desc:e.desc,manual:true};
-  }));
-  const totalCobrado = allCobrosCombinados.reduce(function(s,c){return s+c.monto;},0);
-  const totalEgresos = egresosFiltrados.reduce(function(s,e){return s+(parseFloat(e.monto)||0);},0);
-  const ganancia = totalCobrado - totalEgresos;
-
-  // By month for chart
-  // meses defined dynamically above with anos
-
-  const chartData = meses.map(function(m,i) {
-    const ing = allCobros.filter(function(c){return c.fecha && c.fecha.slice(5,7)===m && (anosVer.length===0||anosVer.indexOf(c.fecha.slice(0,4))>=0);}).reduce(function(s,c){return s+c.monto;},0);
-    const egr = (egresos||[]).filter(function(e){return e.fecha && e.fecha.slice(5,7)===m && (anosVer.length===0||anosVer.indexOf(e.fecha.slice(0,4))>=0);}).reduce(function(s,e){return s+(parseFloat(e.monto)||0);},0);
-    return {mes:mesLabels[i], ing, egr, gan:ing-egr};
-  });
-  const maxChart = Math.max(...chartData.map(function(d){return Math.max(d.ing,d.egr);}), 1);
-
-  // By category
-  const porCat = EGRESO_CATS.map(function(cat){
-    const total = egresosFiltrados.filter(function(e){return e.cat===cat.id;}).reduce(function(s,e){return s+(parseFloat(e.monto)||0);},0);
-    return {...cat, total};
-  }).filter(function(c){return c.total>0;}).sort(function(a,b){return b.total-a.total;});
-
-  // ── Form ───────────────────────────────────────────────────────────────────
-  function handleSaveEgreso() {
-    if((!egForm.cat&&egForm.tipo==='egreso')||!egForm.desc.trim()||!egForm.monto||!egForm.fecha||!egForm.medio){alert('Complet\u00e1 todos los campos antes de guardar.');return;}
-    const list = egresos||[];
-    if(editId) {
-      onSaveEgresos(list.map(function(e){return e.id===editId?{...egForm,id:editId}:e;}));
-    } else {
-      onSaveEgresos([...list, {...egForm, id:Math.random().toString(36).slice(2,9)}]);
-    }
-    setEgForm({id:'',tipo:'egreso',cat:'sueldos',desc:'',monto:'',fecha:'',medio:'efectivo'});
-    setShowForm(false);
-    setEditId(null);
-  }
-
-  function handleEditEgreso(e) {
-    setEgForm({...e});
-    setEditId(e.id);
-    setShowForm(true);
-    setTab('egresos');
-  }
-
-  function handleDeleteEgreso(id) {
-    if(!confirm('\u00bfEliminar este egreso?')) return;
-    onSaveEgresos((egresos||[]).filter(function(e){return e.id!==id;}));
-  }
-
-  // ── Styles ─────────────────────────────────────────────────────────────────
-  const card = {backgroundColor:'#fff',borderRadius:12,border:'1px solid #E2E8F0',padding:'16px 20px'};
-  const inp = {border:'1px solid #E2E8F0',borderRadius:6,padding:'7px 10px',fontSize:13,width:'100%',backgroundColor:'#fff',boxSizing:'border-box'};
-
-
-  // ── Render ─────────────────────────────────────────────────────────────────
-  return /*#__PURE__*/React.createElement(IngresosPane, null,
-    // Header
-    React.createElement('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}},
-      React.createElement('div',null,
-        React.createElement('h1',{style:{fontFamily:"'Oswald',system-ui",fontSize:28,fontWeight:700,color:NAVY,margin:0}},'\u{1F4B0} Ingresos y Egresos'),
-        React.createElement('div',{style:{fontSize:12,color:'#94A3B8',marginTop:2}},'Flujo de caja real')
-      ),
-
-    ),
-
-
-
-    // ── DASHBOARD TAB ────────────────────────────────────────────────────────
-    tab==='dashboard' && React.createElement('div',null,
-      // KPI cards
-      React.createElement('div',{style:{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:12,marginBottom:20}},
-        [
-          {label:'Cobrado'+(mesesVer?' (mes)':anosVer?' (año)':''),val:fmt(totalCobrado),color:'#065F46',bg:'#ECFDF5',icon:'\u{1F4B5}'},
-          {label:'Egresos'+(mesesVer?' (mes)':anosVer?' (año)':''),val:fmt(totalEgresos),color:'#991B1B',bg:'#FFF1F2',icon:'\u{1F4B8}'},
-          {label:'Ganancia neta',val:fmt(ganancia),color:ganancia>=0?'#065F46':'#991B1B',bg:ganancia>=0?'#ECFDF5':'#FFF1F2',icon:'\u{1F4C8}'},
-          {label:'Devengado total',val:fmt(totalDevengado),color:'#1D4ED8',bg:'#EFF6FF',icon:'\u{1F4CB}'},
-        ].map(function(k){
-          return React.createElement('div',{key:k.label,style:{...card,backgroundColor:k.bg,border:'1px solid '+k.color+'33'}},
-            React.createElement('div',{style:{fontSize:11,fontWeight:700,color:k.color,textTransform:'uppercase',letterSpacing:'0.07em',marginBottom:4}},k.icon+' '+k.label),
-            React.createElement('div',{style:{fontFamily:"'Oswald',system-ui",fontSize:22,fontWeight:700,color:k.color}},k.val)
-          );
-        })
-      ),
-
-      // Chart
-      React.createElement('div',{style:{...card,marginBottom:20}},
-        React.createElement('div',{style:{fontSize:13,fontWeight:700,color:NAVY,marginBottom:16}},'\u{1F4CA} Ingresos vs Egresos '+(anosVer.length?anosVer.join('/'):'todos los a\u00f1os')),
-        React.createElement('div',{style:{display:'flex',gap:2,alignItems:'flex-end',height:140,padding:'0 4px'}},
-          chartData.map(function(d,i){
-            const ingH = Math.round((d.ing/maxChart)*120);
-            const egrH = Math.round((d.egr/maxChart)*120);
-            return React.createElement('div',{key:i,style:{flex:1,display:'flex',flexDirection:'column',alignItems:'center',gap:2}},
-              React.createElement('div',{style:{display:'flex',gap:2,alignItems:'flex-end',height:120}},
-                React.createElement('div',{title:'Cobrado: '+fmt(d.ing),style:{width:10,height:Math.max(ingH,1),backgroundColor:'#059669',borderRadius:'2px 2px 0 0',cursor:'default'}}),
-                React.createElement('div',{title:'Egresos: '+fmt(d.egr),style:{width:10,height:Math.max(egrH,1),backgroundColor:'#DC2626',borderRadius:'2px 2px 0 0',cursor:'default'}})
-              ),
-              React.createElement('div',{style:{fontSize:9,color:'#94A3B8',marginTop:2}},d.mes)
-            );
-          })
-        ),
-        React.createElement('div',{style:{display:'flex',gap:16,marginTop:8,justifyContent:'center'}},
-          React.createElement('div',{style:{display:'flex',alignItems:'center',gap:4,fontSize:11,color:'#64748B'}},
-            React.createElement('div',{style:{width:12,height:12,backgroundColor:'#059669',borderRadius:2}}),
-            'Cobrado'
-          ),
-          React.createElement('div',{style:{display:'flex',alignItems:'center',gap:4,fontSize:11,color:'#64748B'}},
-            React.createElement('div',{style:{width:12,height:12,backgroundColor:'#DC2626',borderRadius:2}}),
-            'Egresos'
-          )
-        )
-      ),
-
-      // Egresos por categoría + Ganancia GJF
-      React.createElement('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}},
-        // Categorías
-        React.createElement('div',{style:{...card}},
-          React.createElement('div',{style:{fontSize:13,fontWeight:700,color:NAVY,marginBottom:12}},'\u{1F4B8} Egresos por categoría'),
-          porCat.length===0
-            ? React.createElement('div',{style:{color:'#94A3B8',fontSize:12,textAlign:'center',padding:'20px 0'}},'Sin egresos en el período')
-            : porCat.map(function(cat){
-                const pct = totalEgresos>0?Math.round((cat.total/totalEgresos)*100):0;
-                return React.createElement('div',{key:cat.id,style:{marginBottom:10}},
-                  React.createElement('div',{style:{display:'flex',justifyContent:'space-between',fontSize:12,marginBottom:3}},
-                    React.createElement('span',{style:{color:'#475569'}},cat.label),
-                    React.createElement('span',{style:{fontWeight:600,color:cat.color}},fmt(cat.total))
-                  ),
-                  React.createElement('div',{style:{backgroundColor:'#F1F5F9',borderRadius:4,height:6}},
-                    React.createElement('div',{style:{width:pct+'%',height:6,backgroundColor:cat.color,borderRadius:4,transition:'width 0.3s'}})
-                  )
-                );
-              })
-        ),
-
-        // Ganancia GJF
-        React.createElement('div',{style:{...card}},
-          React.createElement('div',{style:{fontSize:13,fontWeight:700,color:NAVY,marginBottom:12}},'\u{1F91D} Distribución GJF'),
-          React.createElement('div',{style:{backgroundColor:'#F8FAFC',borderRadius:8,padding:'12px 14px',marginBottom:12}},
-            React.createElement('div',{style:{fontSize:11,color:'#94A3B8',fontWeight:700,textTransform:'uppercase',marginBottom:6}},'Ganancia neta del período'),
-            React.createElement('div',{style:{fontFamily:"'Oswald',system-ui",fontSize:24,fontWeight:700,color:ganancia>=0?'#065F46':'#DC2626'}},fmt(ganancia))
-          ),
-          React.createElement('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}},
-            ['Guille','Fede'].map(function(nombre){
-              return React.createElement('div',{key:nombre,style:{backgroundColor:'#EFF6FF',borderRadius:8,padding:'10px 12px',textAlign:'center'}},
-                React.createElement('div',{style:{fontSize:11,color:'#1D4ED8',fontWeight:700,marginBottom:4}},nombre),
-                React.createElement('div',{style:{fontFamily:"'Oswald',system-ui",fontSize:18,fontWeight:700,color:'#1D4ED8'}},fmt(ganancia/2))
-              );
-            })
-          ),
-          React.createElement('div',{style:{fontSize:10,color:'#94A3B8',marginTop:8,textAlign:'center'}},'División 50/50 — ajust\u00e1 manualmente seg\u00fan lo acordado')
-        )
-      )
-    ),
-
-    // ── COBROS TAB ───────────────────────────────────────────────────────────
-    tab==='movimientos' && React.createElement('div',null,
-      React.createElement('div',{style:{display:'flex',gap:6,flexWrap:'wrap',alignItems:'center',marginBottom:10}},
-        React.createElement('span',{style:{fontSize:11,color:'#94A3B8',fontWeight:700}},'AÑO:'),
-        anos.map(function(a){var act=anosVer.indexOf(a)>=0;return React.createElement('button',{key:a,type:'button',onClick:function(){setAnosVer(act?anosVer.filter(function(x){return x!==a;}):[].concat(anosVer,[a]));},
-          style:{padding:'4px 12px',borderRadius:20,fontSize:12,fontWeight:act?700:400,cursor:'pointer',border:'1.5px solid '+(act?NAVY:'#E2E8F0'),backgroundColor:act?NAVY:'#fff',color:act?'#fff':'#64748B'}},a);}),
-        React.createElement('span',{style:{fontSize:11,color:'#94A3B8',fontWeight:700,marginLeft:4}},'MES:'),
-        meses.map(function(m,i){var act=mesesVer.indexOf(m)>=0;return React.createElement('button',{key:m,type:'button',onClick:function(){setMesesVer(act?mesesVer.filter(function(x){return x!==m;}):[].concat(mesesVer,[m]));},
-          style:{padding:'4px 10px',borderRadius:20,fontSize:11,fontWeight:act?700:400,cursor:'pointer',border:'1.5px solid '+(act?NAVY:'#E2E8F0'),backgroundColor:act?NAVY:'#fff',color:act?'#fff':'#64748B'}},mesLabels[i]);}),
-        (anosVer.length>0||mesesVer.length>0)?React.createElement('button',{type:'button',onClick:function(){setAnosVer([]);setMesesVer([]);},
-          style:{padding:'4px 8px',borderRadius:20,fontSize:11,cursor:'pointer',border:'1.5px solid #E2E8F0',backgroundColor:'#fff',color:'#94A3B8'}},'✕ Limpiar'):null
-      ),
-      React.createElement('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}},
-        React.createElement('div',{style:{fontWeight:700,fontSize:14,color:NAVY}},'Movimientos del período'),
-        React.createElement('button',{type:'button',
-          onClick:function(){setShowForm(!showForm);if(showForm){setEgForm({id:'',tipo:'egreso',cat:'sueldos',desc:'',monto:'',fecha:'',medio:'efectivo'});setEditId(null);}},
-          style:{backgroundColor:showForm?'#F1F5F9':ORANGE,color:showForm?'#64748B':'#fff',border:'none',borderRadius:8,padding:'8px 16px',fontSize:13,fontWeight:700,cursor:'pointer'}
-        },showForm?'Cancelar':'+ Nuevo movimiento')
-      ),
-      showForm && React.createElement('div',{style:{...card,marginBottom:16}},
-        React.createElement('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:10}},
-          React.createElement('div',null,
-            React.createElement('div',{style:{fontSize:10,color:'#94A3B8',fontWeight:700,marginBottom:4}},'TIPO'),
-            React.createElement('div',{style:{display:'flex',gap:6}},
-              React.createElement('button',{type:'button',onClick:function(){setEgForm(function(f){return Object.assign({},f,{tipo:'egreso'});});},
-                style:{flex:1,padding:'7px',borderRadius:6,border:'1.5px solid '+(egForm.tipo==='egreso'?'#DC2626':'#E2E8F0'),backgroundColor:egForm.tipo==='egreso'?'#FFF1F2':'#fff',color:egForm.tipo==='egreso'?'#DC2626':'#94A3B8',fontSize:12,fontWeight:700,cursor:'pointer'}},'📤 Egreso'),
-              React.createElement('button',{type:'button',onClick:function(){setEgForm(function(f){return Object.assign({},f,{tipo:'ingreso'});});},
-                style:{flex:1,padding:'7px',borderRadius:6,border:'1.5px solid '+(egForm.tipo==='ingreso'?'#059669':'#E2E8F0'),backgroundColor:egForm.tipo==='ingreso'?'#ECFDF5':'#fff',color:egForm.tipo==='ingreso'?'#059669':'#94A3B8',fontSize:12,fontWeight:700,cursor:'pointer'}},'📥 Ingreso')
-            )
-          ),
-          egForm.tipo==='egreso'?React.createElement('div',null,
-            React.createElement('div',{style:{fontSize:10,color:'#94A3B8',fontWeight:700,marginBottom:4}},'CATEGORÍA'),
-            React.createElement('select',{value:egForm.cat,onChange:function(e){setEgForm(function(f){return Object.assign({},f,{cat:e.target.value});});},style:inp},
-              EGRESO_CATS.map(function(c){return React.createElement('option',{key:c.id,value:c.id},c.label);})
-            )
-          ):React.createElement('div',null),
-          React.createElement('div',null,
-            React.createElement('div',{style:{fontSize:10,color:'#94A3B8',fontWeight:700,marginBottom:4}},'DESCRIPCIÓN'),
-            React.createElement('input',{type:'text',value:egForm.desc,onChange:function(e){setEgForm(function(f){return Object.assign({},f,{desc:e.target.value});});},placeholder:'Descripción...',style:inp})
-          ),
-          React.createElement('div',null,
-            React.createElement('div',{style:{fontSize:10,color:'#94A3B8',fontWeight:700,marginBottom:4}},'MONTO'),
-            React.createElement('input',{type:'number',min:0,value:egForm.monto,onChange:function(e){setEgForm(function(f){return Object.assign({},f,{monto:e.target.value});});},placeholder:'0',style:inp})
-          ),
-          React.createElement('div',null,
-            React.createElement('div',{style:{fontSize:10,color:'#94A3B8',fontWeight:700,marginBottom:4}},'FECHA'),
-            React.createElement('input',{type:'date',value:egForm.fecha,onChange:function(e){setEgForm(function(f){return Object.assign({},f,{fecha:e.target.value});});},style:inp})
-          ),
-          React.createElement('div',null,
-            React.createElement('div',{style:{fontSize:10,color:'#94A3B8',fontWeight:700,marginBottom:4}},'MEDIO'),
-            React.createElement('select',{value:egForm.medio,onChange:function(e){setEgForm(function(f){return Object.assign({},f,{medio:e.target.value});});},style:inp},
-              React.createElement('option',{value:'efectivo'},'Efectivo'),
-              React.createElement('option',{value:'transferencia'},'Transferencia')
-            )
-          ),
-          React.createElement('div',{style:{display:'flex',alignItems:'flex-end'}},
-            React.createElement('button',{type:'button',onClick:handleSaveEgreso,
-              style:{width:'100%',backgroundColor:ORANGE,color:'#fff',border:'none',borderRadius:8,padding:'9px',fontSize:13,fontWeight:700,cursor:'pointer'}},
-              editId?'✓ Actualizar':'✓ Guardar')
-          )
-        )
-      ),
-      React.createElement('div',{style:{display:'flex',gap:6,marginBottom:10}},
-        ['todos','ingresos','egresos'].map(function(t){
-          var labels={todos:'Todos',ingresos:'📥 Ingresos',egresos:'📤 Egresos'};
-          var active=tipoFilter===t;
-          return React.createElement('button',{key:t,type:'button',onClick:function(){setTipoFilter(t);},
-            style:{padding:'5px 14px',borderRadius:20,fontSize:12,fontWeight:active?700:500,cursor:'pointer',
-              border:'1.5px solid '+(active?NAVY:'#E2E8F0'),backgroundColor:active?NAVY:'#fff',color:active?'#fff':'#64748B'}},
-            labels[t]);
-        })
-      ),
-      React.createElement(function MovTable(){
-        var allMovs=[];
-        allCobrosCombinados.forEach(function(c){allMovs.push({fecha:c.fecha,tipo:c.manual?'ingreso':'cobro',label:'📥 Ingreso',ref:c.qNumero?'#'+c.qNumero:'',cliente:c.qCliente,desc:c.desc,monto:c.monto,id:'c'+c.fecha+c.monto,color:'#059669',bg:'#ECFDF5'});});
-        egresosFiltrados.forEach(function(e){var cat=EGRESO_CATS.find(function(c){return c.id===e.cat;})||EGRESO_CATS[5];allMovs.push({fecha:e.fecha,tipo:'egreso',label:'📤 Egreso',ref:cat.label,cliente:cat.label,desc:e.desc,monto:-(parseFloat(e.monto)||0),id:e.id,color:'#DC2626',bg:'#FFF1F2',eObj:e,detalle:cat.label});});
-        allMovs.sort(function(a,b){return (b.fecha||'').localeCompare(a.fecha||'');});
-        var filtered=tipoFilter==='todos'?allMovs:allMovs.filter(function(m){return tipoFilter==='ingresos'?(m.tipo==='cobro'||m.tipo==='ingreso'):m.tipo==='egreso';});
-        var total=filtered.reduce(function(s,m){return s+m.monto;},0);
-        if(filtered.length===0) return React.createElement('div',{style:{...card,textAlign:'center',color:'#94A3B8',padding:40}},'Sin movimientos en el período seleccionado');
-        return React.createElement('div',null,
-          React.createElement('table',{style:{width:'100%',borderCollapse:'collapse',backgroundColor:'#fff',borderRadius:12,overflow:'hidden',border:'1px solid #E2E8F0'}},
-            React.createElement('thead',null,React.createElement('tr',{style:{backgroundColor:'#F8FAFC'}},
-              ['Fecha','Tipo','Detalle','Descripción','Monto',''].map(function(h){return React.createElement('th',{key:h,style:{padding:'10px 14px',fontSize:11,fontWeight:700,color:'#94A3B8',textAlign:'left',textTransform:'uppercase',letterSpacing:'0.06em'}},h);})
-            )),
-            React.createElement('tbody',null,
-              filtered.map(function(m,i){
-                return React.createElement('tr',{key:m.id,style:{borderTop:'1px solid #F1F5F9',backgroundColor:i%2===0?'#fff':'#FAFAFA'}},
-                  React.createElement('td',{style:{padding:'9px 14px',fontSize:12,color:'#64748B'}},
-                  m.fecha?new Date((m.fecha||'').slice(0,10)+'T12:00:00').toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'2-digit'}):'—'),
-                  React.createElement('td',{style:{padding:'9px 14px'}},React.createElement('span',{style:{fontSize:10,fontWeight:700,color:m.color,backgroundColor:m.bg,padding:'2px 8px',borderRadius:20}},m.label)),
-                  React.createElement('td',{style:{padding:'9px 14px',fontSize:12,color:'#475569'}},m.cliente||m.ref||'—'),
-                  React.createElement('td',{style:{padding:'9px 14px',fontSize:12,color:'#64748B'}},m.desc||'—'),
-                  React.createElement('td',{style:{padding:'9px 14px',fontSize:13,fontWeight:700,color:m.monto>=0?'#059669':'#DC2626'}},(m.monto>=0?'':'- ')+'$ '+(Math.abs(m.monto)||0).toLocaleString('es-AR',{maximumFractionDigits:0})),
-                  React.createElement('td',{style:{padding:'9px 14px'}},m.eObj&&React.createElement('div',{style:{display:'flex',gap:4}},
-                    React.createElement('button',{type:'button',onClick:function(){handleEditEgreso(m.eObj);},style:{background:'none',border:'1px solid #E2E8F0',borderRadius:5,padding:'3px 8px',fontSize:12,cursor:'pointer',color:'#475569'}},'✏️'),
-                    React.createElement('button',{type:'button',onClick:function(){handleDeleteEgreso(m.eObj.id);},style:{background:'none',border:'1px solid #FECACA',borderRadius:5,padding:'3px 8px',fontSize:12,cursor:'pointer',color:'#DC2626'}},'✕')
-                  ))
-                );
-              })
-            ),
-            React.createElement('tfoot',null,React.createElement('tr',{style:{backgroundColor:'#F8FAFC',borderTop:'2px solid #E2E8F0'}},
-              React.createElement('td',{colSpan:4,style:{padding:'10px 14px',fontSize:12,fontWeight:700,color:NAVY,textAlign:'right'}},'TOTAL NETO'),
-              React.createElement('td',{style:{padding:'10px 14px',fontSize:14,fontWeight:700,color:total>=0?'#059669':'#DC2626'}},(total>=0?'':'- ')+'$ '+(Math.abs(total)||0).toLocaleString('es-AR',{maximumFractionDigits:0})),
-              React.createElement('td',null)
-            ))
-          )
-        );
-      },null)
-    )
-
   );
 }
 
