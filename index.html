@@ -5626,19 +5626,6 @@ function IngresosView({quotes, egresos, onSaveEgresos, activeTab, setActiveTab})
 
   // Filter by period
   function inPeriod(fecha) {
-  if(!fecha) return false;
-  const d = new Date(fecha);
-  if(isNaN(d.getTime())) return false;
-  const aStr = String(d.getFullYear());
-  const mIdx = d.getMonth();
-  const mesesArr = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
-  const mStr = mesesArr[mIdx];
-  
-  const anoOk = (!anoVer || anoVer.length === 0 || (Array.isArray(anoVer) ? anoVer.includes(aStr) : anoVer === aStr));
-  const mesOk = (!mesVer || mesVer.length === 0 || (Array.isArray(mesVer) ? mesVer.includes(mStr) : mesVer === mStr));
-  return anoOk && mesOk;
-}
-function _old_inPeriod_ignored(fecha) {
     if(!fecha) return false;
     var fd=(fecha||'').slice(0,10);
     var parts=fd.split('-'); var y=parts[0]; var m=parts[1];
@@ -5827,15 +5814,6 @@ function _old_inPeriod_ignored(fecha) {
 
     // ── COBROS TAB ───────────────────────────────────────────────────────────
     tab==='movimientos' && React.createElement('div',null,
-      React.createElement('div',{style:{...card,marginBottom:16}},
-        React.createElement('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:showForm?14:0}},
-          React.createElement('div',{style:{fontSize:13,fontWeight:700,color:NAVY}},editId?('Editar '+(egForm.tipo==='ingreso'?'ingreso':'egreso')):'Nuevo movimiento'),
-          React.createElement('button',{
-            type:'button',
-            onClick:function(){setShowForm(!showForm);if(showForm){setEgForm({id:'',tipo:'egreso',cat:'sueldos',desc:'',monto:'',fecha:'',medio:'efectivo'});setEditId(null);}},
-            style:{backgroundColor:showForm?'#F1F5F9':ORANGE,color:showForm?'#64748B':'#fff',border:'none',borderRadius:8,padding:'8px 16px',fontSize:13,fontWeight:700,cursor:'pointer'}
-          },showForm?'Cancelar':'+ Nuevo movimiento')
-        ),
       React.createElement('div',{style:{fontSize:11,color:'#94A3B8',marginBottom:12}},'Ingresos y egresos del período'),
       allCobrosCombinados.length===0
         ? React.createElement('div',{style:{...card,textAlign:'center',color:'#94A3B8',padding:40}},'Sin cobros en el período seleccionado')
@@ -5865,6 +5843,15 @@ React.createElement('td',{style:{padding:'9px 14px',fontSize:12,fontWeight:700,c
     // ── EGRESOS (dentro de movimientos) ────────────────────────────────────────
     tab==='movimientos' && React.createElement('div',{style:{marginTop:20}},
       // Form
+      React.createElement('div',{style:{...card,marginBottom:16}},
+        React.createElement('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:showForm?14:0}},
+          React.createElement('div',{style:{fontSize:13,fontWeight:700,color:NAVY}},editId?('Editar '+(egForm.tipo==='ingreso'?'ingreso':'egreso')):'Nuevo movimiento'),
+          React.createElement('button',{
+            type:'button',
+            onClick:function(){setShowForm(!showForm);if(showForm){setEgForm({id:'',tipo:'egreso',cat:'sueldos',desc:'',monto:'',fecha:'',medio:'efectivo'});setEditId(null);}},
+            style:{backgroundColor:showForm?'#F1F5F9':ORANGE,color:showForm?'#64748B':'#fff',border:'none',borderRadius:8,padding:'8px 16px',fontSize:13,fontWeight:700,cursor:'pointer'}
+          },showForm?'Cancelar':'+ Nuevo movimiento')
+        ),
         showForm && React.createElement('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:10}},
           React.createElement('div',null,
             React.createElement('div',{style:{fontSize:10,color:'#94A3B8',fontWeight:700,marginBottom:4}},'TIPO'),
