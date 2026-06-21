@@ -601,6 +601,17 @@ const Pane = ({
     padding: "16px 20px 48px"
   }
 }, children);
+const IngresosPane = ({children}) => /*#__PURE__*/React.createElement("div", {
+  style: {
+    position: "absolute",
+    top: "48px",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    overflowY: "auto",
+    padding: "16px 20px 48px"
+  }
+}, children);
 const H1 = ({
   children
 }) => /*#__PURE__*/React.createElement("h1", {
@@ -5692,7 +5703,7 @@ function IngresosView({quotes, egresos, onSaveEgresos, activeTab, setActiveTab})
   const anos = ['2024','2025','2026'];
 
   // ── Render ─────────────────────────────────────────────────────────────────
-  return /*#__PURE__*/React.createElement(Pane, null,
+  return /*#__PURE__*/React.createElement(IngresosPane, null,
     // Header
     React.createElement('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}},
       React.createElement('div',null,
