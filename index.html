@@ -4588,6 +4588,11 @@ const updCli = (f, v) => {
         best = c;
         break;
       }
+      // Una de las dos cadenas contiene a la otra (ej. "Ferrario" dentro de "Admin. Ferrario & Asoc")
+      if (norm.length >= 4 && cNorm.length >= 4 && (cNorm.includes(norm) || norm.includes(cNorm))) {
+        best = best || c;
+        continue;
+      }
       const maxLen = Math.max(cNorm.length, norm.length);
       if (maxLen >= 4 && levenshtein(cNorm, norm) <= 2) {
         best = best || c;
