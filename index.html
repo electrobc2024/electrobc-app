@@ -5693,9 +5693,9 @@ function IngresosView({quotes, egresos, onSaveEgresos, activeTab, setActiveTab})
   const anos = ['2024','2025','2026'];
 
   // ── Render ─────────────────────────────────────────────────────────────────
-  return React.createElement('div',{style:{padding:'48px 20px 48px'}},
+  return React.createElement('div',{style:{display:'flex',flexDirection:'column',height:'100%',width:'100%',boxSizing:'border-box'}},
     // Header
-    React.createElement('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}},
+    React.createElement('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:0,flexShrink:0,padding:'16px 20px 12px',backgroundColor:'#F1F5F9'}},
       React.createElement('div',null,
         React.createElement('h1',{style:{fontFamily:"'Oswald',system-ui",fontSize:28,fontWeight:700,color:NAVY,margin:0}},'\u{1F4B0} Ingresos y Egresos'),
         React.createElement('div',{style:{fontSize:12,color:'#94A3B8',marginTop:2}},'Flujo de caja real')
@@ -5726,6 +5726,8 @@ function IngresosView({quotes, egresos, onSaveEgresos, activeTab, setActiveTab})
 
 
 
+    // ── TAB CONTENT (scrollable)
+    React.createElement('div',{style:{flex:1,overflowY:'auto',padding:'0 20px 48px'}},
     // ── DASHBOARD TAB ────────────────────────────────────────────────────────
     tab==='dashboard' && React.createElement('div',null,
       // KPI cards
@@ -5913,6 +5915,7 @@ function IngresosView({quotes, egresos, onSaveEgresos, activeTab, setActiveTab})
       },null)
     )
 
+    )
   );
 }
 
