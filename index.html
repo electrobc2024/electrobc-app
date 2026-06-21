@@ -132,6 +132,24 @@ const db = {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const uid = () => Math.random().toString(36).slice(2, 9);
+// Normaliza un nombre para comparar duplicados: minúsculas, sin acentos, sin espacios/puntuación
+const normName = s => (s || "").toString().normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]/g, "");
+// Distancia de Levenshtein simple (para detectar nombres "parecidos", ej. errores de tipeo)
+function levenshtein(a, b) {
+  if (a === b) return 0;
+  const m = a.length, n = b.length;
+  if (!m) return n;
+  if (!n) return m;
+  let prev = Array.from({length: n + 1}, (_, i) => i);
+  for (let i = 1; i <= m; i++) {
+    const cur = [i];
+    for (let j = 1; j <= n; j++) {
+      cur[j] = a[i - 1] === b[j - 1] ? prev[j - 1] : 1 + Math.min(prev[j - 1], prev[j], cur[j - 1]);
+    }
+    prev = cur;
+  }
+  return prev[n];
+}
 const todayStr = () => {
   const d = new Date();
   const y = d.getFullYear();
@@ -1803,9 +1821,9 @@ function ClientesView({
       return;
     }
     if (!editId) {
-      const dup = clients.find(c => capitalize((c.nombre || "").trim()).toLowerCase() === nb.toLowerCase());
+      const dup = clients.find(c => normName(c.nombre) === normName(nb));
       if (dup) {
-        setErrs(["Ya existe un cliente con ese nombre."]);
+        setErrs(["Ya existe un cliente con ese nombre (" + dup.nombre + ")."]);
         return;
       }
     }
@@ -4555,6 +4573,29 @@ const updCli = (f, v) => {
   const [selectedClientId, setSelectedClientId] = useState("");
   const [clientSearch, setClientSearch] = useState("");
   const [showClientDrop, setShowClientDrop] = useState(false);
+  const [dupDismissedFor, setDupDismissedFor] = useState(""); // normName del nombre para el que el usuario ya dijo "no es el mismo"
+  const possibleDupClient = React.useMemo(() => {
+    const nameRaw = (quote.cliente.nombre || "").trim();
+    if (clientFromList || nameRaw.length < 3) return null;
+    const norm = normName(nameRaw);
+    if (!norm) return null;
+    let best = null;
+    for (const c of clients) {
+      if (selectedClientId && c.id === selectedClientId) continue;
+      const cNorm = normName(c.nombre);
+      if (!cNorm) continue;
+      if (cNorm === norm) {
+        best = c;
+        break;
+      }
+      const maxLen = Math.max(cNorm.length, norm.length);
+      if (maxLen >= 4 && levenshtein(cNorm, norm) <= 2) {
+        best = best || c;
+      }
+    }
+    return best;
+  }, [quote.cliente.nombre, clients, clientFromList, selectedClientId]);
+  const showDupWarning = possibleDupClient && dupDismissedFor !== normName(quote.cliente.nombre || "");
   const pickClient = id => {
     setSelectedClientId(id);
     if (!id) {
@@ -4846,7 +4887,32 @@ const updCli = (f, v) => {
     }
   }), /*#__PURE__*/React.createElement(ErrM, {
     f: "nombre"
-  })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement(Lbl, null, "Tel\xE9fono directo"), /*#__PURE__*/React.createElement(Inp, {
+  }), showDupWarning && /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 6,
+      padding: "8px 10px",
+      backgroundColor: "#FFFBEB",
+      border: "1px solid #FCD34D",
+      borderRadius: 7,
+      fontSize: 12,
+      color: "#92400E"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {marginBottom: 6}
+  }, "⚠️ Ya existe un cliente parecido: ", /*#__PURE__*/React.createElement("strong", null, possibleDupClient.nombre), possibleDupClient.administracion ? " (" + possibleDupClient.administracion + ")" : "", ". ¿Es el mismo?"),
+  /*#__PURE__*/React.createElement("div", {
+    style: {display: "flex", gap: 8}
+  }, /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    onMouseDown: e => e.preventDefault(),
+    onClick: () => { pickClient(possibleDupClient.id); setDupDismissedFor(""); },
+    style: {fontSize: 11, fontWeight: 700, background: "#92400E", color: "#fff", border: "none", borderRadius: 6, padding: "5px 10px", cursor: "pointer"}
+  }, "Usar este cliente"), /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    onMouseDown: e => e.preventDefault(),
+    onClick: () => setDupDismissedFor(normName(quote.cliente.nombre || "")),
+    style: {fontSize: 11, fontWeight: 600, background: "none", color: "#92400E", border: "1px solid #FCD34D", borderRadius: 6, padding: "5px 10px", cursor: "pointer"}
+  }, "No, es otro cliente")))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement(Lbl, null, "Tel\xE9fono directo"), /*#__PURE__*/React.createElement(Inp, {
     value: quote.cliente.telefono || "",
     onChange: e => updCli("telefono", e.target.value),
     placeholder: "+54 11 1234-5678",
