@@ -5273,65 +5273,25 @@ function setupGlobalNav() {
 }
 
 // ── App ───────────────────────────────────────────────────────────────────────
+
 function App() {
-  const [view, setView] = useState(() => { try { var v = localStorage.getItem("ebc-last-view"); return v || "form"; } catch(e){ return "form"; } });
-  React.useEffect(function(){ try { localStorage.setItem("ebc-last-view", view); } catch(e){} }, [view]);
-  const [quotes, setQuotes] = useState([]);
-  const [quote, setQuote] = useState(null);
-  const [catalog, setCatalog] = useState({
-    mdo: [],
-    mat: []
-  });
-  const [clients, setClients] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [savedFlash, setSavedFlash] = useState(false);
-  const [pdfQuote, setPdfQuote] = useState(null);
-  const [clientsFilter, setClientsFilter] = useState("");
-  const [trackerHighlight, setTrackerHighlight] = useState(null);
-  const [egresos, setEgresos] = useState(() => { try { return JSON.parse(localStorage.getItem(EKEY)||"[]"); } catch(e){ return []; } });
-  const saveEgresos = async (list) => { setEgresos(list); localStorage.setItem(EKEY, JSON.stringify(list)); };
-  React.useEffect(function(){window.__ebc_quotes=quotes;window.__ebc_highlight=function(id){setTrackerHighlight(id);setView("tracker");};},[quotes]);
-  const quotesRef = useRef(quotes);
-  useEffect(() => {
-    setupGlobalNav();
-    Promise.all([loadQ(), loadCat(), loadCl()]).then(([qs, cat, cls]) => {
-      setQuotes(qs);
-      setCatalog(cat);
-      setClients(cls);
-      const nextN = list => {
-        if (list.length === 0) return String(NUM_INICIO).padStart(4, "0");
-        const nums = list.map(q => parseInt(q.numero) || 0);
-        return String(Math.max(...nums, NUM_INICIO - 1) + 1).padStart(4, "0");
-      };
-      setQuote(mkQuote(nextN(qs)));
-      setLoading(false);
-    });
-  }, []);
-  const persist = useCallback(async u => {
-    setQuotes(u);
-    await saveQ(u);
-  }, []);
-  quotesRef.current = quotes;
-  const handleSave = statusRaw => {
-    if (!quote) return;
-    const status = statusRaw === "generar" ? "generado" : statusRaw;
-    const updated = {
-      ...quote,
-      status
-    };
-    const cur = quotesRef.current;
-    const exists = cur.some(q => q.id === updated.id);
-    const nl = exists ? cur.map(q => q.id === updated.id ? updated : q) : [...cur, updated];
-    setQuotes(nl);
-    saveQ(nl).catch(() => {});
-    if (statusRaw === "generar") {
-      const maxNum = nl.reduce((m, q) => Math.max(m, parseInt(q.numero) || 0), NUM_INICIO - 1);
-      setQuote(mkQuote(String(maxNum + 1).padStart(4, "0")));
-      setPdfQuote(updated);
-    } else {
-      setQuote(updated);
-    }
+  const [activeTab, setActiveTab] = React.useState('dashboard');
+  const [egresos, setEgresos] = React.useState(JSON.parse(localStorage.getItem('ebc-egresos-v1') || '[]'));
+  const [quotes, setQuotes] = React.useState(JSON.parse(localStorage.getItem('ebc-quotes-v6') || '[]'));
+  
+  const onSaveEgresos = (nuevos) => {
+    setEgresos(nuevos);
+    localStorage.setItem('ebc-egresos-v1', JSON.stringify(nuevos));
+  };
+
+  // Selector de navegación
+  if (activeTab === 'cargar') {
+    return React.createElement(IngresosView, { quotes, egresos, onSaveEgresos, activeTab, setActiveTab });
+  }
+
+  return React.createElement(Dashboard, { quotes, egresos, onSaveEgresos, setActiveTab });
+}
+
   };
 
   // After PDF save, status stays as-is (user manages it manually from Seguimiento)
