@@ -5777,6 +5777,15 @@ function IngresosView({quotes, egresos, onSaveEgresos, activeTab, setActiveTab})
   const totalEgresosDash = egresosFiltradosDash.filter(function(e){return (e.moneda||'$')==='$';}).reduce(function(s,e){return s+(parseFloat(e.monto)||0);},0);
   const gananciaDash = totalCobradoDash - totalEgresosDash;
 
+  // ── Desglose de ingresos: Presupuestados vs No Presupuestados ──
+  const ingresosPresupuestados = allCobrosCombinadosDash.filter(function(c){
+    return (c.moneda||'$')==='$' && c.qNumero && c.qNumero.toString().trim() !== '';
+  }).reduce(function(s,c){return s+c.monto;},0);
+
+  const ingresosNoPresupuestados = allCobrosCombinadosDash.filter(function(c){
+    return (c.moneda||'$')==='$' && (!c.qNumero || c.qNumero.toString().trim() === '');
+  }).reduce(function(s,c){return s+c.monto;},0);
+
   // ── Totales en USD (Dashboard), separados sin convertir ────────────────────
   const ingresosManualesUSDDash = (egresos||[]).filter(function(e){return inPeriod(e.fecha, dashAnosVer, dashMesesVer) && e.tipo==='ingreso' && e.moneda==='USD';});
   const egresosUSDDash = (egresos||[]).filter(function(e){return inPeriod(e.fecha, dashAnosVer, dashMesesVer) && e.tipo!=='ingreso' && e.moneda==='USD';});
@@ -5875,6 +5884,31 @@ function IngresosView({quotes, egresos, onSaveEgresos, activeTab, setActiveTab})
           {label:'Ganancia neta',val:fmt(gananciaDash),color:gananciaDash>=0?'#065F46':'#991B1B',bg:gananciaDash>=0?'#ECFDF5':'#FFF1F2',icon:'\u{1F4C8}'},
           {label:'Devengado total',val:fmt(totalDevengado),color:'#1D4ED8',bg:'#EFF6FF',icon:'\u{1F4CB}'},
         ].map(function(k){
+
+          // Tarjeta de origen de ingresos (Ubicación de contingencia)
+          React.createElement('div',{style:{...card,marginBottom:16}},
+            React.createElement('div',{style:{fontSize:13,fontWeight:700,color:NAVY,marginBottom:12}},'📈 Origen de los Ingresos (ARS)'),
+            React.createElement('div',{style:{display:'flex',flexDirection:'column',gap:12}},
+              React.createElement('div',null,
+                React.createElement('div',{style:{display:'flex',justifyContent:'space-between',fontSize:12,marginBottom:4}},
+                  React.createElement('span',null,'📋 Trabajos Presupuestados'),
+                  React.createElement('span',{style:{fontWeight:700}},fmt(ingresosPresupuestados))
+                ),
+                React.createElement('div',{style:{backgroundColor:'#E2E8F0',borderRadius:4,height:8,overflow:'hidden'}},
+                  React.createElement('div',{style:{backgroundColor:'#3B82F6',height:'100%',width:(totalCobradoDash>0?Math.min(100,(ingresosPresupuestados/totalCobradoDash)*100):0)+'%'}})
+                )
+              ),
+              React.createElement('div',null,
+                React.createElement('div',{style:{display:'flex',justifyContent:'space-between',fontSize:12,marginBottom:4}},
+                  React.createElement('span',null,'⚡ Directos / No Presupuestados'),
+                  React.createElement('span',{style:{fontWeight:700}},fmt(ingresosNoPresupuestados))
+                ),
+                React.createElement('div',{style:{backgroundColor:'#E2E8F0',borderRadius:4,height:8,overflow:'hidden'}},
+                  React.createElement('div',{style:{backgroundColor:'#10B981',height:'100%',width:(totalCobradoDash>0?Math.min(100,(ingresosNoPresupuestados/totalCobradoDash)*100):0)+'%'}})
+                )
+              )
+            )
+          ),
           return React.createElement('div',{key:k.label,style:{...card,backgroundColor:k.bg,border:'1px solid '+k.color+'33'}},
             React.createElement('div',{style:{fontSize:11,fontWeight:700,color:k.color,textTransform:'uppercase',letterSpacing:'0.07em',marginBottom:4}},k.icon+' '+k.label),
             React.createElement('div',{style:{fontFamily:"'Oswald',system-ui",fontSize:22,fontWeight:700,color:k.color}},k.val)
