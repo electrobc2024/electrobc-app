@@ -5274,15 +5274,6 @@ function setupGlobalNav() {
 
 // ── App ───────────────────────────────────────────────────────────────────────
 
-function App() {
-  const [activeTab, setActiveTab] = React.useState('dashboard');
-  const [egresos, setEgresos] = React.useState(JSON.parse(localStorage.getItem('ebc-egresos-v1') || '[]'));
-  const [quotes, setQuotes] = React.useState(JSON.parse(localStorage.getItem('ebc-quotes-v6') || '[]'));
-  
-  const onSaveEgresos = (nuevos) => {
-    setEgresos(nuevos);
-    localStorage.setItem('ebc-egresos-v1', JSON.stringify(nuevos));
-  };
 
   // Selector de navegación
   if (activeTab === 'cargar') {
@@ -5978,3 +5969,19 @@ ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(
   new MutationObserver(function(){setTimeout(f,400);}).observe(document.body,{childList:true,subtree:true});
 })();</script>
 </body></html>
+
+function App() {
+  const [activeTab, setActiveTab] = React.useState('dashboard');
+  const [egresos, setEgresos] = React.useState(JSON.parse(localStorage.getItem('ebc-egresos-v1') || '[]'));
+  const [quotes, setQuotes] = React.useState(JSON.parse(localStorage.getItem('ebc-quotes-v6') || '[]'));
+  
+  const onSaveEgresos = (nuevos) => {
+    setEgresos(nuevos);
+    localStorage.setItem('ebc-egresos-v1', JSON.stringify(nuevos));
+  };
+
+  if (activeTab === 'cargar') {
+    return React.createElement(IngresosView, { quotes, egresos, onSaveEgresos, activeTab, setActiveTab });
+  }
+  return React.createElement(Dashboard, { quotes, egresos, onSaveEgresos, setActiveTab });
+}
