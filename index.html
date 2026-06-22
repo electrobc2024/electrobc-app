@@ -925,7 +925,13 @@ function ItemsTable({
       }
     }, "\uD83D\uDCBE guardar")), hints[r.id] && (() => {
       const h = hints[r.id];
-      return /*#__PURE__*/React.createElement("div", {
+    
+  // Lógica de navegación integrada
+  if (activeTab === 'cargar') {
+    return React.createElement(IngresosView, { quotes, egresos, onSaveEgresos, activeTab, setActiveTab });
+  }
+
+  return /*#__PURE__*/React.createElement("div", {
         style: {
           marginTop: 6,
           backgroundColor: h.priceDiff ? "#FFF7ED" : "#F0FDF4",
@@ -1117,6 +1123,12 @@ function SearchInput({
   onChange,
   placeholder
 }) {
+
+  // Lógica de navegación integrada
+  if (activeTab === 'cargar') {
+    return React.createElement(IngresosView, { quotes, egresos, onSaveEgresos, activeTab, setActiveTab });
+  }
+
   return /*#__PURE__*/React.createElement("div", {
     style: {
       position: "relative",
@@ -1170,6 +1182,12 @@ function SortBar({
   value,
   onChange
 }) {
+
+  // Lógica de navegación integrada
+  if (activeTab === 'cargar') {
+    return React.createElement(IngresosView, { quotes, egresos, onSaveEgresos, activeTab, setActiveTab });
+  }
+
   return /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
@@ -1208,6 +1226,12 @@ function FloatingError({
   onClose
 }) {
   if (!errors || !errors.length) return null;
+
+  // Lógica de navegación integrada
+  if (activeTab === 'cargar') {
+    return React.createElement(IngresosView, { quotes, egresos, onSaveEgresos, activeTab, setActiveTab });
+  }
+
   return /*#__PURE__*/React.createElement("div", {
     style: {
       position: "fixed",
@@ -1276,6 +1300,12 @@ function PriceHistory({
       fontStyle: "italic"
     }
   }, "Sin historial de precios todav\xEDa.");
+
+  // Lógica de navegación integrada
+  if (activeTab === 'cargar') {
+    return React.createElement(IngresosView, { quotes, egresos, onSaveEgresos, activeTab, setActiveTab });
+  }
+
   return /*#__PURE__*/React.createElement("div", {
     style: {
       padding: "8px 12px 12px"
@@ -2608,7 +2638,13 @@ function PrintDoc({
     hideCant
   }) => {
     if(hidden||!rows||rows.length===0||rows.every(r=>!r.desc||parseFloat(r.pu)===0)) return null;
-    return /*#__PURE__*/React.createElement("div", {
+  
+  // Lógica de navegación integrada
+  if (activeTab === 'cargar') {
+    return React.createElement(IngresosView, { quotes, egresos, onSaveEgresos, activeTab, setActiveTab });
+  }
+
+  return /*#__PURE__*/React.createElement("div", {
     style: {
       marginBottom: 22
     }
@@ -2713,6 +2749,12 @@ function PrintDoc({
     }
   }, "$ ", fmt(sub))))));
   };
+
+  // Lógica de navegación integrada
+  if (activeTab === 'cargar') {
+    return React.createElement(IngresosView, { quotes, egresos, onSaveEgresos, activeTab, setActiveTab });
+  }
+
   return /*#__PURE__*/React.createElement("div", {
     className: "print-page",
     style: {
@@ -3095,6 +3137,12 @@ function PdfOverlay({
     cursor: "pointer",
     opacity: status === "loading" ? 0.6 : 1
   };
+
+  // Lógica de navegación integrada
+  if (activeTab === 'cargar') {
+    return React.createElement(IngresosView, { quotes, egresos, onSaveEgresos, activeTab, setActiveTab });
+  }
+
   return /*#__PURE__*/React.createElement("div", {
     style: {
       position: "fixed",
@@ -3305,6 +3353,12 @@ function EsperaCountdown({
   const dias = Math.floor((Date.now() - desde.getTime()) / (1000 * 60 * 60 * 24));
   const restantes = DIAS_ESPERA - dias;
   const color = restantes <= 3 ? "#DC2626" : restantes <= 7 ? "#B45309" : "#64748B";
+
+  // Lógica de navegación integrada
+  if (activeTab === 'cargar') {
+    return React.createElement(IngresosView, { quotes, egresos, onSaveEgresos, activeTab, setActiveTab });
+  }
+
   return /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 10,
@@ -4874,7 +4928,13 @@ const updCli = (f, v) => {
         var q = clientSearch.toLowerCase();
         return !q || (c.nombre||"").toLowerCase().includes(q) || (c.administracion||"").toLowerCase().includes(q) || (c.empresa||"").toLowerCase().includes(q);
       }).sort(function(a,b){return (a.nombre||"").localeCompare(b.nombre||"");}).map(function(c){
-        return /*#__PURE__*/React.createElement("div", {
+      
+  // Lógica de navegación integrada
+  if (activeTab === 'cargar') {
+    return React.createElement(IngresosView, { quotes, egresos, onSaveEgresos, activeTab, setActiveTab });
+  }
+
+  return /*#__PURE__*/React.createElement("div", {
           key: c.id,
           onMouseDown: function() { pickClient(c.id); setClientSearch(""); setShowClientDrop(false); },
           style: {padding:"8px 12px",fontSize:13,color:"#1E293B",cursor:"pointer",backgroundColor:selectedClientId===c.id?"#F0F4FF":"#fff"}
@@ -5390,6 +5450,12 @@ function setupGlobalNav() {
     {id:"dashboard",   label:"📊 Dashboard Financiero"},
   ];
   const nav = [...navMain, ...navFin];
+
+  // Lógica de navegación integrada
+  if (activeTab === 'cargar') {
+    return React.createElement(IngresosView, { quotes, egresos, onSaveEgresos, activeTab, setActiveTab });
+  }
+
   return /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
