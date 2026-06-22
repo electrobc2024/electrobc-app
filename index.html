@@ -5701,6 +5701,7 @@ function MdoCalc({tipoCliente,updMdoWithCalc,clienteSeleccionado}){
 }
 
 
+const card = { backgroundColor: '#FFFFFF', borderRadius: 8, padding: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.1)' };
 const EGRESO_CATS = [
   {id:'sueldos', label:'\u{1F477} Sueldos', color:'#7C3AED'},
   {id:'materiales', label:'\u{1F3EA} Materiales / Borello', color:'#DC2626'},
@@ -5712,7 +5713,7 @@ const EGRESO_CATS = [
 ];
 
 function IngresosView({
-  const card = { backgroundColor: '#FFFFFF', borderRadius: 8, padding: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.1)' };quotes, egresos, onSaveEgresos, activeTab, setActiveTab}) {
+quotes, egresos, onSaveEgresos, activeTab, setActiveTab}) {
   var _now = new Date();
   var _curYear = _now.getFullYear();
   var _curMonth = _now.getMonth() + 1;
