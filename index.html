@@ -5838,7 +5838,13 @@ quotes, egresos, onSaveEgresos, activeTab, setActiveTab}) {
     return {...cat, total};
   }).filter(function(c){return c.total>0;}).sort(function(a,b){return b.total-a.total;});
 
-    return React.createElement('div', { style: { padding: 16 } },
+
+  // Selección de vista basada en la pestaña activa
+  if (activeTab === 'cargar') {
+    return React.createElement(IngresosView, { quotes, egresos, onSaveEgresos, activeTab, setActiveTab });
+  }
+
+  return React.createElement('div', { style: { padding: 16 } },
       // Tarjeta superior: Desglose Origen de Ingresos
       typeof ingresosPresupuestados !== 'undefined' && React.createElement('div', { style: { ...card, marginTop: 0, marginBottom: 16 } },
         React.createElement('div', { style: { fontSize: 13, fontWeight: 700, color: NAVY, marginBottom: 12 } }, "📈 Origen de los Ingresos (ARS)"),
