@@ -5773,8 +5773,8 @@ function IngresosView({quotes, egresos, onSaveEgresos, activeTab, setActiveTab})
   const allCobrosCombinadosDash = cobrosFiltradosDash.concat(ingresosManualesDash.map(function(e){
     return {qNumero:'',qCliente:'',monto:parseFloat(e.monto)||0,fecha:e.fecha,desc:e.desc,manual:true};
   }));
-  const totalCobradoDash = allCobrosCombinadosDash.reduce(function(s,c){return s+c.monto;},0);
-  const totalEgresosDash = egresosFiltradosDash.reduce(function(s,e){return s+(parseFloat(e.monto)||0);},0);
+  const totalCobradoDash = allCobrosCombinadosDash.filter(function(c){return (c.moneda||'$')==='$';}).reduce(function(s,c){return s+c.monto;},0);
+  const totalEgresosDash = egresosFiltradosDash.filter(function(e){return (e.moneda||'$')==='$';}).reduce(function(s,e){return s+(parseFloat(e.monto)||0);},0);
   const gananciaDash = totalCobradoDash - totalEgresosDash;
 
   // ── Totales en USD (Dashboard), separados sin convertir ────────────────────
@@ -5945,7 +5945,7 @@ function IngresosView({quotes, egresos, onSaveEgresos, activeTab, setActiveTab})
 
         // Ganancia GJF
         React.createElement('div',{style:{...card}},
-          React.createElement('div',{style:{fontSize:13,fontWeight:700,color:NAVY,marginBottom:12}},'\u{1F91D} Distribución GJF'),
+          React.createElement('div',{style:{fontSize:13,fontWeight:700,color:NAVY,marginBottom:12}},'\u{1F91D} Distribución de la ganancia'),
           React.createElement('div',{style:{backgroundColor:'#F8FAFC',borderRadius:8,padding:'12px 14px',marginBottom:12}},
             React.createElement('div',{style:{fontSize:11,color:'#94A3B8',fontWeight:700,textTransform:'uppercase',marginBottom:6}},'Ganancia neta del período'),
             React.createElement('div',{style:{fontFamily:"'Oswald',system-ui",fontSize:24,fontWeight:700,color:gananciaDash>=0?'#065F46':'#DC2626'}},fmt(gananciaDash))
