@@ -42,7 +42,8 @@ const NAVY = "#0A0F1E",
   ORANGE = "#F26B1D";
 const SKEY = "ebc-quotes-v6",
   CKEY = "ebc-catalog-v2",
-  CLKEY = "ebc-clients-v2";
+  CLKEY = "ebc-clients-v2",
+  EKEY = "ebc-egresos-v1";
 
 // Configurar con el enlace de invitación al grupo de WhatsApp de presupuestos
 const WA_GRUPO = "https://chat.whatsapp.com/IphhQd8vcU7HA4bgOALkyY?mode=gi_t";
@@ -5827,7 +5828,7 @@ function IngresosView({quotes, egresos, onSaveEgresos, activeTab, setActiveTab})
     setEgForm({...e});
     setEditId(e.id);
     setShowForm(true);
-    setTab('egresos');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   function handleDeleteEgreso(id) {
