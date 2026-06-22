@@ -5786,6 +5786,21 @@ function IngresosView({quotes, egresos, onSaveEgresos, activeTab, setActiveTab})
   const totalEgresosDash = egresosFiltradosDash.filter(function(e){return (e.moneda||'$')==='$';}).reduce(function(s,e){return s+(parseFloat(e.monto)||0);},0);
   const gananciaDash = totalCobradoDash - totalEgresosDash;
 
+  // Calcular lo pendiente de cobro filtrado por el período del Dashboard
+  const cotizacionesAceptadasPeriodo = (quotes || []).filter(function(q) {
+    // Si el presupuesto tiene fecha, la filtramos por el período seleccionado
+    return q.status === 'aceptado' && (!q.fecha || inPeriod(q.fecha, dashAnosVer, dashMesesVer));
+  });
+
+  const totalAceptadoPeriodo = cotizacionesAceptadasPeriodo.reduce(function(s, q) {
+    const mdo = (q.mdo || []).reduce(function(a, r) { return a + (parseFloat(r.pu) || 0) * (parseFloat(r.qty) || 1); }, 0);
+    const mat = (q.mat || []).reduce(function(a, r) { return a + (parseFloat(r.pu) || 0) * (parseFloat(r.qty) || 1); }, 0);
+    return s + mdo + mat;
+  }, 0);
+
+  // Restamos lo que ya se cobró de esos presupuestos en este período (ingresosPresupuestados ya lo tenés calculado arriba)
+  const pendienteCobroDash = Math.max(0, totalAceptadoPeriodo - ingresosPresupuestados);
+
   // ── Desglose de ingresos: Presupuestados vs No Presupuestados ──
 
 
