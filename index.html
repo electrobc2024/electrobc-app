@@ -5429,14 +5429,6 @@ function App() {
     setClients(u);
     await saveCl(u);
   }, [clients]);
-function LoadingScreen() {  if (loading) return React.createElement(LoadingScreen, null); // /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      height: "100vh",
-      color: "#94A3B8"
-    }
   }, "Cargando\u2026");
 }  const navMain = [
     {id:"form",    label:"📋 Nuevo Presupuesto"},
@@ -5445,7 +5437,7 @@ function LoadingScreen() {  if (loading) return React.createElement(LoadingScree
     {id:"catMat",  label:"📦 Materiales"},
     {id:"tracker", label:"📈 Seguimiento de Presupuestos"},
   ];
-  const navFin = [
+  }  const navFin = [
     {id:"movimientos", label:"💱 Cargar Ingresos / Egresos"},
     {id:"dashboard",   label:"📊 Dashboard Financiero"},
   ];
