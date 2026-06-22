@@ -5711,7 +5711,8 @@ const EGRESO_CATS = [
   {id:'clientes', label:'\u{1F4E6} Compras para clientes', color:'#0369A1'},
 ];
 
-function IngresosView({quotes, egresos, onSaveEgresos, activeTab, setActiveTab}) {
+function IngresosView({
+  const card = { backgroundColor: '#FFFFFF', borderRadius: 8, padding: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.1)' };quotes, egresos, onSaveEgresos, activeTab, setActiveTab}) {
   var _now = new Date();
   var _curYear = _now.getFullYear();
   var _curMonth = _now.getMonth() + 1;
