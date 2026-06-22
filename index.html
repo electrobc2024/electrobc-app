@@ -5334,10 +5334,6 @@ function setupGlobalNav() {
 
 // ── App ───────────────────────────────────────────────────────────────────────
 
-function App() {
-  // Selector de navegación
-  if (activeTab === 'cargar') {
-    return React.createElement(IngresosView, { quotes, egresos, onSaveEgresos, activeTab, setActiveTab });
   }
 
   return React.createElement(Dashboard, { quotes, egresos, onSaveEgresos, setActiveTab });
@@ -6028,15 +6024,6 @@ ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(
 })();</script>
 </body></html>
 
-function App() {
-  const [activeTab, setActiveTab] = React.useState('dashboard');
-  const [egresos, setEgresos] = React.useState(JSON.parse(localStorage.getItem('ebc-egresos-v1') || '[]'));
-  const [quotes, setQuotes] = React.useState(JSON.parse(localStorage.getItem('ebc-quotes-v6') || '[]'));
-  
-  const onSaveEgresos = (nuevos) => {
-    setEgresos(nuevos);
-    localStorage.setItem('ebc-egresos-v1', JSON.stringify(nuevos));
-  };
 
   if (activeTab === 'cargar') {
     return React.createElement(IngresosView, { quotes, egresos, onSaveEgresos, activeTab, setActiveTab });
