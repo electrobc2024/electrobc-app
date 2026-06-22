@@ -5773,11 +5773,7 @@ function IngresosView({quotes, egresos, onSaveEgresos, activeTab, setActiveTab})
   const allCobrosCombinadosDash = cobrosFiltradosDash.concat(ingresosManualesDash.map(function(e){
     return {qNumero:'',qCliente:'',monto:parseFloat(e.monto)||0,fecha:e.fecha,desc:e.desc,manual:true};
   }));
-  const totalCobradoDash = allCobrosCombinadosDash.filter(function(c){return (c.moneda||'$')==='$';}).reduce(function(s,c){return s+c.monto;},0);
-  const totalEgresosDash = egresosFiltradosDash.filter(function(e){return (e.moneda||'$')==='$';}).reduce(function(s,e){return s+(parseFloat(e.monto)||0);},0);
-  const gananciaDash = totalCobradoDash - totalEgresosDash;
-
-  // ── Desglose de ingresos: Presupuestados vs No Presupuestados ──
+  // ── Desglose de ingresos analíticos ──
   const ingresosPresupuestados = allCobrosCombinadosDash.filter(function(c){
     return (c.moneda||'$')==='$' && c.qNumero && c.qNumero.toString().trim() !== '';
   }).reduce(function(s,c){return s+c.monto;},0);
@@ -5785,6 +5781,13 @@ function IngresosView({quotes, egresos, onSaveEgresos, activeTab, setActiveTab})
   const ingresosNoPresupuestados = allCobrosCombinadosDash.filter(function(c){
     return (c.moneda||'$')==='$' && (!c.qNumero || c.qNumero.toString().trim() === '');
   }).reduce(function(s,c){return s+c.monto;},0);
+
+  const totalCobradoDash = allCobrosCombinadosDash.filter(function(c){return (c.moneda||'$')==='$';}).reduce(function(s,c){return s+c.monto;},0);
+  const totalEgresosDash = egresosFiltradosDash.filter(function(e){return (e.moneda||'$')==='$';}).reduce(function(s,e){return s+(parseFloat(e.monto)||0);},0);
+  const gananciaDash = totalCobradoDash - totalEgresosDash;
+
+  // ── Desglose de ingresos: Presupuestados vs No Presupuestados ──
+
 
   // ── Totales en USD (Dashboard), separados sin convertir ────────────────────
   const ingresosManualesUSDDash = (egresos||[]).filter(function(e){return inPeriod(e.fecha, dashAnosVer, dashMesesVer) && e.tipo==='ingreso' && e.moneda==='USD';});
@@ -5979,13 +5982,7 @@ function IngresosView({quotes, egresos, onSaveEgresos, activeTab, setActiveTab})
 
         // Ganancia GJF
         // ── Desglose de ingresos analíticos ──
-  const ingresosPresupuestados = allCobrosCombinadosDash.filter(function(c){
-    return (c.moneda||'$')==='$' && c.qNumero && c.qNumero.toString().trim() !== '';
-  }).reduce(function(s,c){return s+c.monto;},0);
 
-  const ingresosNoPresupuestados = allCobrosCombinadosDash.filter(function(c){
-    return (c.moneda||'$')==='$' && (!c.qNumero || c.qNumero.toString().trim() === '');
-  }).reduce(function(s,c){return s+c.monto;},0);
 
           // 📈 Tarjeta de Origen de los Ingresos
           React.createElement('div', { style: { ...card, marginTop: 16, marginBottom: 16 } },
@@ -6013,13 +6010,7 @@ function IngresosView({quotes, egresos, onSaveEgresos, activeTab, setActiveTab})
           ),
 
           // ── Desglose de ingresos analíticos ──
-  const ingresosPresupuestados = allCobrosCombinadosDash.filter(function(c){
-    return (c.moneda||'$')==='$' && c.qNumero && c.qNumero.toString().trim() !== '';
-  }).reduce(function(s,c){return s+c.monto;},0);
 
-  const ingresosNoPresupuestados = allCobrosCombinadosDash.filter(function(c){
-    return (c.moneda||'$')==='$' && (!c.qNumero || c.qNumero.toString().trim() === '');
-  }).reduce(function(s,c){return s+c.monto;},0);
 
           // 📈 Tarjeta de Origen de los Ingresos
           React.createElement('div', { style: { ...card, marginTop: 16, marginBottom: 16 } },
