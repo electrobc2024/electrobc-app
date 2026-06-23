@@ -5332,38 +5332,41 @@ function App() {
       // Auto-save client if new
       if (updated.cliente && updated.cliente.nombre && updated.cliente.nombre.trim()) {
         const cNorm = updated.cliente.nombre.trim().toLowerCase();
-        const clientExists = clientsRef.current.some(c => c.nombre.trim().toLowerCase() === cNorm);
-        if (!clientExists) {
-          const newClient = {id: uid(), nombre: updated.cliente.nombre.trim(), empresa: updated.cliente.empresa||"", administracion: updated.cliente.administracion||"", telefono: updated.cliente.telefono||"", telefonoAdm: updated.cliente.telefonoAdm||"", tipo: "particular"};
-          const newClients = [...clientsRef.current, newClient];
-          setClients(newClients);
-          saveC(newClients).catch(()=>{});
-        }
+        setClients(function(prev) {
+          const clientExists = prev.some(function(c){ return c.nombre.trim().toLowerCase() === cNorm; });
+          if (!clientExists) {
+            const newClient = {id: uid(), nombre: updated.cliente.nombre.trim(), empresa: updated.cliente.empresa||"", administracion: updated.cliente.administracion||"", telefono: updated.cliente.telefono||"", telefonoAdm: updated.cliente.telefonoAdm||"", tipo: "particular"};
+            const newClients = [...prev, newClient];
+            saveC(newClients).catch(function(){});
+            return newClients;
+          }
+          return prev;
+        });
       }
-      console.log("AUTO-SAVE: mdo rows=", updated.mdo, "mat rows=", updated.mat, "catalog=", catalog);
-      // Auto-save new MdO items to catalog
-      var newMdoCat = [...catalog.mdo];
-      var mdoChanged = false;
-      (updated.mdo||[]).forEach(function(r) {
-        if (r.desc && r.desc.trim() && parseFloat(r.pu) > 0 && !r.catId) {
-          var exists = newMdoCat.some(c => c.nombre.trim().toLowerCase() === r.desc.trim().toLowerCase());
-          if (!exists) { newMdoCat.push({id: uid(), nombre: r.desc.trim(), precioBase: r.pu, historial: [{fecha: new Date().toISOString(), precio: r.pu}]}); mdoChanged = true; }
+      // Auto-save new MdO+Mat items to catalog
+      setCatalog(function(prevCat) {
+        var newMdoCat = [...(prevCat.mdo||[])];
+        var newMatCat = [...(prevCat.mat||[])];
+        var changed = false;
+        (updated.mdo||[]).forEach(function(r) {
+          if (r.desc && r.desc.trim() && parseFloat(r.pu) > 0 && !r.catId) {
+            var exists = newMdoCat.some(function(c){ return c.nombre.trim().toLowerCase() === r.desc.trim().toLowerCase(); });
+            if (!exists) { newMdoCat.push({id: uid(), nombre: r.desc.trim(), precioBase: r.pu, historial: [{fecha: new Date().toISOString(), precio: r.pu}]}); changed = true; }
+          }
+        });
+        (updated.mat||[]).forEach(function(r) {
+          if (r.desc && r.desc.trim() && parseFloat(r.pu) > 0 && !r.catId) {
+            var exists = newMatCat.some(function(c){ return c.nombre.trim().toLowerCase() === r.desc.trim().toLowerCase(); });
+            if (!exists) { newMatCat.push({id: uid(), nombre: r.desc.trim(), precioBase: r.pu, historial: [{fecha: new Date().toISOString(), precio: r.pu}]}); changed = true; }
+          }
+        });
+        if (changed) {
+          var newCat = {mdo: newMdoCat, mat: newMatCat};
+          saveCat(newCat).catch(function(){});
+          return newCat;
         }
+        return prevCat;
       });
-      // Auto-save new Mat items to catalog
-      var newMatCat = [...catalog.mat];
-      var matChanged = false;
-      (updated.mat||[]).forEach(function(r) {
-        if (r.desc && r.desc.trim() && parseFloat(r.pu) > 0 && !r.catId) {
-          var exists = newMatCat.some(c => c.nombre.trim().toLowerCase() === r.desc.trim().toLowerCase());
-          if (!exists) { newMatCat.push({id: uid(), nombre: r.desc.trim(), precioBase: r.pu, historial: [{fecha: new Date().toISOString(), precio: r.pu}]}); matChanged = true; }
-        }
-      });
-      if (mdoChanged || matChanged) {
-        const newCat = {mdo: newMdoCat, mat: newMatCat};
-        setCatalog(newCat);
-        saveCat(newCat).catch(()=>{});
-      }
     } else {
       setQuote(updated);
     }
