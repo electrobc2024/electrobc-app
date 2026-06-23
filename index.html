@@ -4116,7 +4116,7 @@ function Tracker({
       style: {
         color: "#475569"
       }
-    }, r.desc), /*#__PURE__*/React.createElement("span", {
+    }, /*#__PURE__*/React.createElement("span", null, r.qty && parseFloat(r.qty) !== 1 ? r.qty + " × " : "", r.desc)), /*#__PURE__*/React.createElement("span", {
       style: {
         fontVariantNumeric: "tabular-nums",
         color: NAVY
