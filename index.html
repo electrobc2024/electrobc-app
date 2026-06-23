@@ -5325,7 +5325,7 @@ function App() {
     const nl = exists ? cur.map(q => q.id === updated.id ? updated : q) : [...cur, updated];
     setQuotes(nl);
     saveQ(nl).catch(() => {});
-    if (statusRaw === "generar") {
+    if (statusRaw === "generar" || exists) {
       const maxNum = nl.reduce((m, q) => Math.max(m, parseInt(q.numero) || 0), NUM_INICIO - 1);
       setQuote(mkQuote(String(maxNum + 1).padStart(4, "0")));
       setPdfQuote(updated);
