@@ -902,15 +902,7 @@ function ItemsTable({
       }
     }), onSaveToCatalog && r.desc.trim() && parseFloat(r.pu) > 0 && !hints[r.id] && /*#__PURE__*/React.createElement("button", {
       onMouseDown: e => e.preventDefault(),
-      onClick: () => onSaveToCatalog({
-        id: uid(),
-        nombre: r.desc.trim(),
-        precioBase: r.pu,
-        historial: [{
-          fecha: new Date().toISOString(),
-          precio: r.pu
-        }]
-      }),
+      onClick: () => { var item={id:uid(),nombre:r.desc.trim(),precioBase:r.pu,historial:[{fecha:new Date().toISOString(),precio:r.pu}]}; onSaveToCatalog(item); setHints(function(h){var n={};Object.assign(n,h);n[r.id]=item;return n;}); },
       title: "Guardar en cat\xE1logo",
       style: {
         flexShrink: 0,
