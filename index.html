@@ -4600,6 +4600,16 @@ const updCli = (f, v) => {
   const [selectedClientId, setSelectedClientId] = useState("");
   const [clientSearch, setClientSearch] = useState("");
   const [showClientDrop, setShowClientDrop] = useState(false);
+  // Sync client when editing existing quote
+  useEffect(() => {
+    if (quote && quote.numero) {
+      const match = clients.find(c => c.nombre === quote.cliente.nombre && (!quote.cliente.administracion || c.administracion === quote.cliente.administracion));
+      if (match) setSelectedClientId(match.id);
+      else setSelectedClientId("");
+    } else {
+      setSelectedClientId("");
+    }
+  }, [quote && quote.id]);
   const [dupDismissedFor, setDupDismissedFor] = useState(""); // normName del nombre para el que el usuario ya dijo "no es el mismo"
   const possibleDupClient = React.useMemo(() => {
     const nameRaw = (quote.cliente.nombre || "").trim();
