@@ -5340,6 +5340,7 @@ function App() {
           saveC(newClients).catch(()=>{});
         }
       }
+      console.log("AUTO-SAVE: mdo rows=", updated.mdo, "mat rows=", updated.mat, "catalog=", catalog);
       // Auto-save new MdO items to catalog
       var newMdoCat = [...catalog.mdo];
       var mdoChanged = false;
