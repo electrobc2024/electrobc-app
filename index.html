@@ -5359,7 +5359,9 @@ function App() {
         }
       });
       if (mdoChanged || matChanged) {
-        handleCatalog({...catalog, mdo: newMdoCat, mat: newMatCat});
+        const newCat = {mdo: newMdoCat, mat: newMatCat};
+        setCatalog(newCat);
+        saveCat(newCat).catch(()=>{});
       }
     } else {
       setQuote(updated);
