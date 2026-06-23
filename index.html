@@ -680,6 +680,7 @@ function ItemsTable({
   tableBase = 100
 }) {
   const [hints, setHints] = useState({}); // rowId → matched catalog item
+  const [descSearch, setDescSearch] = useState({}); // rowId → bool show drop
   const setRow = useCallback((id, f, v) => onChange(rows.map(r => r.id === id ? {
     ...r,
     [f]: v
@@ -882,12 +883,14 @@ function ItemsTable({
         display: "flex",
         gap: 4,
         alignItems: "center",
-        marginTop: 4
+        marginTop: 4,
+        position: "relative"
       }
     }, /*#__PURE__*/React.createElement("input", {
       value: r.desc,
-      onChange: e => setRow(r.id, "desc", e.target.value),
-      onBlur: e => handleDescBlur(r.id, e.target.value, r.pu),
+      onChange: function(e){ setRow(r.id,"desc",e.target.value); setDescSearch(function(s){var n=Object.assign({},s);n[r.id]=true;return n;}); },
+      onFocus: function(){ setDescSearch(function(s){var n=Object.assign({},s);n[r.id]=true;return n;}); },
+      onBlur: function(e){ handleDescBlur(r.id,e.target.value,r.pu); setTimeout(function(){setDescSearch(function(s){var n=Object.assign({},s);n[r.id]=false;return n;});},200); },
       style: {
         ...iS,
         flex: 1
@@ -900,7 +903,18 @@ function ItemsTable({
           focusPu();
         }
       }
-    }), onSaveToCatalog && r.desc.trim() && parseFloat(r.pu) > 0 && !hints[r.id] && /*#__PURE__*/React.createElement("button", {
+    }), descSearch[r.id] && r.desc && r.desc.trim().length >= 2 && catalog.some(function(c){return c.nombre.toLowerCase().includes(r.desc.toLowerCase());}) &&
+      /*#__PURE__*/React.createElement('div',{style:{position:'absolute',left:0,top:'100%',width:'100%',zIndex:99,backgroundColor:'#fff',border:'1px solid #E2E8F0',borderRadius:6,boxShadow:'0 4px 12px rgba(0,0,0,0.1)',maxHeight:150,overflowY:'auto',marginTop:2}},
+        catalog.filter(function(c){return c.nombre.toLowerCase().includes(r.desc.toLowerCase());}).slice(0,6).map(function(c){
+          return /*#__PURE__*/React.createElement('div',{key:c.id,
+            onMouseDown:function(){setRow(r.id,'desc',c.nombre);setRow(r.id,'catId',c.id);setRow(r.id,'pu',c.precioBase);setDescSearch(function(s){var n=Object.assign({},s);n[r.id]=false;return n;});},
+            style:{padding:'7px 10px',fontSize:12,color:'#1E293B',cursor:'pointer',borderBottom:'1px solid #F1F5F9',display:'flex',justifyContent:'space-between'}},
+            c.nombre,
+            /*#__PURE__*/React.createElement('span',{style:{color:'#94A3B8',fontSize:11}},'$ '+c.precioBase)
+          );
+        })
+      ),
+      onSaveToCatalog && r.desc.trim() && parseFloat(r.pu) > 0 && !hints[r.id] && /*#__PURE__*/React.createElement("button", {
       onMouseDown: e => e.preventDefault(),
       onClick: () => onSaveToCatalog({
         id: uid(),
