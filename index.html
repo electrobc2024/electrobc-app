@@ -5810,7 +5810,7 @@ function IngresosView({quotes, egresos, onSaveEgresos, activeTab, setActiveTab})
   const egresosFiltradosDash = (egresos||[]).filter(function(e){return inPeriod(e.fecha, dashAnosVer, dashMesesVer) && e.tipo!=='ingreso' && (e.moneda||'$')==='$';});
   const ingresosManualesDash = (egresos||[]).filter(function(e){return inPeriod(e.fecha, dashAnosVer, dashMesesVer) && e.tipo==='ingreso' && (e.moneda||'$')==='$';});
   const allCobrosCombinadosDash = cobrosFiltradosDash.concat(ingresosManualesDash.map(function(e){
-    return {qNumero:'',qCliente:'',monto:parseFloat(e.monto)||0,fecha:e.fecha,desc:e.desc,manual:true};
+    return {qNumero:'',qCliente:'',monto:parseFloat(e.monto)||0,fecha:e.fecha,desc:e.desc,manual:true,moneda:e.moneda||'$'};
   }));
   // ── Desglose de ingresos analíticos ──
   const ingresosPresupuestados = allCobrosCombinadosDash.filter(function(c){
@@ -5847,7 +5847,7 @@ function IngresosView({quotes, egresos, onSaveEgresos, activeTab, setActiveTab})
   const ingresosManualesUSDDash = (egresos||[]).filter(function(e){return inPeriod(e.fecha, dashAnosVer, dashMesesVer) && e.tipo==='ingreso' && e.moneda==='USD';});
   const egresosUSDDash = (egresos||[]).filter(function(e){return inPeriod(e.fecha, dashAnosVer, dashMesesVer) && e.tipo!=='ingreso' && e.moneda==='USD';});
   const totalIngresosUSDDash = ingresosManualesUSDDash.reduce(function(s,e){return s+(parseFloat(e.monto)||0);},0);
-  const cobradoUSDDash = allCobrosCombinadosDash.filter(function(c){return c.moneda==='USD';}).reduce(function(s,c){return s+c.monto;},0) + totalIngresosUSDDash;
+  const cobradoUSDDash = allCobrosCombinadosDash.filter(function(c){return c.moneda==='USD';}).reduce(function(s,c){return s+c.monto;},0);
   const totalEgresosUSDDash = egresosUSDDash.reduce(function(s,e){return s+(parseFloat(e.monto)||0);},0);
   const gananciaUSDDash = cobradoUSDDash - totalEgresosUSDDash;
 
