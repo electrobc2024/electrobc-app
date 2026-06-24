@@ -5942,6 +5942,19 @@ function IngresosView({quotes, egresos, onSaveEgresos, activeTab, setActiveTab})
           {label:'Pendiente de cobro',val:fmt(pendienteCobroDash),color:'#92400E',bg:'#FFFBEB',icon:'\u23F3'},
           {label:'Egresos'+(dashMesesVer.length>0?' (mes)':dashAnosVer.length>0?' (año)':''),val:fmt(totalEgresosDash),color:'#991B1B',bg:'#FFF1F2',icon:'\u{1F4B8}'},
           {label:'Ganancia neta',val:fmt(gananciaDash),color:gananciaDash>=0?'#065F46':'#991B1B',bg:gananciaDash>=0?'#ECFDF5':'#FFF1F2',icon:'\u{1F4C8}'},
+          {label:'Devengado total',val:fmt(totalDevengado),color:'#1D4ED8',bg:'#EFF6FF',icon:'\u{1F4CB}'},
+        ].map(function(k){
+          return React.createElement('div',{key:k.label,style:{...card,backgroundColor:k.bg,border:'1px solid '+k.color+'33'}},
+            React.createElement('div',{style:{fontSize:11,fontWeight:700,color:k.color,textTransform:'uppercase',letterSpacing:'0.07em',marginBottom:4}},k.icon+' '+k.label),
+            React.createElement('div',{style:{fontFamily:"'Oswald',system-ui",fontSize:22,fontWeight:700,color:k.color}},k.val)
+          );
+        })
+      ),
+      (totalIngresosUSDDash>0||totalEgresosUSDDash>0) && React.createElement('div',{style:{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:12,marginBottom:20}},
+        [
+          {label:'Ingresos USD'+(dashMesesVer.length>0?' (mes)':dashAnosVer.length>0?' (año)':''),val:'USD '+totalIngresosUSDDash.toLocaleString('es-AR',{maximumFractionDigits:0}),color:'#065F46',bg:'#ECFDF5',icon:'\u{1F4B5}'},
+          {label:'Egresos USD'+(dashMesesVer.length>0?' (mes)':dashAnosVer.length>0?' (año)':''),val:'USD '+totalEgresosUSDDash.toLocaleString('es-AR',{maximumFractionDigits:0}),color:'#991B1B',bg:'#FFF1F2',icon:'\u{1F4B8}'},
+          {label:'Ganancia USD',val:(gananciaUSDDash>=0?'':'- ')+'USD '+Math.abs(gananciaUSDDash).toLocaleString('es-AR',{maximumFractionDigits:0}),color:gananciaUSDDash>=0?'#065F46':'#991B1B',bg:gananciaUSDDash>=0?'#ECFDF5':'#FFF1F2',icon:'\u{1F4C8}'},
         ].map(function(k){
           return React.createElement('div',{key:k.label,style:{...card,backgroundColor:k.bg,border:'1px solid '+k.color+'33'}},
             React.createElement('div',{style:{fontSize:11,fontWeight:700,color:k.color,textTransform:'uppercase',letterSpacing:'0.07em',marginBottom:4}},k.icon+' '+k.label),
@@ -5950,6 +5963,32 @@ function IngresosView({quotes, egresos, onSaveEgresos, activeTab, setActiveTab})
         })
       ),
 
+      // Chart
+      React.createElement('div',{style:{...card,marginBottom:20}},
+        React.createElement('div',{style:{fontSize:13,fontWeight:700,color:NAVY,marginBottom:16}},'\u{1F4CA} Ingresos vs Egresos '+(dashAnosVer.length?dashAnosVer.join('/'):'todos los a\u00f1os')),
+        React.createElement('div',{style:{display:'flex',gap:2,alignItems:'flex-end',height:140,padding:'0 4px'}},
+          chartData.map(function(d,i){
+            const ingH = Math.round((d.ing/maxChart)*120);
+            const egrH = Math.round((d.egr/maxChart)*120);
+            return React.createElement('div',{key:i,style:{flex:1,display:'flex',flexDirection:'column',alignItems:'center',gap:2}},
+              React.createElement('div',{style:{display:'flex',gap:2,alignItems:'flex-end',height:120}},
+                React.createElement('div',{title:'Cobrado: '+fmt(d.ing),style:{width:10,height:Math.max(ingH,1),backgroundColor:'#059669',borderRadius:'2px 2px 0 0',cursor:'default'}}),
+                React.createElement('div',{title:'Egresos: '+fmt(d.egr),style:{width:10,height:Math.max(egrH,1),backgroundColor:'#DC2626',borderRadius:'2px 2px 0 0',cursor:'default'}})
+              ),
+              React.createElement('div',{style:{fontSize:9,color:'#94A3B8',marginTop:2}},d.mes)
+            );
+          })
+        ),
+        React.createElement('div',{style:{display:'flex',gap:16,marginTop:8,justifyContent:'center'}},
+          React.createElement('div',{style:{display:'flex',alignItems:'center',gap:4,fontSize:11,color:'#64748B'}},
+            React.createElement('div',{style:{width:12,height:12,backgroundColor:'#059669',borderRadius:2}}),
+            'Cobrado'
+          ),
+          React.createElement('div',{style:{display:'flex',alignItems:'center',gap:4,fontSize:11,color:'#64748B'}},
+            React.createElement('div',{style:{width:12,height:12,backgroundColor:'#DC2626',borderRadius:2}}),
+            'Egresos'
+          )
+        )
       ),
 
       // Egresos por categoría + Ganancia GJF
