@@ -5822,7 +5822,6 @@ function IngresosView({quotes, egresos, onSaveEgresos, activeTab, setActiveTab})
   }).reduce(function(s,c){return s+c.monto;},0);
 
   const totalCobradoDash = allCobrosCombinadosDash.filter(function(c){return (c.moneda||'$')==='$';}).reduce(function(s,c){return s+c.monto;},0);
-  const cobradoUSDDash = allCobrosCombinadosDash.filter(function(c){return c.moneda==='USD';}).reduce(function(s,c){return s+c.monto;},0) + totalIngresosUSDDash;
   const totalEgresosDash = egresosFiltradosDash.filter(function(e){return (e.moneda||'$')==='$';}).reduce(function(s,e){return s+(parseFloat(e.monto)||0);},0);
   const gananciaDash = totalCobradoDash - totalEgresosDash;
 
@@ -5848,6 +5847,7 @@ function IngresosView({quotes, egresos, onSaveEgresos, activeTab, setActiveTab})
   const ingresosManualesUSDDash = (egresos||[]).filter(function(e){return inPeriod(e.fecha, dashAnosVer, dashMesesVer) && e.tipo==='ingreso' && e.moneda==='USD';});
   const egresosUSDDash = (egresos||[]).filter(function(e){return inPeriod(e.fecha, dashAnosVer, dashMesesVer) && e.tipo!=='ingreso' && e.moneda==='USD';});
   const totalIngresosUSDDash = ingresosManualesUSDDash.reduce(function(s,e){return s+(parseFloat(e.monto)||0);},0);
+  const cobradoUSDDash = allCobrosCombinadosDash.filter(function(c){return c.moneda==='USD';}).reduce(function(s,c){return s+c.monto;},0) + totalIngresosUSDDash;
   const totalEgresosUSDDash = egresosUSDDash.reduce(function(s,e){return s+(parseFloat(e.monto)||0);},0);
   const gananciaUSDDash = totalIngresosUSDDash - totalEgresosUSDDash;
 
