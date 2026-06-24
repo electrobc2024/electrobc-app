@@ -5849,7 +5849,7 @@ function IngresosView({quotes, egresos, onSaveEgresos, activeTab, setActiveTab})
   const totalIngresosUSDDash = ingresosManualesUSDDash.reduce(function(s,e){return s+(parseFloat(e.monto)||0);},0);
   const cobradoUSDDash = allCobrosCombinadosDash.filter(function(c){return c.moneda==='USD';}).reduce(function(s,c){return s+c.monto;},0) + totalIngresosUSDDash;
   const totalEgresosUSDDash = egresosUSDDash.reduce(function(s,e){return s+(parseFloat(e.monto)||0);},0);
-  const gananciaUSDDash = totalIngresosUSDDash - totalEgresosUSDDash;
+  const gananciaUSDDash = cobradoUSDDash - totalEgresosUSDDash;
 
   // ── Datos filtrados para MOVIMIENTOS (usa movAnosVer/movMesesVer) ──────────
   const cobrosFiltradosMov = allCobros.filter(function(c){return inPeriod(c.fecha, movAnosVer, movMesesVer);});
