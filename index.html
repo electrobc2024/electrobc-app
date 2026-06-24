@@ -5936,7 +5936,6 @@ function IngresosView({quotes, egresos, onSaveEgresos, activeTab, setActiveTab})
       React.createElement('div',{style:{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:12,marginBottom:(totalIngresosUSDDash>0||totalEgresosUSDDash>0)?12:20}},
         [
           {label:'Cobrado'+(dashMesesVer.length>0?' (mes)':dashAnosVer.length>0?' (año)':''),val:fmt(totalCobradoDash),color:'#065F46',bg:'#ECFDF5',icon:'\u{1F4B5}'},
-          {label:'Pendiente de cobro',val:fmt(pendienteCobroDash),color:'#92400E',bg:'#FFFBEB',icon:'\u23F3'},
           {label:'Egresos'+(dashMesesVer.length>0?' (mes)':dashAnosVer.length>0?' (año)':''),val:fmt(totalEgresosDash),color:'#991B1B',bg:'#FFF1F2',icon:'\u{1F4B8}'},
           {label:'Ganancia neta',val:fmt(gananciaDash),color:gananciaDash>=0?'#065F46':'#991B1B',bg:gananciaDash>=0?'#ECFDF5':'#FFF1F2',icon:'\u{1F4C8}'},
           {label:'Devengado total',val:fmt(totalDevengado),color:'#1D4ED8',bg:'#EFF6FF',icon:'\u{1F4CB}'},
@@ -5972,11 +5971,12 @@ function IngresosView({quotes, egresos, onSaveEgresos, activeTab, setActiveTab})
           );
         })
       ),
-      (totalIngresosUSDDash>0||totalEgresosUSDDash>0) && React.createElement('div',{style:{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:12,marginBottom:20}},
+      (totalIngresosUSDDash>0||totalEgresosUSDDash>0) && React.createElement('div',{style:{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:12,marginBottom:20}},
         [
           {label:'Ingresos USD'+(dashMesesVer.length>0?' (mes)':dashAnosVer.length>0?' (año)':''),val:'USD '+totalIngresosUSDDash.toLocaleString('es-AR',{maximumFractionDigits:0}),color:'#065F46',bg:'#ECFDF5',icon:'\u{1F4B5}'},
           {label:'Egresos USD'+(dashMesesVer.length>0?' (mes)':dashAnosVer.length>0?' (año)':''),val:'USD '+totalEgresosUSDDash.toLocaleString('es-AR',{maximumFractionDigits:0}),color:'#991B1B',bg:'#FFF1F2',icon:'\u{1F4B8}'},
           {label:'Ganancia USD',val:(gananciaUSDDash>=0?'':'- ')+'USD '+Math.abs(gananciaUSDDash).toLocaleString('es-AR',{maximumFractionDigits:0}),color:gananciaUSDDash>=0?'#065F46':'#991B1B',bg:gananciaUSDDash>=0?'#ECFDF5':'#FFF1F2',icon:'\u{1F4C8}'},
+          {label:'Pendiente de cobro',val:fmt(pendienteCobroDash),color:'#92400E',bg:'#FFFBEB',icon:'\u23F3'},
         ].map(function(k){
           return React.createElement('div',{key:k.label,style:{...card,backgroundColor:k.bg,border:'1px solid '+k.color+'33'}},
             React.createElement('div',{style:{fontSize:11,fontWeight:700,color:k.color,textTransform:'uppercase',letterSpacing:'0.07em',marginBottom:4}},k.icon+' '+k.label),
