@@ -3159,9 +3159,13 @@ function PaymentsPanel({
   qid,
   pagos = [],
   total,
-  onUpdatePagos
+  onUpdatePagos,
+  qstatus
 }) {
-  const addPago = () => onUpdatePagos(qid, [...pagos, mkPago()]);
+  const addPago = () => {
+    if (qstatus !== 'aceptado') { alert('Solo se pueden cargar pagos en presupuestos aprobados.'); return; }
+    onUpdatePagos(qid, [...pagos, mkPago()]);
+  };
   const delPago = id => onUpdatePagos(qid, pagos.filter(p => p.id !== id));
   const setPago = (id, f, v) => onUpdatePagos(qid, pagos.map(p => p.id === id ? {
     ...p,
@@ -3268,7 +3272,7 @@ function PaymentsPanel({
       padding: "2px"
     }
   }, "\u2715"),
-  p.monto && p.fecha && /*#__PURE__*/React.createElement("button", {
+  p.monto && p.fecha && qstatus==='aceptado' && /*#__PURE__*/React.createElement("button", {
     onClick: () => onUpdatePagos(qid, pagos),
     style: {background:"none",border:"1px solid #86EFAC",borderRadius:4,color:"#16A34A",fontSize:10,padding:"2px 6px",cursor:"pointer",fontWeight:700}
   }, "\u2713")
@@ -4191,7 +4195,8 @@ function Tracker({
       qid: q.id,
       pagos: pagos,
       total: total,
-      onUpdatePagos: onUpdatePagos
+      onUpdatePagos: onUpdatePagos,
+      qstatus: q.status
     }))), q.aclaraciones && /*#__PURE__*/React.createElement("div", {
       style: {
         marginTop: 12,
