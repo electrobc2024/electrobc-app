@@ -5886,7 +5886,17 @@ function IngresosView({quotes, egresos, onSaveEgresos, activeTab, setActiveTab})
   }, 0);
 
   // Restamos lo que ya se cobró de esos presupuestos en este período (ingresosPresupuestados ya lo tenés calculado arriba)
-  const pendienteCobroDash = Math.max(0, totalAceptadoPeriodo - ingresosPresupuestados);
+  const pendienteCobroDash = cotizacionesAceptadasPeriodo.reduce(function(s, q) {
+    var mdo = (q.mdo||[]).reduce(function(a,r){return a+(parseFloat(r.pu)||0)*(parseFloat(r.qty)||1);},0);
+    var mat = (q.mat||[]).reduce(function(a,r){return a+(parseFloat(r.pu)||0)*(parseFloat(r.qty)||1);},0);
+    var total = mdo + mat;
+    var cobrado = (q.pagos||[]).reduce(function(a,p){
+      var monto = parseFloat(p.monto||0);
+      if (p.moneda==='USD') monto = monto * parseFloat(p.tcambio||0);
+      return a + monto;
+    }, 0);
+    return s + Math.max(0, total - cobrado);
+  }, 0);
 
   // ── Desglose de ingresos: Presupuestados vs No Presupuestados ──
 
