@@ -3221,7 +3221,15 @@ function PaymentsPanel({
     }
   }, /*#__PURE__*/React.createElement("option", { value: "$" }, "$"), /*#__PURE__*/React.createElement("option", { value: "USD" }, "USD")), /*#__PURE__*/React.createElement("input", {
     value: p.monto,
-    onChange: e => setPago(p.id, "monto", e.target.value),
+    onChange: e => {
+      var tc = parseFloat(p.tcambio||1);
+      var otrosARS = pagos.filter(function(x){return x.id!==p.id&&(x.moneda||"$")==="$";}).reduce(function(s,x){return s+parseFloat(x.monto||0);},0);
+      var otrosUSD = pagos.filter(function(x){return x.id!==p.id&&x.moneda==="USD";}).reduce(function(s,x){return s+(parseFloat(x.monto||0)*parseFloat(x.tcambio||0));},0);
+      var maxARS = Math.max(0, total - otrosARS - otrosUSD);
+      var maxMonto = p.moneda==="USD" ? maxARS/tc : maxARS;
+      var val = p.moneda==="USD" ? Math.min(parseFloat(e.target.value)||0, maxMonto) : e.target.value;
+      setPago(p.id, "monto", p.moneda==="USD" ? String(Math.round(val*100)/100) : val);
+    },
     type: "number",
     min: "0",
     step: "0.01",
