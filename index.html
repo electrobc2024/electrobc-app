@@ -3177,7 +3177,8 @@ function PaymentsPanel({
   };
   const totalPagado = pagos.filter(p => (p.moneda||"$") === "$").reduce((s, p) => s + parseFloat(p.monto || 0), 0);
   const totalPagadoUSD = pagos.filter(p => p.moneda === "USD").reduce((s, p) => s + parseFloat(p.monto || 0), 0);
-  const resta = Math.max(0, total - totalPagado);
+  const totalPagadoUSDenARS = pagos.filter(p => p.moneda === "USD").reduce((s, p) => s + (parseFloat(p.monto||0) * parseFloat(p.tcambio||0)), 0);
+  const resta = Math.max(0, total - totalPagado - totalPagadoUSDenARS);
   const iS = {
     border: "none",
     borderBottom: "1px solid #CBD5E1",
