@@ -5453,15 +5453,27 @@ function App() {
       ...extra
     } : q));
   }, [quotes, persist]);
-  const handlePagos = useCallback(async (qid, pagos) => {
+  const handlePagos = useCallback(async (qid, newPagos) => {
+    // Validate: total pagado no puede superar el total del presupuesto
+    var q = quotes.find(function(x){return x.id===qid;});
+    if (q) {
+      var tot = (q.mdo||[]).reduce(function(s,r){return s+parseFloat(r.pu||0)*parseFloat(r.qty||1);},0) +
+                (q.mat||[]).reduce(function(s,r){return s+parseFloat(r.pu||0)*parseFloat(r.qty||1);},0);
+      var pagadoARS = newPagos.filter(function(p){return (p.moneda||"$")==="$";}).reduce(function(s,p){return s+parseFloat(p.monto||0);},0);
+      var pagadoUSD = newPagos.filter(function(p){return p.moneda==="USD";}).reduce(function(s,p){return s+(parseFloat(p.monto||0)*parseFloat(p.tcambio||0));},0);
+      if (pagadoARS + pagadoUSD > tot + 0.01) {
+        alert("El total de pagos ($" + Math.round(pagadoARS+pagadoUSD).toLocaleString("es-AR") + ") supera el total del presupuesto ($" + Math.round(tot).toLocaleString("es-AR") + "). Corregí el monto antes de guardar.");
+        return;
+      }
+    }
     // Save all pagos to state (including incomplete ones being edited)
-    var newQuotes = quotes.map(q => q.id === qid ? {...q, pagos} : q);
+    var newQuotes = quotes.map(function(x){ return x.id===qid ? {...x, pagos:newPagos} : x; });
     setQuotes(newQuotes);
     // Persist only complete pagos (monto + fecha)
-    var toSave = newQuotes.map(q => q.id === qid ? {
-      ...q,
-      pagos: pagos.filter(function(p){ return p.monto && parseFloat(p.monto)>0 && p.fecha && p.fecha.trim(); })
-    } : q);
+    var toSave = newQuotes.map(function(x){ return x.id===qid ? {
+      ...x,
+      pagos: newPagos.filter(function(p){ return p.monto && parseFloat(p.monto)>0 && p.fecha && p.fecha.trim(); })
+    } : x; });
     await saveQ(toSave);
   }, [quotes, persist]);
   const handleCatalog = useCallback(async u => {
