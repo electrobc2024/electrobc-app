@@ -3267,7 +3267,12 @@ function PaymentsPanel({
       fontSize: 12,
       padding: "2px"
     }
-  }, "\u2715"))), /*#__PURE__*/React.createElement("button", {
+  }, "\u2715"),
+  p.monto && p.fecha && /*#__PURE__*/React.createElement("button", {
+    onClick: () => onUpdatePagos(qid, pagos),
+    style: {background:"none",border:"1px solid #86EFAC",borderRadius:4,color:"#16A34A",fontSize:10,padding:"2px 6px",cursor:"pointer",fontWeight:700}
+  }, "\u2713")
+  )), /*#__PURE__*/React.createElement("button", {
     onClick: addPago,
     onMouseDown: e => e.preventDefault(),
     style: {
