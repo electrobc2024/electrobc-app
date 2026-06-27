@@ -5454,10 +5454,15 @@ function App() {
     } : q));
   }, [quotes, persist]);
   const handlePagos = useCallback(async (qid, pagos) => {
-    await persist(quotes.map(q => q.id === qid ? {
+    // Save all pagos to state (including incomplete ones being edited)
+    var newQuotes = quotes.map(q => q.id === qid ? {...q, pagos} : q);
+    setQuotes(newQuotes);
+    // Persist only complete pagos (monto + fecha)
+    var toSave = newQuotes.map(q => q.id === qid ? {
       ...q,
-      pagos
-    } : q));
+      pagos: pagos.filter(function(p){ return p.monto && parseFloat(p.monto)>0 && p.fecha && p.fecha.trim(); })
+    } : q);
+    await saveQ(toSave);
   }, [quotes, persist]);
   const handleCatalog = useCallback(async u => {
     setCatalog(u);
