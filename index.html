@@ -6218,6 +6218,13 @@ function IngresosView({quotes, egresos, onSaveEgresos, activeTab, setActiveTab})
               React.createElement('td',{colSpan:6,style:{padding:'10px 14px',fontSize:12,fontWeight:700,color:NAVY,textAlign:'right'}},'TOTAL NETO'),
               React.createElement('td',{style:{padding:'10px 14px',fontSize:14,fontWeight:700,color:total>=0?'#059669':'#DC2626'}},(total>=0?'':'- ')+'$ '+(Math.abs(total)||0).toLocaleString('es-AR',{maximumFractionDigits:0})),
               React.createElement('td',null)
+            ),
+            React.createElement('tr',{style:{backgroundColor:'#F8FAFC',borderTop:'1px solid #E2E8F0'}},
+              React.createElement('td',{colSpan:6,style:{padding:'6px 14px',fontSize:11,fontWeight:700,color:'#475569',textAlign:'right'}},'TOTAL NETO USD'),
+              React.createElement('td',{style:{padding:'6px 14px',fontSize:13,fontWeight:700,color:'#059669'}},
+                'USD '+(filtered.filter(function(m){return m.moneda==='USD';}).reduce(function(s,m){return s+Math.abs(m.monto);},0)).toLocaleString('es-AR',{maximumFractionDigits:0})
+              ),
+              React.createElement('td',null)
             ), totalUSD!==0 && React.createElement('tr',{style:{backgroundColor:'#F8FAFC'}},
               React.createElement('td',{colSpan:4,style:{padding:'6px 14px',fontSize:11,fontWeight:700,color:'#0369A1',textAlign:'right'}},'TOTAL NETO USD'),
               React.createElement('td',{style:{padding:'6px 14px',fontSize:12,fontWeight:700,color:totalUSD>=0?'#059669':'#DC2626'}},(totalUSD>=0?'':'- ')+'USD '+(Math.abs(totalUSD)||0).toLocaleString('es-AR',{maximumFractionDigits:0})),
