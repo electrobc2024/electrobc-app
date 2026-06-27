@@ -3907,7 +3907,16 @@ function Tracker({
         flexWrap: "wrap"
       }
     }, /*#__PURE__*/React.createElement("button", {
-      onClick: () => setExpandId(isExp ? null : q.id),
+      onClick: () => {
+        if (isExp) {
+          var nPend = pagosPendientes[q.id] || 0;
+          if (nPend > 0 && !confirm('Hay ' + nPend + ' pago(s) sin guardar. ¿Cerrar igual?')) return;
+          setPagosPendientes(function(prev){var n=Object.assign({},prev);delete n[q.id];return n;});
+          setExpandId(null);
+        } else {
+          setExpandId(q.id);
+        }
+      },
       title: "Pagos y detalle",
       style: {
         background: "none",
