@@ -6201,7 +6201,8 @@ function IngresosView({quotes, egresos, onSaveEgresos, activeTab, setActiveTab})
           React.createElement('div',null,
             React.createElement('div',{style:{fontSize:10,color:'#94A3B8',fontWeight:700,marginBottom:4}},'MONEDA'),
             React.createElement('select',{value:egForm.moneda||'$',onChange:function(e){setEgForm(function(f){return Object.assign({},f,{moneda:e.target.value});});},style:inp},
-              React.createElement('option',{value:'$'},'$ Pesos')
+              React.createElement('option',{value:'$'},'$ Pesos'),
+              egForm.tipo==='ingreso' && React.createElement('option',{value:'USD'},'USD Dólares')
             )
           ),
           React.createElement('div',null,
