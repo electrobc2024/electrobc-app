@@ -5875,8 +5875,8 @@ function IngresosView({quotes, egresos, onSaveEgresos, activeTab, setActiveTab})
 
   // Calcular lo pendiente de cobro filtrado por el período del Dashboard
   const cotizacionesAceptadasPeriodo = (quotes || []).filter(function(q) {
-    // Si el presupuesto tiene fecha, la filtramos por el período seleccionado
-    return q.status === 'aceptado' && (!q.fecha || inPeriod(q.fecha, dashAnosVer, dashMesesVer));
+    // Todos los presupuestos aceptados sin filtro de período
+    return q.status === 'aceptado';
   });
 
   const totalAceptadoPeriodo = cotizacionesAceptadasPeriodo.reduce(function(s, q) {
