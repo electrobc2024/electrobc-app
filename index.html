@@ -3951,6 +3951,10 @@ function Tracker({
           mdo: [...(q.mdo || [])],
           mat: [...(q.mat || [])]
         });
+        var pagosIncompletos = (q.pagos||[]).filter(function(p){return !p.monto||!p.fecha||!p.fecha.trim();});
+        if (pagosIncompletos.length>0) {
+          if (!confirm("Hay " + pagosIncompletos.length + " pago(s) sin completar que no se guardarán. ¿Cerrar igual?")) return;
+        }
         setExpandId(null);
       },
       style: {
