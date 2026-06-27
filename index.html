@@ -5454,9 +5454,12 @@ function App() {
     } : q));
   }, [quotes, persist]);
   const handlePagos = useCallback(async (qid, pagos) => {
+    var pagosFiltrados = pagos.filter(function(p){
+      return p.monto && parseFloat(p.monto) > 0 && p.fecha && p.fecha.trim();
+    });
     await persist(quotes.map(q => q.id === qid ? {
       ...q,
-      pagos
+      pagos: pagosFiltrados
     } : q));
   }, [quotes, persist]);
   const handleCatalog = useCallback(async u => {
