@@ -4926,6 +4926,7 @@ const updCli = (f, v) => {
   }, /*#__PURE__*/React.createElement(Lbl, null, "Cargar cliente guardado"), /*#__PURE__*/React.createElement("div", {style:{position:"relative",width:"100%"}},
     /*#__PURE__*/React.createElement("input", {
       type: "text",
+    spellCheck: true,
       value: clientSearch,
       onChange: function(e) { setClientSearch(e.target.value); setShowClientDrop(true); },
       onFocus: function() { setShowClientDrop(true); },
@@ -6192,7 +6193,8 @@ function IngresosView({quotes, egresos, onSaveEgresos, activeTab, setActiveTab})
           ):React.createElement('div',null),
           React.createElement('div',null,
             React.createElement('div',{style:{fontSize:10,color:'#94A3B8',fontWeight:700,marginBottom:4}},'DESCRIPCIÓN'),
-            React.createElement('input',{type:'text',value:egForm.desc,onChange:function(e){setEgForm(function(f){return Object.assign({},f,{desc:e.target.value});});},placeholder:'Descripción...',style:inp})
+            React.createElement('input',{type:'text',
+    spellCheck:true,value:egForm.desc,onChange:function(e){setEgForm(function(f){return Object.assign({},f,{desc:e.target.value});});},placeholder:'Descripción...',style:inp})
           ),
           React.createElement('div',null,
             React.createElement('div',{style:{fontSize:10,color:'#94A3B8',fontWeight:700,marginBottom:4}},'MONTO'),
