@@ -6285,7 +6285,39 @@ function IngresosView({quotes, egresos, onSaveEgresos, activeTab, setActiveTab})
   );
 }
 
-ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(App));}
+function LoginScreen({onLogin}){
+  const [u,setU]=React.useState('');const [p,setP]=React.useState('');const [err,setErr]=React.useState('');
+  function submit(e){e.preventDefault();
+    if(u.trim().toLowerCase()==='electrobc'&&p==='electrobcapp2026$'){sessionStorage.setItem('ebc-auth','1');onLogin();}
+    else{setErr('Usuario o contraseña incorrectos.');}
+  }
+  return React.createElement('div',{style:{position:'fixed',inset:0,backgroundColor:'#0A0F1E',display:'flex',alignItems:'center',justifyContent:'center'}},
+    React.createElement('div',{style:{backgroundColor:'#fff',borderRadius:16,padding:'40px 36px',width:340,boxShadow:'0 8px 40px rgba(0,0,0,0.3)'}},
+      React.createElement('div',{style:{textAlign:'center',marginBottom:24}},
+        React.createElement('div',{style:{fontFamily:"'Oswald',system-ui",fontSize:28,fontWeight:700,color:'#0A0F1E'}},'⚡ ELECTRO BC'),
+        React.createElement('div',{style:{fontSize:12,color:'#94A3B8',marginTop:4}},'Servicios Integrales')
+      ),
+      React.createElement('form',{onSubmit:submit},
+        React.createElement('div',{style:{marginBottom:12}},
+          React.createElement('label',{style:{fontSize:11,fontWeight:700,color:'#64748B',display:'block',marginBottom:4}},'USUARIO'),
+          React.createElement('input',{type:'text',value:u,onChange:function(e){setU(e.target.value);setErr('');},autoFocus:true,style:{width:'100%',border:'1px solid #E2E8F0',borderRadius:8,padding:'10px 12px',fontSize:14,outline:'none',boxSizing:'border-box'}})
+        ),
+        React.createElement('div',{style:{marginBottom:16}},
+          React.createElement('label',{style:{fontSize:11,fontWeight:700,color:'#64748B',display:'block',marginBottom:4}},'CONTRASEÑA'),
+          React.createElement('input',{type:'password',value:p,onChange:function(e){setP(e.target.value);setErr('');},style:{width:'100%',border:'1px solid #E2E8F0',borderRadius:8,padding:'10px 12px',fontSize:14,outline:'none',boxSizing:'border-box'}})
+        ),
+        err&&React.createElement('div',{style:{color:'#DC2626',fontSize:12,marginBottom:12,textAlign:'center'}},err),
+        React.createElement('button',{type:'submit',style:{width:'100%',backgroundColor:'#F26B1D',color:'#fff',border:'none',borderRadius:8,padding:'12px',fontSize:15,fontWeight:700,cursor:'pointer'}},'Ingresar')
+      )
+    )
+  );
+}
+function Root(){
+  const [authed,setAuthed]=React.useState(!!sessionStorage.getItem('ebc-auth'));
+  if(!authed) return React.createElement(LoginScreen,{onLogin:function(){setAuthed(true);}});
+  return React.createElement(App,null);
+}
+ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(Root));}
 </script>
 <script>
 (function(){
