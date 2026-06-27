@@ -3258,7 +3258,8 @@ function PaymentsPanel({
     value: p.fecha,
     onChange: e => setPago(p.id, "fecha", e.target.value),
     type: "date",
-    min: "2026-01-01",
+    min: "2020-01-01",
+    max: new Date().toISOString().slice(0,10),
     style: {
       ...iS,
       width: 108
@@ -3273,8 +3274,8 @@ function PaymentsPanel({
       padding: "2px"
     }
   }, "\u2715"),
-  p.monto && p.fecha && qstatus==='aceptado' && /*#__PURE__*/React.createElement("button", {
-    onClick: () => { onUpdatePagos(qid, pagos); setSavedId(p.id); setTimeout(function(){setSavedId(null);},1500); },
+  p.monto && p.fecha && qstatus==='aceptado' && savedId!==('done_'+p.id) && /*#__PURE__*/React.createElement("button", {
+    onClick: () => { onUpdatePagos(qid, pagos); setSavedId(p.id); setTimeout(function(){setSavedId('done_'+p.id);},1500); },
     style: {background:savedId===p.id?'#ECFDF5':'none',border:'1px solid '+(savedId===p.id?'#059669':'#86EFAC'),borderRadius:4,color:savedId===p.id?'#059669':'#16A34A',fontSize:10,padding:'2px 6px',cursor:'pointer',fontWeight:700,transition:'all 0.3s'}
   }, savedId===p.id?'\u2713 Guardado!':'\u2713')
   )), /*#__PURE__*/React.createElement("button", {
