@@ -3361,6 +3361,7 @@ function Tracker({
 }) {
   const [clientFilter, setClientFilter] = useState("");
   const [dropId, setDropId] = useState(null);
+  const [pagosPendientes, setPagosPendientes] = useState({});
   const [expandId, setExpandId] = useState(highlightId || null);
   const [editInlineId, setEditInlineId] = useState(null);
   const [editForm, setEditForm] = useState({});
@@ -3951,10 +3952,11 @@ function Tracker({
           mdo: [...(q.mdo || [])],
           mat: [...(q.mat || [])]
         });
-        var pagosIncompletos = (q.pagos||[]).filter(function(p){return !p.monto||!p.fecha||!p.fecha.trim();});
-        if (pagosIncompletos.length>0) {
-          if (!confirm("Hay " + pagosIncompletos.length + " pago(s) sin completar que no se guardarán. ¿Cerrar igual?")) return;
+        var nPend = pagosPendientes[q.id] || 0;
+        if (nPend>0) {
+          if (!confirm("Hay " + nPend + " pago(s) sin guardar. ¿Cerrar igual?")) return;
         }
+        setPagosPendientes(function(prev){var n=Object.assign({},prev);delete n[q.id];return n;});
         setExpandId(null);
       },
       style: {
@@ -4199,7 +4201,11 @@ function Tracker({
       qid: q.id,
       pagos: pagos,
       total: total,
-      onUpdatePagos: onUpdatePagos,
+      onUpdatePagos: function(qid, newPagos) {
+        var incompletos = newPagos.filter(function(p){return !p.monto||!p.fecha||!p.fecha.trim();});
+        setPagosPendientes(function(prev){var n=Object.assign({},prev);n[qid]=incompletos.length;return n;});
+        onUpdatePagos(qid, newPagos);
+      },
       qstatus: q.status
     }))), q.aclaraciones && /*#__PURE__*/React.createElement("div", {
       style: {
