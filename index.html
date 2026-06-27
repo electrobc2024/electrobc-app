@@ -3315,16 +3315,7 @@ function PaymentsPanel({
       fontVariantNumeric: "tabular-nums",
       color: resta > 0 ? "#C2410C" : pagos.length > 0 ? "#065F46" : "#94A3B8"
     }
-  }, "Resta: $ ", fmt(resta)),
-  resta > 0 && qstatus==='aceptado' && /*#__PURE__*/React.createElement("button", {
-    onClick: () => {
-      var hoy = new Date().toISOString().slice(0,10);
-      var newPago = {id: uid(), desc: "Saldo final", monto: String(Math.round(resta*100)/100), fecha: hoy, moneda: "$", tcambio: ""};
-      onUpdatePagos(qid, [...pagos, newPago]);
-    },
-    style: {marginLeft:8,background:"none",border:"1px solid #C2410C",borderRadius:6,color:"#C2410C",fontSize:10,padding:"3px 8px",cursor:"pointer",fontWeight:700,whiteSpace:"nowrap"}
-  }, "\u2713 Saldar")
-  )), totalPagadoUSD > 0 && /*#__PURE__*/React.createElement("div", {
+  }, "Resta: $ ", fmt(resta))), totalPagadoUSD > 0 && /*#__PURE__*/React.createElement("div", {
     style: {
       marginTop: 4,
       fontSize: 11,
