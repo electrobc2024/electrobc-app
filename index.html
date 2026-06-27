@@ -3167,6 +3167,14 @@ function PaymentsPanel({
     ...p,
     [f]: v
   } : p));
+  const fetchBlue = async (pagoId) => {
+    try {
+      const r = await fetch("https://api.bluelytics.com.ar/v2/latest");
+      const d = await r.json();
+      const blue = d && d.blue && d.blue.value_sell ? d.blue.value_sell : null;
+      if (blue) setPago(pagoId, "tcambio", String(blue));
+    } catch(e) { console.warn("No se pudo obtener cotizacion blue", e); }
+  };
   const totalPagado = pagos.filter(p => (p.moneda||"$") === "$").reduce((s, p) => s + parseFloat(p.monto || 0), 0);
   const totalPagadoUSD = pagos.filter(p => p.moneda === "USD").reduce((s, p) => s + parseFloat(p.monto || 0), 0);
   const resta = Math.max(0, total - totalPagado);
@@ -3198,7 +3206,11 @@ function PaymentsPanel({
     }
   }, "Pago ", i + 1), /*#__PURE__*/React.createElement("select", {
     value: p.moneda || "$",
-    onChange: e => setPago(p.id, "moneda", e.target.value),
+    onChange: e => {
+      var val = e.target.value;
+      setPago(p.id, "moneda", val);
+      if (val === "USD" && !p.tcambio) fetchBlue(p.id);
+    },
     style: {
       ...iS,
       width: 46,
@@ -3218,7 +3230,17 @@ function PaymentsPanel({
       width: 80,
       textAlign: "right"
     }
-  }), /*#__PURE__*/React.createElement("input", {
+  }),
+  p.moneda === "USD" && /*#__PURE__*/React.createElement("div", {style:{display:"flex",alignItems:"center",gap:2}},
+    /*#__PURE__*/React.createElement("span", {style:{fontSize:9,color:"#94A3B8",whiteSpace:"nowrap"}},"TC $"),
+    /*#__PURE__*/React.createElement("input", {
+      value: p.tcambio||"",
+      onChange: e => setPago(p.id, "tcambio", e.target.value),
+      type: "number", min: "0", placeholder: "Blue",
+      style: {...iS, width:60, textAlign:"right", fontSize:10}
+    })
+  ),
+  /*#__PURE__*/React.createElement("input", {
     value: p.fecha,
     onChange: e => setPago(p.id, "fecha", e.target.value),
     type: "date",
