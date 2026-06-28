@@ -5932,7 +5932,7 @@ function IngresosView({quotes, egresos, onSaveEgresos, activeTab, setActiveTab})
   var tab = activeTab||'dashboard'; var setTab = setActiveTab||function(){};
   const [showForm, setShowForm] = React.useState(false);
   const [tipoFilter, setTipoFilter] = React.useState('todos');
-  const [egForm, setEgForm] = React.useState({id:'',tipo:'egreso',cat:'sueldos',desc:'',monto:'',fecha:'',medio:'efectivo',moneda:'$'});
+  const [egForm, setEgForm] = React.useState({id:'',tipo:'egreso',cat:'sueldos',desc:'',monto:'',fecha:'',medio:'efectivo',moneda:'$',tcambio:''});
   const [editId, setEditId] = React.useState(null);
   // Filtros AÑO/MES independientes por pestaña (no deben afectarse entre sí)
   const [dashMesesVer, setDashMesesVer] = React.useState([]);
@@ -6073,7 +6073,7 @@ function IngresosView({quotes, egresos, onSaveEgresos, activeTab, setActiveTab})
     } else {
       onSaveEgresos([...list, {...egForm, id:Math.random().toString(36).slice(2,9)}]);
     }
-    setEgForm({id:'',tipo:'egreso',cat:'sueldos',desc:'',monto:'',fecha:'',medio:'efectivo',moneda:'$'});
+    setEgForm({id:'',tipo:'egreso',cat:'sueldos',desc:'',monto:'',fecha:'',medio:'efectivo',moneda:'$',tcambio:''});
     setShowForm(false);
     setEditId(null);
   }
@@ -6258,7 +6258,7 @@ function IngresosView({quotes, egresos, onSaveEgresos, activeTab, setActiveTab})
       React.createElement('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}},
         React.createElement('div',{style:{fontWeight:700,fontSize:14,color:NAVY}},'Movimientos del período'),
         React.createElement('button',{type:'button',
-          onClick:function(){setShowForm(!showForm);if(showForm){setEgForm({id:'',tipo:'egreso',cat:'sueldos',desc:'',monto:'',fecha:'',medio:'efectivo',moneda:'$'});setEditId(null);}},
+          onClick:function(){setShowForm(!showForm);if(showForm){setEgForm({id:'',tipo:'egreso',cat:'sueldos',desc:'',monto:'',fecha:'',medio:'efectivo',moneda:'$',tcambio:''});setEditId(null);}},
           style:{backgroundColor:showForm?'#F1F5F9':ORANGE,color:showForm?'#64748B':'#fff',border:'none',borderRadius:8,padding:'8px 16px',fontSize:13,fontWeight:700,cursor:'pointer'}
         },showForm?'Cancelar':'+ Nuevo movimiento')
       ),
