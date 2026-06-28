@@ -5406,6 +5406,14 @@ function App() {
   const [clientsFilter, setClientsFilter] = useState("");
   const [trackerHighlight, setTrackerHighlight] = useState(null);
   const [egresos, setEgresos] = useState(() => { try { return JSON.parse(localStorage.getItem(EKEY)||"[]"); } catch(e){ return []; } });
+  React.useEffect(function(){
+    sbGet(EKEY).then(function(val){
+      if (val && Array.isArray(val) && val.length > 0) {
+        setEgresos(val);
+        localStorage.setItem(EKEY, JSON.stringify(val));
+      }
+    }).catch(function(){});
+  }, []);
   const saveEgresos = async (list) => {
     setEgresos(list);
     localStorage.setItem(EKEY, JSON.stringify(list));
