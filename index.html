@@ -6043,7 +6043,7 @@ function IngresosView({quotes, egresos, onSaveEgresos, activeTab, setActiveTab})
   const egresosFiltradosMov = (egresos||[]).filter(function(e){return inPeriod(e.fecha, movAnosVer, movMesesVer) && e.tipo!=='ingreso' && (e.moneda||'$')==='$';});
   const ingresosManualesMov = (egresos||[]).filter(function(e){return inPeriod(e.fecha, movAnosVer, movMesesVer) && e.tipo==='ingreso';});
   const allCobrosCombinadosMov = cobrosFiltradosMov.concat(ingresosManualesMov.map(function(e){
-    return {qNumero:'',qCliente:'',monto:parseFloat(e.monto)||0,fecha:e.fecha,desc:e.desc,manual:true,moneda:e.moneda||'$'};
+    return {qNumero:'',qCliente:'',monto:parseFloat(e.monto)||0,fecha:e.fecha,desc:e.desc,manual:true,moneda:e.moneda||'$',tcambio:e.tcambio||null};
   }));
 
   // By month for chart (Dashboard, usa dashAnosVer) — solo pesos, USD queda fuera del gráfico mensual
