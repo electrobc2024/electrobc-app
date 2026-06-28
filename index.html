@@ -5655,7 +5655,34 @@ function App() {
       fontSize: 9,
       color: "rgba(255,255,255,0.18)"
     }
-  }, "v3.0"))), /*#__PURE__*/React.createElement("main", {
+  }, "v3.0")),
+  /*#__PURE__*/React.createElement("button", {
+    className: "ebc-hamburger",
+    onClick: function(){setMenuOpen(function(o){return !o;});},
+    style: {background:"none",border:"none",color:"#fff",fontSize:22,
+      cursor:"pointer",padding:"0 12px",display:"none",alignItems:"center",
+      marginLeft:"auto",flexShrink:0}
+  }, menuOpen ? "✕" : "☰")
+), menuOpen && /*#__PURE__*/React.createElement("div", {
+    className: "ebc-menu-overlay",
+    style: {position:"fixed",top:56,left:0,right:0,bottom:0,
+      backgroundColor:NAVY,zIndex:9998,flexDirection:"column",
+      padding:20,gap:4,overflowY:"auto",display:"none"}
+  },
+    [...navMain,...navFin].map(function(item){
+      var a=view===item.id;
+      var fin=navFin.some(function(f){return f.id===item.id;});
+      return React.createElement("button",{key:item.id,
+        onClick:function(){setView(item.id);setMenuOpen(false);},
+        style:{background:a?"rgba(255,255,255,0.1)":"none",border:"none",
+          color:a?"#fff":fin?"rgba(255,210,100,0.9)":"rgba(255,255,255,0.7)",
+          fontSize:15,fontWeight:a?700:400,cursor:"pointer",
+          padding:"14px 16px",textAlign:"left",borderRadius:8,
+          borderLeft:a?"3px solid "+ORANGE:"3px solid transparent"}
+      }, item.label);
+    })
+  ),
+  /*#__PURE__*/React.createElement("main", {
     style: {
       flex: 1,
       position: "relative",
