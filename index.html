@@ -5350,6 +5350,7 @@ function setupGlobalNav() {
 
 // ── App ───────────────────────────────────────────────────────────────────────
 function App() {
+  const [menuOpen, setMenuOpen] = React.useState(false);
   const [view, setView] = useState(() => { try { var v = localStorage.getItem("ebc-last-view"); return v || "form"; } catch(e){ return "form"; } });
   React.useEffect(function(){ try { localStorage.setItem("ebc-last-view", view); } catch(e){} }, [view]);
   const [quotes, setQuotes] = useState([]);
