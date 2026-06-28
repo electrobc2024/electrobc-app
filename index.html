@@ -6290,7 +6290,19 @@ function IngresosView({quotes, egresos, onSaveEgresos, activeTab, setActiveTab})
           ),
           React.createElement('div',null,
             React.createElement('div',{style:{fontSize:10,color:'#94A3B8',fontWeight:700,marginBottom:4}},'MONEDA'),
-            React.createElement('select',{value:egForm.moneda||'$',onChange:function(e){setEgForm(function(f){return Object.assign({},f,{moneda:e.target.value});});},style:inp},
+            React.createElement('select',{value:egForm.moneda||'$',onChange:function(e){
+              var val=e.target.value;
+              setEgForm(function(f){return Object.assign({},f,{moneda:val});});
+              if(val==='USD' && !egForm.tcambio){
+                fetch('https://api.bluelytics.com.ar/v2/latest')
+                  .then(function(r){return r.json();})
+                  .then(function(d){
+                    if(d&&d.blue&&d.blue.value_sell){
+                      setEgForm(function(f){return Object.assign({},f,{tcambio:String(d.blue.value_sell)});});
+                    }
+                  }).catch(function(){});
+              }
+            },style:inp},
               React.createElement('option',{value:'$'},'$ Pesos'),
               egForm.tipo==='ingreso' && React.createElement('option',{value:'USD'},'USD Dólares')
             )
