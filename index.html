@@ -5350,6 +5350,9 @@ function setupGlobalNav() {
 
 // ── App ───────────────────────────────────────────────────────────────────────
 function App() {
+  const [menuOpen, setMenuOpen] = React.useState(false);
+  const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
+
   const [view, setView] = useState(() => { try { var v = localStorage.getItem("ebc-last-view"); return v || "form"; } catch(e){ return "form"; } });
   React.useEffect(function(){ try { localStorage.setItem("ebc-last-view", view); } catch(e){} }, [view]);
   const [quotes, setQuotes] = useState([]);
@@ -5622,7 +5625,33 @@ function App() {
       alignItems: "stretch",
       flex: 1
     }
-  }, (function(){
+  },
+  /*#__PURE__*/React.createElement("button", {
+    className: "ebc-nav-mobile",
+    onClick: function(){setMenuOpen(function(o){return !o;});},
+    style: {background:"none",border:"none",color:"#fff",fontSize:24,cursor:"pointer",padding:"0 12px",display:"none"}
+  }, menuOpen ? "✕" : "☰"),
+  menuOpen && /*#__PURE__*/React.createElement("div", {
+    className: "ebc-menu-overlay",
+    style: {position:"fixed",top:48,left:0,right:0,bottom:0,backgroundColor:NAVY,zIndex:9998,
+      flexDirection:"column",padding:20,gap:4,overflowY:"auto",display:"none"}
+  },
+    [...navMain, ...navFin].map(function(item){
+      var a = view===item.id;
+      var fin = navFin.some(function(f){return f.id===item.id;});
+      return /*#__PURE__*/React.createElement("button",{
+        key:item.id,
+        onClick:function(){setView(item.id);setMenuOpen(false);},
+        style:{background:a?"rgba(255,255,255,0.1)":"none",border:"none",
+          color:a?"#fff":fin?"rgba(255,210,100,0.9)":"rgba(255,255,255,0.7)",
+          fontSize:15,fontWeight:a?700:400,cursor:"pointer",
+          padding:"14px 16px",textAlign:"left",borderRadius:8,
+          borderLeft:a?"3px solid "+ORANGE:"3px solid transparent"}
+      }, item.label);
+    })
+  ),
+  /*#__PURE__*/React.createElement("div", {className:"ebc-nav-desktop",style:{display:"flex",alignItems:"stretch",flex:1}},
+  (function(){
     function nbtn(item,fin){
       var a=view===item.id;
       return React.createElement("button",{
@@ -5645,7 +5674,8 @@ function App() {
         alignSelf:"center",margin:"0 6px",flexShrink:0
       }})])
       .concat(navFin.map(function(i){return nbtn(i,true);}));
-  })()), /*#__PURE__*/React.createElement("div", {
+  })())
+  )), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
       alignItems: "center"
@@ -6039,7 +6069,7 @@ function IngresosView({quotes, egresos, onSaveEgresos, activeTab, setActiveTab})
           style:{padding:'4px 8px',borderRadius:20,fontSize:11,cursor:'pointer',border:'1.5px solid #E2E8F0',backgroundColor:'#fff',color:'#94A3B8'}},'✕ Limpiar'):null
       ),
       // KPI cards
-      React.createElement('div',{style:{display:'grid',gridTemplateColumns:'repeat(5,1fr)',gap:12,marginBottom:(totalIngresosUSDDash>0||totalEgresosUSDDash>0)?12:20}},
+      React.createElement('div',{style:{display:'grid',gridTemplateColumns:'repeat(5,1fr)',gap:12,marginBottom:(totalIngresosUSDDash>0||totalEgresosUSDDash>0)?12:20},className:'ebc-grid-5'}},
         [
           {label:'Cobrado $ARS',val:fmt(totalCobradoDash),color:'#065F46',bg:'#ECFDF5',icon:'\u{1F4B5}'},
           {label:'Cobrado USD',val:'USD '+cobradoUSDDash.toLocaleString('es-AR',{maximumFractionDigits:0}),color:'#065F46',bg:'#ECFDF5',icon:'\u{1F4B5}'},
