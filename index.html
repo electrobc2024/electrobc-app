@@ -116,8 +116,33 @@ const effectiveStatus = q => isVencido(q) ? "recotizar" : q.status;
 
 // ── Storage ───────────────────────────────────────────────────────────────────
 const _mem = {};
+const SB_URL = 'https://wdvzepyxlehmitncnxlv.supabase.co';
+const SB_KEY = 'sb_publishable_pMpGWXdigzfRKn2IBznFvg_4is9UlWp';
+const sbGet = async (key) => {
+  try {
+    const r = await fetch(SB_URL+'/rest/v1/ebc_data?key=eq.'+encodeURIComponent(key)+'&select=value',
+      {headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY}});
+    const d = await r.json();
+    return d && d[0] ? d[0].value : null;
+  } catch(e) { return null; }
+};
+const sbSet = async (key, value) => {
+  try {
+    await fetch(SB_URL+'/rest/v1/ebc_data',{
+      method:'POST',
+      headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,
+        'Content-Type':'application/json','Prefer':'resolution=merge-duplicates'},
+      body: JSON.stringify({key, value, updated_at: new Date().toISOString()})
+    });
+  } catch(e) {}
+};
 const db = {
   get: async k => {
+    // Try Supabase first
+    try {
+      const sbVal = await sbGet(k);
+      if (sbVal !== null) return {value: typeof sbVal === "string" ? sbVal : JSON.stringify(sbVal)};
+    } catch {}
     if (typeof window !== "undefined" && window.storage) try {
       return await window.storage.get(k);
     } catch {}
@@ -132,6 +157,8 @@ const db = {
     } : null;
   },
   set: async (k, v) => {
+    // Save to Supabase (fire and forget)
+    sbSet(k, typeof v === "string" ? JSON.parse(v) : v).catch(()=>{});
     if (typeof window !== "undefined" && window.storage) try {
       await window.storage.set(k, v);
       return;
