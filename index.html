@@ -3119,7 +3119,12 @@ function PdfOverlay({
       backgroundColor: NAVY,
       color: "#fff"
     }
-  }, status === "loading" ? "Generando PDF…" : "💾 Descargar PDF"), /*#__PURE__*/React.createElement("button", {
+  }, status === "loading" ? "Generando PDF…" : "💾 Descargar PDF"),
+  /*#__PURE__*/React.createElement("button", {
+    onClick: function() { window.open("https://drive.google.com", "_blank"); },
+    style: {...btn, backgroundColor: "#1a73e8", color: "#fff", marginLeft: 8}
+  }, "📂 Abrir Drive"),
+  /*#__PURE__*/React.createElement("button", {
     onClick: onClose,
     style: {
       ...btn,
