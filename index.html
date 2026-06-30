@@ -5923,6 +5923,13 @@ const EGRESO_CATS = [
 ];
 
 function IngresosView({quotes, egresos, onSaveEgresos, activeTab, setActiveTab}) {
+  var [blueHoy, setBlueHoy] = React.useState(null);
+  React.useEffect(function(){
+    fetch('https://api.bluelytics.com.ar/v2/latest')
+      .then(function(r){return r.json();})
+      .then(function(d){ if(d&&d.blue&&d.blue.value_sell) setBlueHoy(d.blue.value_sell); })
+      .catch(function(){});
+  }, []);
   var _now = new Date();
   var _curYear = _now.getFullYear();
   var _curMonth = _now.getMonth() + 1;
