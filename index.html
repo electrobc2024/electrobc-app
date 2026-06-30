@@ -5998,6 +5998,7 @@ function IngresosView({quotes, egresos, onSaveEgresos, activeTab, setActiveTab})
   const totalEgresosDash = egresosFiltradosDash.filter(function(e){return (e.moneda||'$')==='$';}).reduce(function(s,e){return s+(parseFloat(e.monto)||0);},0);
   const gananciaDash = totalCobradoDash + cobradoUSDenARS - totalEgresosDash;
   console.log('DEBUG ganancia:', {totalCobradoDash, cobradoUSDenARS, totalEgresosDash, gananciaDash});
+  console.log('DEBUG ganancia:', {totalCobradoDash, cobradoUSDenARS, totalEgresosDash, gananciaDash});
 
   // Calcular lo pendiente de cobro filtrado por el período del Dashboard
   const cotizacionesAceptadasPeriodo = (quotes || []).filter(function(q) {
