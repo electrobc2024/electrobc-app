@@ -5996,8 +5996,7 @@ function IngresosView({quotes, egresos, onSaveEgresos, activeTab, setActiveTab})
 
   const totalCobradoDash = allCobrosCombinadosDash.filter(function(c){return (c.moneda||'$')==='$';}).reduce(function(s,c){return s+c.monto;},0);
   const totalEgresosDash = egresosFiltradosDash.filter(function(e){return (e.moneda||'$')==='$';}).reduce(function(s,e){return s+(parseFloat(e.monto)||0);},0);
-  const gananciaDash = totalCobradoDash + cobradoUSDenARS - totalEgresosDash;
-  console.log('DEBUG ganancia:', {totalCobradoDash, cobradoUSDenARS, totalEgresosDash, gananciaDash});
+  
   console.log('DEBUG ganancia:', {totalCobradoDash, cobradoUSDenARS, totalEgresosDash, gananciaDash});
 
   // Calcular lo pendiente de cobro filtrado por el período del Dashboard
@@ -6034,6 +6033,7 @@ function IngresosView({quotes, egresos, onSaveEgresos, activeTab, setActiveTab})
   const totalIngresosUSDDash = ingresosManualesUSDDash.reduce(function(s,e){return s+(parseFloat(e.monto)||0);},0);
   var cobradoUSDenARS = allCobrosCombinadosDash.filter(function(c){return c.moneda==='USD';}).reduce(function(s,c){return s+(parseFloat(c.monto)||0)*(parseFloat(c.tcambio)||0);},0)
     + ingresosManualesUSDDash.reduce(function(s,e){return s+(parseFloat(e.monto)||0)*(parseFloat(e.tcambio)||0);},0);
+  const gananciaDash = totalCobradoDash + cobradoUSDenARS - totalEgresosDash;
   const cobradoUSDDash = allCobrosCombinadosDash.filter(function(c){return c.moneda==='USD';}).reduce(function(s,c){return s+c.monto;},0)
   + ingresosManualesUSDDash.reduce(function(s,e){return s+(parseFloat(e.monto)||0);},0);
   console.log('COBROS USD:', allCobrosCombinadosDash.filter(function(c){return c.moneda==='USD';}), 'ALL MONEDAS:', allCobrosCombinadosDash.map(function(c){return c.moneda;}));
