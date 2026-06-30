@@ -6398,7 +6398,7 @@ function IngresosView({quotes, egresos, onSaveEgresos, activeTab, setActiveTab})
             React.createElement('tr',{style:{backgroundColor:'#F8FAFC',borderTop:'1px solid #E2E8F0'}},
               React.createElement('td',{colSpan:6,style:{padding:'6px 14px',fontSize:11,fontWeight:700,color:'#475569',textAlign:'right'}},'TOTAL NETO USD'),
               React.createElement('td',{style:{padding:'6px 14px',fontSize:13,fontWeight:700,color:'#059669'}},
-                'USD '+(filtered.filter(function(m){return m.moneda==='USD';}).reduce(function(s,m){return s+Math.abs(m.monto);},0)).toLocaleString('es-AR',{maximumFractionDigits:0})
+                'USD '+(totalUSD||0).toLocaleString('es-AR',{maximumFractionDigits:0})
               ),
               React.createElement('td',null)
             ))
