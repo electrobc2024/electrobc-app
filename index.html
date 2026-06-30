@@ -6307,6 +6307,12 @@ function IngresosView({quotes, egresos, onSaveEgresos, activeTab, setActiveTab})
               egForm.tipo==='ingreso' && React.createElement('option',{value:'USD'},'USD Dólares')
             )
           ),
+          egForm.moneda==='USD' && React.createElement('div',null,
+            React.createElement('div',{style:{fontSize:10,color:'#94A3B8',fontWeight:700,marginBottom:4}},'TC (Dólar Blue)'),
+            React.createElement('input',{type:'number',min:0,value:egForm.tcambio,
+              onChange:function(e){setEgForm(function(f){return Object.assign({},f,{tcambio:e.target.value});});},
+              placeholder:'Ej: 1515',style:inp})
+          ),
           React.createElement('div',null,
             React.createElement('div',{style:{fontSize:10,color:'#94A3B8',fontWeight:700,marginBottom:4}},'FECHA'),
             React.createElement('input',{type:'date',value:egForm.fecha,min:'2026-01-01',onChange:function(e){setEgForm(function(f){return Object.assign({},f,{fecha:e.target.value});});},style:inp})
