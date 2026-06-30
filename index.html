@@ -5990,12 +5990,15 @@ function IngresosView({quotes, egresos, onSaveEgresos, activeTab, setActiveTab})
   const egresosFiltradosDash = (egresos||[]).filter(function(e){return inPeriod(e.fecha, dashAnosVer, dashMesesVer) && e.tipo!=='ingreso' && (e.moneda||'$')==='$';});
   const ingresosManualesDash = (egresos||[]).filter(function(e){return inPeriod(e.fecha, dashAnosVer, dashMesesVer) && e.tipo==='ingreso' && (e.moneda||'$')==='$';});
   const allCobrosCombinadosDash = cobrosFiltradosDash.concat(ingresosManualesDash.map(function(e){
-    return {qNumero:'',qCliente:'',monto:parseFloat(e.monto)||0,fecha:e.fecha,desc:e.desc,manual:true,moneda:e.moneda||'$'};
+    return {qNumero:'',qCliente:'',monto:parseFloat(e.monto)||0,fecha:e.fecha,desc:e.desc,manual:true,moneda:e.moneda||'$',tcambio:e.tcambio||null};
   }));
   // ── Desglose de ingresos analíticos ──
   const ingresosPresupuestados = allCobrosCombinadosDash.filter(function(c){
     return (c.moneda||'$')==='$' && c.qNumero && c.qNumero.toString().trim() !== '';
-  }).reduce(function(s,c){return s+c.monto;},0);
+  }).reduce(function(s,c){return s+c.monto;},0)
+  + allCobrosCombinadosDash.filter(function(c){
+    return c.moneda==='USD' && c.qNumero && c.qNumero.toString().trim() !== '';
+  }).reduce(function(s,c){return s+(c.monto*(parseFloat(c.tcambio)||0));},0);
 
   const ingresosNoPresupuestados = allCobrosCombinadosDash.filter(function(c){
     return (c.moneda||'$')==='$' && (!c.qNumero || c.qNumero.toString().trim() === '');
@@ -6040,6 +6043,7 @@ function IngresosView({quotes, egresos, onSaveEgresos, activeTab, setActiveTab})
   var cobradoUSDenARS = allCobrosCombinadosDash.filter(function(c){return c.moneda==='USD';}).reduce(function(s,c){return s+(parseFloat(c.monto)||0)*(parseFloat(c.tcambio)||0);},0)
     + ingresosManualesUSDDash.reduce(function(s,e){return s+(parseFloat(e.monto)||0)*(parseFloat(e.tcambio)||0);},0);
   const gananciaDash = totalCobradoDash + cobradoUSDenARS - totalEgresosDash;
+  const gananciaDashPuroARS = totalCobradoDash - totalEgresosDash;
   const cobradoUSDDash = allCobrosCombinadosDash.filter(function(c){return c.moneda==='USD';}).reduce(function(s,c){return s+c.monto;},0)
   + ingresosManualesUSDDash.reduce(function(s,e){return s+(parseFloat(e.monto)||0);},0);
   console.log('COBROS USD:', allCobrosCombinadosDash.filter(function(c){return c.moneda==='USD';}), 'ALL MONEDAS:', allCobrosCombinadosDash.map(function(c){return c.moneda;}));
@@ -6222,13 +6226,13 @@ function IngresosView({quotes, egresos, onSaveEgresos, activeTab, setActiveTab})
           React.createElement('div',{style:{fontSize:13,fontWeight:700,color:NAVY,marginBottom:12}},'\u{1F91D} Distribución de la ganancia'),
           React.createElement('div',{style:{backgroundColor:'#F8FAFC',borderRadius:8,padding:'12px 14px',marginBottom:12}},
             React.createElement('div',{style:{fontSize:11,color:'#94A3B8',fontWeight:700,textTransform:'uppercase',marginBottom:6}},'Ganancia neta ARS'),
-            React.createElement('div',{style:{fontFamily:"'Oswald',system-ui",fontSize:24,fontWeight:700,color:gananciaDash>=0?'#065F46':'#DC2626'}},fmt(gananciaDash))
+            React.createElement('div',{style:{fontFamily:"'Oswald',system-ui",fontSize:24,fontWeight:700,color:gananciaDashPuroARS>=0?'#065F46':'#DC2626'}},fmt(gananciaDashPuroARS))
           ),
           React.createElement('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}},
             ['Guille','Fede'].map(function(nombre){
               return React.createElement('div',{key:nombre,style:{backgroundColor:'#EFF6FF',borderRadius:8,padding:'10px 12px',textAlign:'center'}},
                 React.createElement('div',{style:{fontSize:11,color:'#1D4ED8',fontWeight:700,marginBottom:4}},nombre),
-                React.createElement('div',{style:{fontFamily:"'Oswald',system-ui",fontSize:16,fontWeight:700,color:'#1D4ED8'}},fmt(gananciaDash/2))
+                React.createElement('div',{style:{fontFamily:"'Oswald',system-ui",fontSize:16,fontWeight:700,color:'#1D4ED8'}},fmt(gananciaDashPuroARS/2))
               );
             })
           ),
