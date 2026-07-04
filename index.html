@@ -3936,7 +3936,7 @@ function Tracker({
       return /*#__PURE__*/React.createElement("button", {
         key: k,
         onClick: () => {
-          if(canTransition(effectiveStatus(q),k)){onStatusChange(q.id,k);setDropId(null);}
+          onStatusChange(q.id,k);setDropId(null);
         },
         style: {
           display: "flex",
