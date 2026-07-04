@@ -214,7 +214,7 @@ const mkPago = () => ({
   id: uid(),
   desc: "",
   monto: "",
-  fecha: "",
+  fecha: new Date().toISOString().slice(0,10),
   moneda: "$"
 });
 const mkQuote = n => ({
