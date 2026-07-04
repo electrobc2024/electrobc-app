@@ -21,7 +21,6 @@
 <script src="https://unpkg.com/react@18.2.0/umd/react.production.min.js"></script>
 <script src="https://unpkg.com/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-<script src="https://unpkg.com/recharts@2.12.7/umd/Recharts.js"></script>
 <script>
 if(typeof React==='undefined'){document.body.innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:system-ui;text-align:center;flex-direction:column;gap:12px"><h2>ELECTRO BC</h2><p style="color:#64748B">Abrí desde Vercel.</p></div>';}
 else{"use strict";const {useState,useEffect,useCallback,useRef}=React;
@@ -5938,134 +5937,124 @@ function DashboardEvolutionChart({quotes, egresos, dashAnosVer}) {
   var MES_LABELS = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
   var now = new Date();
   var currentYear = now.getFullYear();
-  var currentMonth = now.getMonth(); // 0-indexed
-
-  // Use selected years or current year
+  var currentMonth = now.getMonth();
   var years = dashAnosVer && dashAnosVer.length > 0 ? dashAnosVer.map(Number) : [currentYear];
+  var [tooltip, setTooltip] = React.useState(null);
 
-  // Build monthly data for each year
   var allData = [];
   years.forEach(function(year) {
     var maxMonth = year === currentYear ? currentMonth : 11;
     for (var m = 0; m <= maxMonth; m++) {
       var mesStr = String(m+1).padStart(2,'0');
-      var label = MES_LABELS[m] + (years.length > 1 ? " '"+String(year).slice(2) : '');
-
-      // Cobrado ARS from presupuesto pagos
-      var cobradoARS = 0;
-      var cobradoUSD = 0;
+      var label = MES_LABELS[m] + (years.length > 1 ? " '" + String(year).slice(2) : '');
+      var cobradoARS = 0, cobradoUSD = 0, egresosTotal = 0;
       (quotes||[]).forEach(function(q){
         (q.pagos||[]).forEach(function(p){
-          if(!p.monto || !p.fecha) return;
-          var pYear = parseInt(p.fecha.slice(0,4));
-          var pMonth = p.fecha.slice(5,7);
-          if(pYear===year && pMonth===mesStr) {
-            if((p.moneda||'$')==='USD') {
-              cobradoUSD += (parseFloat(p.monto)||0) * (parseFloat(p.tcambio)||0);
-            } else {
-              cobradoARS += parseFloat(p.monto)||0;
-            }
+          if(!p.monto||!p.fecha) return;
+          if(parseInt(p.fecha.slice(0,4))===year && p.fecha.slice(5,7)===mesStr){
+            if((p.moneda||'$')==='USD') cobradoUSD += (parseFloat(p.monto)||0)*(parseFloat(p.tcambio)||0);
+            else cobradoARS += parseFloat(p.monto)||0;
           }
         });
       });
-
-      // Manual ingresos
-      (egresos||[]).filter(function(e){
-        return e.tipo==='ingreso' && e.fecha &&
-          parseInt(e.fecha.slice(0,4))===year && e.fecha.slice(5,7)===mesStr;
-      }).forEach(function(e){
-        if((e.moneda||'$')==='USD') {
-          cobradoUSD += (parseFloat(e.monto)||0) * (parseFloat(e.tcambio)||0);
-        } else {
-          cobradoARS += parseFloat(e.monto)||0;
+      (egresos||[]).forEach(function(e){
+        if(!e.fecha) return;
+        if(parseInt(e.fecha.slice(0,4))===year && e.fecha.slice(5,7)===mesStr){
+          if(e.tipo==='ingreso'){
+            if((e.moneda||'$')==='USD') cobradoUSD += (parseFloat(e.monto)||0)*(parseFloat(e.tcambio)||0);
+            else cobradoARS += parseFloat(e.monto)||0;
+          } else {
+            if((e.moneda||'$')==='USD') egresosTotal += (parseFloat(e.monto)||0)*(parseFloat(e.tcambio)||0);
+            else egresosTotal += parseFloat(e.monto)||0;
+          }
         }
       });
-
-      // Egresos
-      var egresosTotal = 0;
-      (egresos||[]).filter(function(e){
-        return e.tipo!=='ingreso' && e.fecha &&
-          parseInt(e.fecha.slice(0,4))===year && e.fecha.slice(5,7)===mesStr;
-      }).forEach(function(e){
-        if((e.moneda||'$')==='USD') {
-          egresosTotal += (parseFloat(e.monto)||0) * (parseFloat(e.tcambio)||0);
-        } else {
-          egresosTotal += parseFloat(e.monto)||0;
-        }
-      });
-
-      var cobrado = cobradoARS + cobradoUSD;
-      var ganancia = cobrado - egresosTotal;
-
-      allData.push({
-        label: label,
-        cobrado: Math.round(cobrado),
-        egresos: Math.round(egresosTotal),
-        ganancia: Math.round(ganancia)
-      });
+      var cobrado = Math.round(cobradoARS + cobradoUSD);
+      var eg = Math.round(egresosTotal);
+      allData.push({label:label, cobrado:cobrado, egresos:eg, ganancia:cobrado-eg});
     }
   });
 
+  if(allData.length === 0) return null;
+
+  var W = 700, H = 260, PL = 70, PR = 20, PT = 20, PB = 40;
+  var chartW = W - PL - PR, chartH = H - PT - PB;
+  var vals = allData.flatMap(function(d){return [d.cobrado, d.egresos, Math.abs(d.ganancia)];});
+  var maxVal = Math.max.apply(null, vals) || 1;
+  var minVal = Math.min.apply(null, allData.map(function(d){return d.ganancia;}));
+  var range = maxVal - Math.min(0, minVal) || 1;
+  var yScale = function(v){ return PT + chartH - ((v - Math.min(0,minVal)) / range) * chartH; };
+  var xScale = function(i){ return PL + (i / Math.max(allData.length-1,1)) * chartW; };
+
+  var mkPath = function(key, color) {
+    var d = allData.map(function(p,i){
+      return (i===0?'M':'L') + xScale(i).toFixed(1) + ',' + yScale(p[key]).toFixed(1);
+    }).join(' ');
+    return React.createElement('path',{key:key,d:d,fill:'none',stroke:color,strokeWidth:2.5,strokeLinejoin:'round'});
+  };
+
+  var mkDots = function(key, color) {
+    return allData.map(function(p,i){
+      return React.createElement('circle',{
+        key:key+i, cx:xScale(i), cy:yScale(p[key]), r:5,
+        fill:color, stroke:'#fff', strokeWidth:2, style:{cursor:'pointer'},
+        onMouseEnter:function(e){
+          setTooltip({x:xScale(i),y:yScale(p[key]),data:p,key:key});
+        },
+        onMouseLeave:function(){setTooltip(null);}
+      });
+    });
+  };
+
+  var fmtV = function(v){ return (v<0?'- ':'')+'$ '+Math.abs(v).toLocaleString('es-AR'); };
+
+  // Y axis ticks
+  var ticks = [0,0.25,0.5,0.75,1].map(function(t){
+    var v = Math.min(0,minVal) + t*range;
+    return {y:yScale(v), label:(v>=1000000?(v/1000000).toFixed(1)+'M':v>=1000?(v/1000).toFixed(0)+'K':Math.round(v).toString())};
+  });
+
   var NAVY = "#0A0F1E";
-  var fmt = function(v) {
-    if(Math.abs(v) >= 1000000) return '$ '+(v/1000000).toFixed(1)+'M';
-    if(Math.abs(v) >= 1000) return '$ '+(v/1000).toFixed(0)+'K';
-    return '$ '+v;
-  };
 
-  // Custom tooltip
-  var CustomTooltip = function(props) {
-    if(!props.active || !props.payload || !props.payload.length) return null;
-    return React.createElement('div',{style:{
-      backgroundColor:'#fff',border:'1px solid #E2E8F0',borderRadius:8,
-      padding:'10px 14px',boxShadow:'0 4px 12px rgba(0,0,0,0.1)',fontSize:12
-    }},
-      React.createElement('div',{style:{fontWeight:700,color:NAVY,marginBottom:6}},props.label),
-      props.payload.map(function(p){
-        return React.createElement('div',{key:p.dataKey,style:{color:p.color,marginBottom:2}},
-          p.name+': $ '+(p.value||0).toLocaleString('es-AR')
-        );
-      })
-    );
-  };
-
-  if(typeof Recharts === 'undefined') {
-    return React.createElement('div',{style:{color:'#94A3B8',fontSize:12,textAlign:'center',padding:20}},
-      'Cargando gráfico...'
-    );
-  }
-
-  var RC = Recharts;
-
-  return React.createElement('div',{style:{
-    backgroundColor:'#fff',border:'1px solid #E2E8F0',borderRadius:12,
-    padding:'20px',marginTop:16
-  }},
-    React.createElement('div',{style:{fontSize:13,fontWeight:700,color:NAVY,marginBottom:16}},
-      '📊 Evolución mensual'
+  return React.createElement('div',{style:{backgroundColor:'#fff',border:'1px solid #E2E8F0',borderRadius:12,padding:'20px',marginTop:16}},
+    React.createElement('div',{style:{fontSize:13,fontWeight:700,color:NAVY,marginBottom:4}},'📊 Evolución mensual'),
+    // Legend
+    React.createElement('div',{style:{display:'flex',gap:16,marginBottom:12,fontSize:11}},
+      React.createElement('span',{style:{color:'#059669',fontWeight:700}},'● Cobrado'),
+      React.createElement('span',{style:{color:'#DC2626',fontWeight:700}},'● Egresos'),
+      React.createElement('span',{style:{color:'#2563EB',fontWeight:700}},'● Ganancia')
     ),
-    React.createElement(RC.ResponsiveContainer,{width:'100%',height:300},
-      React.createElement(RC.LineChart,{data:allData,margin:{top:5,right:20,left:10,bottom:5}},
-        React.createElement(RC.CartesianGrid,{strokeDasharray:'3 3',stroke:'#F1F5F9'}),
-        React.createElement(RC.XAxis,{dataKey:'label',tick:{fontSize:11,fill:'#94A3B8'}}),
-        React.createElement(RC.YAxis,{tickFormatter:fmt,tick:{fontSize:10,fill:'#94A3B8'},width:60}),
-        React.createElement(RC.Tooltip,{content:React.createElement(CustomTooltip)}),
-        React.createElement(RC.Legend,{wrapperStyle:{fontSize:12}}),
-        React.createElement(RC.Line,{
-          type:'monotone',dataKey:'cobrado',name:'💵 Cobrado',
-          stroke:'#059669',strokeWidth:2,dot:{r:4,fill:'#059669'},
-          activeDot:{r:6}
+    React.createElement('div',{style:{overflowX:'auto'}},
+      React.createElement('svg',{width:Math.max(W, allData.length*60),height:H,style:{display:'block'}},
+        // Grid lines
+        ticks.map(function(t,i){
+          return React.createElement('g',{key:i},
+            React.createElement('line',{x1:PL,y1:t.y,x2:W-PR,y2:t.y,stroke:'#F1F5F9',strokeWidth:1}),
+            React.createElement('text',{x:PL-6,y:t.y+4,textAnchor:'end',fontSize:9,fill:'#94A3B8'},t.label)
+          );
         }),
-        React.createElement(RC.Line,{
-          type:'monotone',dataKey:'egresos',name:'💸 Egresos',
-          stroke:'#DC2626',strokeWidth:2,dot:{r:4,fill:'#DC2626'},
-          activeDot:{r:6}
+        // Zero line
+        minVal < 0 && React.createElement('line',{x1:PL,y1:yScale(0),x2:W-PR,y2:yScale(0),stroke:'#E2E8F0',strokeWidth:1,strokeDasharray:'4 2'}),
+        // Lines
+        mkPath('cobrado','#059669'),
+        mkPath('egresos','#DC2626'),
+        mkPath('ganancia','#2563EB'),
+        // Dots
+        mkDots('cobrado','#059669'),
+        mkDots('egresos','#DC2626'),
+        mkDots('ganancia','#2563EB'),
+        // X axis labels
+        allData.map(function(p,i){
+          return React.createElement('text',{key:i,x:xScale(i),y:H-8,textAnchor:'middle',fontSize:10,fill:'#94A3B8'},p.label);
         }),
-        React.createElement(RC.Line,{
-          type:'monotone',dataKey:'ganancia',name:'📈 Ganancia',
-          stroke:'#2563EB',strokeWidth:2,dot:{r:4,fill:'#2563EB'},
-          activeDot:{r:6},strokeDasharray:'4 2'
-        })
+        // Tooltip
+        tooltip && React.createElement('g',null,
+          React.createElement('rect',{x:tooltip.x+8,y:tooltip.y-50,width:140,height:70,fill:'#fff',stroke:'#E2E8F0',strokeWidth:1,rx:6}),
+          React.createElement('text',{x:tooltip.x+16,y:tooltip.y-33,fontSize:10,fontWeight:'bold',fill:NAVY},tooltip.data.label),
+          React.createElement('text',{x:tooltip.x+16,y:tooltip.y-18,fontSize:9,fill:'#059669'},'Cobrado: '+fmtV(tooltip.data.cobrado)),
+          React.createElement('text',{x:tooltip.x+16,y:tooltip.y-6,fontSize:9,fill:'#DC2626'},'Egresos: '+fmtV(tooltip.data.egresos)),
+          React.createElement('text',{x:tooltip.x+16,y:tooltip.y+8,fontSize:9,fill:'#2563EB'},'Ganancia: '+fmtV(tooltip.data.ganancia))
+        )
       )
     )
   );
