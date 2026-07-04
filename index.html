@@ -6365,10 +6365,12 @@ function IngresosView({quotes, egresos, onSaveEgresos, activeTab, setActiveTab})
                   React.createElement('td',{style:{padding:'9px 14px',fontSize:12,color:'#64748B'}},m.desc||'—'),
                   React.createElement('td',{style:{padding:'9px 14px',fontSize:13,fontWeight:700,color:m.monto>=0?'#059669':'#DC2626'}},(m.monto>=0?'':'- ')+(m.moneda==='USD'?'USD ':'$ ')+(Math.abs(m.monto)||0).toLocaleString('es-AR',{maximumFractionDigits:0})),
                   React.createElement('td',{style:{padding:'9px 14px',fontSize:12,color:'#64748B'}},
-                    m.moneda==='USD'&&m.tcambio?('$'+parseFloat(m.tcambio).toLocaleString('es-AR',{maximumFractionDigits:0})):'—'
+                    m.moneda==='USD'&&m.tcambio?('$'+parseFloat(m.tcambio).toLocaleString('es-AR',{maximumFractionDigits:0})):
+                    blueHoy?('$'+Math.round(blueHoy).toLocaleString('es-AR')):'—'
                   ),
-                  React.createElement('td',{style:{padding:'9px 14px',fontSize:13,fontWeight:700,color:'#059669'}},
-                    m.moneda==='USD'&&m.tcambio?('$ '+(Math.abs(m.monto)*parseFloat(m.tcambio)).toLocaleString('es-AR',{maximumFractionDigits:0})):'—'
+                  React.createElement('td',{style:{padding:'9px 14px',fontSize:13,fontWeight:700,color:'#64748B'}},
+                    m.moneda==='USD'&&m.tcambio?('$ '+(Math.abs(m.monto)*parseFloat(m.tcambio)).toLocaleString('es-AR',{maximumFractionDigits:0})):
+                    blueHoy?('USD '+(Math.abs(m.monto)/blueHoy).toLocaleString('es-AR',{maximumFractionDigits:0})):'—'
                   ),
                   React.createElement('td',{style:{padding:'9px 14px'}},m.eObj&&React.createElement('div',{style:{display:'flex',gap:4}},
                     React.createElement('button',{type:'button',onClick:function(){handleEditEgreso(m.eObj);},style:{background:'none',border:'1px solid #E2E8F0',borderRadius:5,padding:'3px 8px',fontSize:12,cursor:'pointer',color:'#475569'}},'✏️'),
