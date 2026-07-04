@@ -5944,7 +5944,18 @@ function DashboardEvolutionChart({quotes, egresos, dashAnosVer}) {
   var allData = [];
   years.forEach(function(year) {
     var maxMonth = year === currentYear ? currentMonth : 11;
-    for (var m = 0; m <= maxMonth; m++) {
+    var minMonth = year === Math.min.apply(null,years) ? 
+      (function(){
+        // Find first month with any data
+        for(var mm=0;mm<=11;mm++){
+          var ms=String(mm+1).padStart(2,'0');
+          var hasData = (quotes||[]).some(function(q){return (q.pagos||[]).some(function(p){return p.fecha&&parseInt(p.fecha.slice(0,4))===year&&p.fecha.slice(5,7)===ms;});}) ||
+            (egresos||[]).some(function(e){return e.fecha&&parseInt(e.fecha.slice(0,4))===year&&e.fecha.slice(5,7)===ms;});
+          if(hasData) return mm;
+        }
+        return 0;
+      })() : 0;
+    for (var m = minMonth; m <= maxMonth; m++) {
       var mesStr = String(m+1).padStart(2,'0');
       var label = MES_LABELS[m] + (years.length > 1 ? " '" + String(year).slice(2) : '');
       var cobradoARS = 0, cobradoUSD = 0, egresosTotal = 0;
@@ -5977,7 +5988,7 @@ function DashboardEvolutionChart({quotes, egresos, dashAnosVer}) {
 
   if(allData.length === 0) return null;
 
-  var W = 700, H = 260, PL = 70, PR = 20, PT = 20, PB = 40;
+  var W = 700, H = 280, PL = 70, PR = 20, PT = 20, PB = 55;
   var chartW = W - PL - PR, chartH = H - PT - PB;
   var vals = allData.flatMap(function(d){return [d.cobrado, d.egresos, Math.abs(d.ganancia)];});
   var maxVal = Math.max.apply(null, vals) || 1;
