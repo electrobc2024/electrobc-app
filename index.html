@@ -6150,6 +6150,25 @@ function IngresosView({quotes, egresos, onSaveEgresos, activeTab, setActiveTab})
       ),
             // Egresos por categoría + Ganancia GJF
       React.createElement('div',{style:{display:'grid',gridTemplateColumns:'1fr',gap:12}},
+        // Categorías
+        React.createElement('div',{style:{...card}},
+          React.createElement('div',{style:{fontSize:13,fontWeight:700,color:NAVY,marginBottom:12}},'\u{1F4B8} Egresos por categoría'),
+          porCat.length===0
+            ? React.createElement('div',{style:{color:'#94A3B8',fontSize:12,textAlign:'center',padding:'20px 0'}},'Sin egresos en el período')
+            : porCat.map(function(cat){
+                const pct = totalEgresosDash>0?Math.round((cat.total/totalEgresosDash)*100):0;
+                return React.createElement('div',{key:cat.id,style:{marginBottom:10}},
+                  React.createElement('div',{style:{display:'flex',justifyContent:'space-between',fontSize:12,marginBottom:3}},
+                    React.createElement('span',{style:{color:'#475569'}},cat.label),
+                    React.createElement('span',{style:{fontWeight:600,color:cat.color}},fmt(cat.total))
+                  ),
+                  React.createElement('div',{style:{backgroundColor:'#F1F5F9',borderRadius:4,height:6}},
+                    React.createElement('div',{style:{width:pct+'%',height:6,backgroundColor:cat.color,borderRadius:4,transition:'width 0.3s'}})
+                  )
+                );
+              })
+        ),
+
         // Ganancia GJF (duplicate removed)
         false && React.createElement('div', { style: { ...card, marginTop: 16, marginBottom: 16 } },
             React.createElement('div', { style: { fontSize: 13, fontWeight: 700, color: NAVY, marginBottom: 12 } }, '📈 Origen de los Ingresos (ARS)'),
@@ -6206,26 +6225,7 @@ function IngresosView({quotes, egresos, onSaveEgresos, activeTab, setActiveTab})
           )
     ),
 
-    // Categorías
-        React.createElement('div',{style:{...card}},
-          React.createElement('div',{style:{fontSize:13,fontWeight:700,color:NAVY,marginBottom:12}},'\u{1F4B8} Egresos por categoría'),
-          porCat.length===0
-            ? React.createElement('div',{style:{color:'#94A3B8',fontSize:12,textAlign:'center',padding:'20px 0'}},'Sin egresos en el período')
-            : porCat.map(function(cat){
-                const pct = totalEgresosDash>0?Math.round((cat.total/totalEgresosDash)*100):0;
-                return React.createElement('div',{key:cat.id,style:{marginBottom:10}},
-                  React.createElement('div',{style:{display:'flex',justifyContent:'space-between',fontSize:12,marginBottom:3}},
-                    React.createElement('span',{style:{color:'#475569'}},cat.label),
-                    React.createElement('span',{style:{fontWeight:600,color:cat.color}},fmt(cat.total))
-                  ),
-                  React.createElement('div',{style:{backgroundColor:'#F1F5F9',borderRadius:4,height:6}},
-                    React.createElement('div',{style:{width:pct+'%',height:6,backgroundColor:cat.color,borderRadius:4,transition:'width 0.3s'}})
-                  )
-                );
-              })
-        ),
-
-        // ── COBROS TAB ───────────────────────────────────────────────────────────
+    // ── COBROS TAB ───────────────────────────────────────────────────────────
     tab==='movimientos' && React.createElement('div',null,
       React.createElement('div',{style:{display:'flex',gap:6,flexWrap:'wrap',alignItems:'center',marginBottom:10}},
         React.createElement('span',{style:{fontSize:11,color:'#94A3B8',fontWeight:700}},'AÑO:'),
@@ -6326,9 +6326,8 @@ function IngresosView({quotes, egresos, onSaveEgresos, activeTab, setActiveTab})
       React.createElement(function MovTable(){
         var allMovs=[];
         allCobrosCombinadosMov.forEach(function(c){
-          if (!c.manual) return; // solo ingresos manuales, no cobros de presupuestos
-          var origEObj = ingresosManualesMov.find(function(ie){return ie.fecha===c.fecha&&parseFloat(ie.monto)===c.monto&&ie.desc===c.desc;});
-          allMovs.push({fecha:c.fecha,tipo:'ingreso',label:'📥 Ingreso',ref:'',cliente:'',desc:c.desc,monto:c.monto,moneda:c.moneda||'$',tcambio:c.tcambio||null,id:'c'+c.fecha+c.monto,color:'#059669',bg:'#ECFDF5',eObj:origEObj||null});
+          var origEObj = c.manual ? ingresosManualesMov.find(function(ie){return ie.fecha===c.fecha&&parseFloat(ie.monto)===c.monto&&ie.desc===c.desc;}) : null;
+          allMovs.push({fecha:c.fecha,tipo:c.manual?'ingreso':'cobro',label:'📥 Ingreso',ref:c.qNumero?'#'+c.qNumero:'',cliente:c.qCliente,desc:c.desc,monto:c.monto,moneda:c.moneda||'$',tcambio:c.tcambio||null,id:'c'+c.fecha+c.monto,color:'#059669',bg:'#ECFDF5',eObj:origEObj||null});
         });
         egresosFiltradosMov.forEach(function(e){var cat=EGRESO_CATS.find(function(c){return c.id===e.cat;})||EGRESO_CATS[5];allMovs.push({fecha:e.fecha,tipo:'egreso',label:'📤 Egreso',ref:cat.label,cliente:cat.label,desc:e.desc,monto:-(parseFloat(e.monto)||0),moneda:e.moneda||'$',id:e.id,color:'#DC2626',bg:'#FFF1F2',eObj:e,detalle:cat.label});});
         allMovs.sort(function(a,b){return (b.fecha||'').localeCompare(a.fecha||'');});
