@@ -6075,7 +6075,7 @@ function IngresosView({quotes, egresos, onSaveEgresos, activeTab, setActiveTab})
   const porCat = EGRESO_CATS.map(function(cat){
     const total = egresosFiltradosDash.filter(function(e){return e.cat===cat.id;}).reduce(function(s,e){return s+(parseFloat(e.monto)||0);},0);
     return {...cat, total};
-  }).filter(function(c){return c.total>0;}).sort(function(a,b){return b.total-a.total;});
+  }).sort(function(a,b){return b.total-a.total;});
 
   // ── Form ───────────────────────────────────────────────────────────────────
   function handleSaveEgreso() {
