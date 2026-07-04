@@ -5934,11 +5934,11 @@ const EGRESO_CATS = [
 ];
 
 function IngresosView({quotes, egresos, onSaveEgresos, activeTab, setActiveTab}) {
-  var [blueHoy, setBlueHoy] = React.useState(null);
+  var [blueHoy, setBlueHoy] = React.useState({buy:null,sell:null});
   React.useEffect(function(){
     fetch('https://api.bluelytics.com.ar/v2/latest')
       .then(function(r){return r.json();})
-      .then(function(d){ if(d&&d.blue&&d.blue.value_sell) setBlueHoy(d.blue.value_sell); })
+      .then(function(d){ if(d&&d.blue) setBlueHoy({buy:d.blue.value_buy||null,sell:d.blue.value_sell||null}); })
       .catch(function(){});
   }, []);
   var _now = new Date();
@@ -6348,7 +6348,7 @@ function IngresosView({quotes, egresos, onSaveEgresos, activeTab, setActiveTab})
         var totalARSonly=filtered.filter(function(m){return m.moneda==='$';}).reduce(function(s,m){return s+m.monto;},0);
         var totalUSDPesificado=filtered.filter(function(m){return m.moneda==='USD';}).reduce(function(s,m){return s+(m.monto*(parseFloat(m.tcambio)||0));},0);
         var total=totalARSonly+totalUSDPesificado;
-        var totalUSD=blueHoy?(total/blueHoy):0;
+        var totalUSD=blueHoy.buy?(total/blueHoy.buy):0;
         if(filtered.length===0) return React.createElement('div',{style:{...card,textAlign:'center',color:'#94A3B8',padding:40}},'Sin movimientos en el período seleccionado');
         return React.createElement('div',null,
           React.createElement('table',{style:{width:'100%',borderCollapse:'collapse',backgroundColor:'#fff',borderRadius:12,overflow:'hidden',border:'1px solid #E2E8F0'}},
@@ -6366,7 +6366,7 @@ function IngresosView({quotes, egresos, onSaveEgresos, activeTab, setActiveTab})
                   React.createElement('td',{style:{padding:'9px 14px',fontSize:13,fontWeight:700,color:m.monto>=0?'#059669':'#DC2626'}},(m.monto>=0?'':'- ')+(m.moneda==='USD'?'USD ':'$ ')+(Math.abs(m.monto)||0).toLocaleString('es-AR',{maximumFractionDigits:0})),
                   React.createElement('td',{style:{padding:'9px 14px',fontSize:12,color:'#64748B'}},
                     m.moneda==='USD'&&m.tcambio?('$'+parseFloat(m.tcambio).toLocaleString('es-AR',{maximumFractionDigits:0})):
-                    blueHoy?('$'+Math.round(blueHoy).toLocaleString('es-AR')):'—'
+                    blueHoy.buy?('$'+Math.round(blueHoy.buy).toLocaleString('es-AR')):'—'
                   ),
                   React.createElement('td',{style:{padding:'9px 14px',fontSize:13,fontWeight:700,color:'#64748B'}},
                     m.moneda==='USD'&&m.tcambio?('$ '+(Math.abs(m.monto)*parseFloat(m.tcambio)).toLocaleString('es-AR',{maximumFractionDigits:0})):
