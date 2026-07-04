@@ -5950,7 +5950,7 @@ function IngresosView({quotes, egresos, onSaveEgresos, activeTab, setActiveTab})
   var tab = activeTab||'dashboard'; var setTab = setActiveTab||function(){};
   const [showForm, setShowForm] = React.useState(false);
   const [tipoFilter, setTipoFilter] = React.useState('todos');
-  const [egForm, setEgForm] = React.useState({id:'',tipo:'egreso',cat:'sueldos',desc:'',monto:'',fecha:'',medio:'efectivo',moneda:'$',tcambio:''});
+  const [egForm, setEgForm] = React.useState({id:'',tipo:'egreso',cat:'sueldos',desc:'',monto:'',fecha:new Date().toISOString().slice(0,10),medio:'efectivo',moneda:'$',tcambio:''});
   const [editId, setEditId] = React.useState(null);
   // Filtros AÑO/MES independientes por pestaña (no deben afectarse entre sí)
   const [dashMesesVer, setDashMesesVer] = React.useState([]);
