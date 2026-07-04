@@ -6309,7 +6309,7 @@ function IngresosView({quotes, egresos, onSaveEgresos, activeTab, setActiveTab})
           ),
           React.createElement('div',null,
             React.createElement('div',{style:{fontSize:10,color:'#94A3B8',fontWeight:700,marginBottom:4}},'FECHA'),
-            React.createElement('input',{type:'date',value:egForm.fecha,min:'2026-01-01',onChange:function(e){setEgForm(function(f){return Object.assign({},f,{fecha:e.target.value});});},style:inp})
+            React.createElement('input',{type:'date',value:egForm.fecha,min:'2020-01-01',max:new Date().toISOString().slice(0,10),onChange:function(e){setEgForm(function(f){return Object.assign({},f,{fecha:e.target.value});});},style:inp})
           ),
           React.createElement('div',null,
             React.createElement('div',{style:{fontSize:10,color:'#94A3B8',fontWeight:700,marginBottom:4}},'MEDIO'),
