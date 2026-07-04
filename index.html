@@ -5964,6 +5964,7 @@ function IngresosView({quotes, egresos, onSaveEgresos, activeTab, setActiveTab})
             fecha: (p.fecha||'').slice(0,10),
             desc: p.desc || ('Pago presupuesto #'+q.numero),
             moneda: p.moneda||'$',
+            tcambio: p.tcambio||null,
           });
         }
       });
