@@ -6643,6 +6643,19 @@ function IngresosView({quotes, egresos, onSaveEgresos, activeTab, setActiveTab})
         var totalUSD=blueHoy.buy?Math.round(total/blueHoy.buy):0;
         if(filtered.length===0) return React.createElement('div',{style:{...card,textAlign:'center',color:'#94A3B8',padding:40}},'Sin movimientos en el período seleccionado');
         return React.createElement('div',null,
+          React.createElement('div',{style:{display:'flex',gap:24,marginBottom:12,padding:'10px 16px',
+            backgroundColor:'#F8FAFC',borderRadius:10,border:'1px solid #E2E8F0',alignItems:'center',flexWrap:'wrap'}},
+            React.createElement('div',{style:{fontSize:12,color:NAVY}},
+              React.createElement('span',{style:{fontWeight:700}},'TOTAL NETO: '),
+              React.createElement('span',{style:{color:total>=0?'#059669':'#DC2626',fontWeight:700,fontSize:14}},
+                (total>=0?'':'- ')+'$ '+(Math.abs(Math.round(total))||0).toLocaleString('es-AR'))
+            ),
+            React.createElement('div',{style:{fontSize:12,color:NAVY}},
+              React.createElement('span',{style:{fontWeight:700}},'TOTAL NETO USD: '),
+              React.createElement('span',{style:{color:totalUSD>=0?'#0369A1':'#DC2626',fontWeight:700,fontSize:14}},
+                (totalUSD>=0?'':'- ')+'USD '+(Math.abs(Math.round(totalUSD))||0).toLocaleString('es-AR'))
+            )
+          ),
           React.createElement('table',{style:{width:'100%',borderCollapse:'collapse',backgroundColor:'#fff',borderRadius:12,overflow:'hidden',border:'1px solid #E2E8F0'}},
             React.createElement('thead',null,React.createElement('tr',{style:{backgroundColor:'#F8FAFC'}},
               ['Fecha','Tipo','Detalle','Descripción','Monto','TC','ARS','USD',''].map(function(h){return React.createElement('th',{key:h,style:{padding:'10px 14px',fontSize:11,fontWeight:700,color:'#94A3B8',textAlign:'left',textTransform:'uppercase',letterSpacing:'0.06em'}},h);})
