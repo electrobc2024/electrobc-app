@@ -5933,8 +5933,115 @@ const EGRESO_CATS = [
   {id:'clientes', label:'\u{1F4E6} Compras para clientes', color:'#0369A1'},
 ];
 
+function DashboardPdfOverlay({onClose, data}) {
+  const [status, setStatus] = React.useState("idle");
+  const {
+    cobrado, egresos, ganancia, cobradoUSD,
+    pendiente, presupuestados, noPresupuestados,
+    porCat, periodo, fechaHoy
+  } = data;
+  const fmt = n => Math.abs(Math.round(n)||0).toLocaleString('es-AR');
+  const filename = 'ELECTRO BC - Dashboard Financiero - ' + periodo + ' - ' + fechaHoy;
+  const downloadPdf = async () => {
+    setStatus("loading");
+    try {
+      const el = document.getElementById("dashboard-pdf-preview-area");
+      if (typeof html2pdf !== "undefined" && el) {
+        await html2pdf().set({
+          margin: [8,8,8,8],
+          filename: filename + ".pdf",
+          image: {type:"jpeg", quality:0.95},
+          html2canvas: {scale:2, useCORS:true, logging:false},
+          jsPDF: {unit:"mm", format:"a4", orientation:"portrait"}
+        }).from(el).save();
+      }
+    } catch(e) { console.error(e); }
+    setStatus("idle");
+  };
+  const NAVY = "#0A0F1E", ORANGE = "#F26B1D";
+  const cardS = {backgroundColor:"#fff",border:"1px solid #E2E8F0",borderRadius:8,padding:"12px 16px",marginBottom:12};
+  const rowS = {display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6};
+  return React.createElement("div",{style:{position:"fixed",inset:0,zIndex:9999,backgroundColor:"rgba(0,0,0,0.7)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"flex-start",overflowY:"auto",padding:"20px 0"}},
+    React.createElement("div",{style:{backgroundColor:"#F8FAFC",borderRadius:12,width:"min(780px,95vw)",boxShadow:"0 8px 40px rgba(0,0,0,0.3)"}},
+      // Toolbar
+      React.createElement("div",{className:"no-print",style:{display:"flex",gap:8,padding:"12px 16px",borderBottom:"1px solid #E2E8F0",backgroundColor:"#fff",borderRadius:"12px 12px 0 0"}},
+        React.createElement("button",{onClick:downloadPdf,disabled:status==="loading",
+          style:{backgroundColor:NAVY,color:"#fff",border:"none",borderRadius:8,padding:"8px 20px",fontSize:13,fontWeight:700,cursor:"pointer"}},
+          status==="loading"?"Generando PDF...":"\uD83D\uDCBE Descargar PDF"),
+        React.createElement("button",{onClick:onClose,
+          style:{backgroundColor:"transparent",color:"rgba(0,0,0,0.5)",border:"1px solid #E2E8F0",borderRadius:8,padding:"8px 16px",fontSize:13,cursor:"pointer"}},
+          "Cerrar")
+      ),
+      // Preview area
+      React.createElement("div",{id:"dashboard-pdf-preview-area",style:{padding:"24px",backgroundColor:"#fff",borderRadius:"0 0 12px 12px"}},
+        // Header con logo
+        React.createElement("div",{style:{display:"flex",alignItems:"center",gap:12,marginBottom:20,paddingBottom:16,borderBottom:"3px solid "+ORANGE}},
+          React.createElement("div",{style:{backgroundColor:NAVY,borderRadius:8,padding:"8px 12px",display:"flex",alignItems:"center",justifyContent:"center"}},
+            React.createElement("span",{style:{fontSize:20}},"⚡")
+          ),
+          React.createElement("div",null,
+            React.createElement("div",{style:{fontFamily:"'Oswald',system-ui",fontSize:22,fontWeight:700,color:NAVY,letterSpacing:"0.05em"}},"ELECTRO BC"),
+            React.createElement("div",{style:{fontSize:10,color:"#94A3B8",letterSpacing:"0.15em",textTransform:"uppercase"}},"Servicios Integrales")
+          ),
+          React.createElement("div",{style:{marginLeft:"auto",textAlign:"right"}},
+            React.createElement("div",{style:{fontFamily:"'Oswald',system-ui",fontSize:14,fontWeight:700,color:NAVY}},"Dashboard Financiero"),
+            React.createElement("div",{style:{fontSize:11,color:"#94A3B8"}},periodo),
+            React.createElement("div",{style:{fontSize:10,color:"#94A3B8"}},"Generado: "+fechaHoy)
+          )
+        ),
+        // KPI cards
+        React.createElement("div",{style:{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:10,marginBottom:16}},
+          React.createElement("div",{style:{...cardS,backgroundColor:"#ECFDF5"}},
+            React.createElement("div",{style:{fontSize:10,color:"#94A3B8",fontWeight:700,textTransform:"uppercase",marginBottom:4}},"💵 Cobrado"),
+            React.createElement("div",{style:{fontFamily:"'Oswald',system-ui",fontSize:20,fontWeight:700,color:"#065F46"}},"$ "+fmt(cobrado))
+          ),
+          React.createElement("div",{style:{...cardS,backgroundColor:"#FFFBEB"}},
+            React.createElement("div",{style:{fontSize:10,color:"#94A3B8",fontWeight:700,textTransform:"uppercase",marginBottom:4}},"⏳ Pendiente de cobro"),
+            React.createElement("div",{style:{fontFamily:"'Oswald',system-ui",fontSize:20,fontWeight:700,color:"#92400E"}},"$ "+fmt(pendiente))
+          ),
+          React.createElement("div",{style:{...cardS,backgroundColor:"#FFF1F2"}},
+            React.createElement("div",{style:{fontSize:10,color:"#94A3B8",fontWeight:700,textTransform:"uppercase",marginBottom:4}},"💸 Egresos"),
+            React.createElement("div",{style:{fontFamily:"'Oswald',system-ui",fontSize:20,fontWeight:700,color:"#991B1B"}},"$ "+fmt(egresos))
+          ),
+          React.createElement("div",{style:{...cardS,backgroundColor:ganancia>=0?"#ECFDF5":"#FFF1F2"}},
+            React.createElement("div",{style:{fontSize:10,color:"#94A3B8",fontWeight:700,textTransform:"uppercase",marginBottom:4}},"📈 Ganancia neta"),
+            React.createElement("div",{style:{fontFamily:"'Oswald',system-ui",fontSize:20,fontWeight:700,color:ganancia>=0?"#065F46":"#991B1B"}},(ganancia<0?"- ":"")+"$ "+fmt(ganancia))
+          )
+        ),
+        // Origen de ingresos
+        React.createElement("div",{style:cardS},
+          React.createElement("div",{style:{fontSize:12,fontWeight:700,color:NAVY,marginBottom:10}},"📈 Origen de los Ingresos (ARS)"),
+          React.createElement("div",{style:rowS},
+            React.createElement("span",{style:{fontSize:12,color:"#475569"}},"📋 Trabajos Presupuestados"),
+            React.createElement("span",{style:{fontSize:13,fontWeight:700,color:NAVY}},"$ "+fmt(presupuestados))
+          ),
+          React.createElement("div",{style:rowS},
+            React.createElement("span",{style:{fontSize:12,color:"#475569"}},"⚡ Directos / No Presupuestados"),
+            React.createElement("span",{style:{fontSize:13,fontWeight:700,color:NAVY}},"$ "+fmt(noPresupuestados))
+          )
+        ),
+        // Egresos por categoría
+        React.createElement("div",{style:cardS},
+          React.createElement("div",{style:{fontSize:12,fontWeight:700,color:NAVY,marginBottom:10}},"💸 Egresos por categoría"),
+          porCat.map(function(cat){
+            return React.createElement("div",{key:cat.id,style:rowS},
+              React.createElement("span",{style:{fontSize:12,color:"#475569"}},cat.icon+" "+cat.label),
+              React.createElement("span",{style:{fontSize:13,fontWeight:700,color:cat.total>0?"#991B1B":"#94A3B8"}},"$ "+fmt(cat.total))
+            );
+          })
+        ),
+        // Footer
+        React.createElement("div",{style:{textAlign:"center",fontSize:9,color:"#CBD5E1",marginTop:16,paddingTop:12,borderTop:"1px solid #E2E8F0"}},
+          "ELECTRO BC — Servicios Integrales — Generado el "+fechaHoy
+        )
+      )
+    )
+  );
+}
+
 function IngresosView({quotes, egresos, onSaveEgresos, activeTab, setActiveTab}) {
   var [blueHoy, setBlueHoy] = React.useState({buy:null,sell:null});
+  var [showDashPdf, setShowDashPdf] = React.useState(false);
   React.useEffect(function(){
     fetch('https://api.bluelytics.com.ar/v2/latest')
       .then(function(r){return r.json();})
@@ -6152,21 +6259,27 @@ function IngresosView({quotes, egresos, onSaveEgresos, activeTab, setActiveTab})
         (dashAnosVer.length>0||dashMesesVer.length>0)?React.createElement('button',{type:'button',onClick:function(){setDashAnosVer([]);setDashMesesVer([]);},
           style:{padding:'4px 8px',borderRadius:20,fontSize:11,cursor:'pointer',border:'1.5px solid #E2E8F0',backgroundColor:'#fff',color:'#94A3B8'}},'✕ Limpiar'):null
       ),
+      // Dashboard PDF Overlay
+      showDashPdf && React.createElement(DashboardPdfOverlay,{
+        onClose:function(){setShowDashPdf(false);},
+        data:{
+          cobrado: totalCobradoDash + cobradoUSDenARS,
+          egresos: totalEgresosDash,
+          ganancia: gananciaDash,
+          cobradoUSD: cobradoUSDDash,
+          pendiente: pendienteCobroDash,
+          presupuestados: ingresosPresupuestados,
+          noPresupuestados: ingresosNoPresupuestados,
+          porCat: porCat,
+          periodo: (dashAnosVer.length>0?dashAnosVer.join('/'):'Todos') + (dashMesesVer.length>0?' - Meses: '+dashMesesVer.join('/'):''),
+          fechaHoy: new Date().toLocaleDateString('es-AR')
+        }
+      }),
       // Print button
       React.createElement('div',{style:{display:'flex',justifyContent:'flex-end',marginBottom:12}},
         React.createElement('button',{
-          onClick:function(){
-            var el = document.getElementById('dashboard-pdf-area');
-            if(el && typeof html2pdf !== 'undefined'){
-              html2pdf().set({
-                margin:[8,8,8,8],
-                filename:'dashboard-electrobc.pdf',
-                image:{type:'jpeg',quality:0.95},
-                html2canvas:{scale:2,useCORS:true,logging:false,scrollY:0},
-                jsPDF:{unit:'mm',format:'a4',orientation:'portrait'}
-              }).from(el).save();
-            }
-          },
+          onClick:function(){setShowDashPdf(true);},
+
           style:{background:'none',border:'1px solid #E2E8F0',borderRadius:8,padding:'6px 16px',
             fontSize:12,cursor:'pointer',color:'#475569',display:'flex',alignItems:'center',gap:6}
         },'🖨️ Exportar PDF')
