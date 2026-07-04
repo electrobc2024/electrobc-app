@@ -6345,10 +6345,12 @@ function IngresosView({quotes, egresos, onSaveEgresos, activeTab, setActiveTab})
         egresosFiltradosMov.forEach(function(e){var cat=EGRESO_CATS.find(function(c){return c.id===e.cat;})||EGRESO_CATS[5];allMovs.push({fecha:e.fecha,tipo:'egreso',label:'📤 Egreso',ref:cat.label,cliente:cat.label,desc:e.desc,monto:-(parseFloat(e.monto)||0),moneda:e.moneda||'$',tcambio:e.tcambio||null,id:e.id,color:'#DC2626',bg:'#FFF1F2',eObj:e,detalle:cat.label});});
         allMovs.sort(function(a,b){return (b.fecha||'').localeCompare(a.fecha||'');});
         var filtered=tipoFilter==='todos'?allMovs:allMovs.filter(function(m){return tipoFilter==='ingresos'?(m.tipo==='cobro'||m.tipo==='ingreso'):m.tipo==='egreso';});
-        var totalARSonly=filtered.filter(function(m){return m.moneda==='$';}).reduce(function(s,m){return s+m.monto;},0);
-        var totalUSDPesificado=filtered.filter(function(m){return m.moneda==='USD';}).reduce(function(s,m){return s+(m.monto*(parseFloat(m.tcambio)||0));},0);
-        var total=totalARSonly+totalUSDPesificado;
-        var totalUSD=blueHoy.buy?(total/blueHoy.buy):0;
+        // Total neto: ARS + USD pesificado con TC de cada movimiento
+        var total=filtered.reduce(function(s,m){
+          if(m.moneda==='USD') return s+(m.monto*(parseFloat(m.tcambio)||parseFloat(blueHoy.sell)||0));
+          return s+m.monto;
+        },0);
+        var totalUSD=blueHoy.buy?Math.round(total/blueHoy.buy):0;
         if(filtered.length===0) return React.createElement('div',{style:{...card,textAlign:'center',color:'#94A3B8',padding:40}},'Sin movimientos en el período seleccionado');
         return React.createElement('div',null,
           React.createElement('table',{style:{width:'100%',borderCollapse:'collapse',backgroundColor:'#fff',borderRadius:12,overflow:'hidden',border:'1px solid #E2E8F0'}},
