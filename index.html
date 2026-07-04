@@ -6018,7 +6018,10 @@ function IngresosView({quotes, egresos, onSaveEgresos, activeTab, setActiveTab})
   + (egresos||[]).filter(function(e){return inPeriod(e.fecha,dashAnosVer,dashMesesVer)&&e.tipo==='ingreso'&&e.moneda==='USD';}).reduce(function(s,e){return s+(parseFloat(e.monto)||0)*(parseFloat(e.tcambio)||0);},0);
 
   const totalCobradoDash = allCobrosCombinadosDash.filter(function(c){return (c.moneda||'$')==='$';}).reduce(function(s,c){return s+c.monto;},0);
-  const totalEgresosDash = egresosFiltradosDash.filter(function(e){return (e.moneda||'$')==='$';}).reduce(function(s,e){return s+(parseFloat(e.monto)||0);},0);
+  const totalEgresosDash = egresosFiltradosDash.reduce(function(s,e){
+    if((e.moneda||'$')==='USD') return s+(parseFloat(e.monto)||0)*(parseFloat(e.tcambio)||0);
+    return s+(parseFloat(e.monto)||0);
+  },0);
 
 
   // Calcular lo pendiente de cobro filtrado por el período del Dashboard
