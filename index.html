@@ -6410,7 +6410,10 @@ function IngresosView({quotes, egresos, onSaveEgresos, activeTab, setActiveTab})
           noPresupuestados: ingresosNoPresupuestados,
           porCat: porCat,
           periodo: (dashAnosVer.length>0?dashAnosVer.join('/'):'Todos') + (dashMesesVer.length>0?' - Meses: '+dashMesesVer.join('/'):''),
-          fechaHoy: new Date().toLocaleDateString('es-AR')
+          fechaHoy: new Date().toLocaleDateString('es-AR'),
+          quotes: quotes,
+          egresos: egresos,
+          dashAnosVer: dashAnosVer
         }
       }),
       // Print button
