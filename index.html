@@ -6150,27 +6150,7 @@ function IngresosView({quotes, egresos, onSaveEgresos, activeTab, setActiveTab})
       ),
             // Egresos por categoría + Ganancia GJF
       React.createElement('div',{style:{display:'grid',gridTemplateColumns:'1fr',gap:12}},
-        // Categorías
-        React.createElement('div',{style:{...card}},
-          React.createElement('div',{style:{fontSize:13,fontWeight:700,color:NAVY,marginBottom:12}},'\u{1F4B8} Egresos por categoría'),
-          porCat.length===0
-            ? React.createElement('div',{style:{color:'#94A3B8',fontSize:12,textAlign:'center',padding:'20px 0'}},'Sin egresos en el período')
-            : porCat.map(function(cat){
-                const pct = totalEgresosDash>0?Math.round((cat.total/totalEgresosDash)*100):0;
-                return React.createElement('div',{key:cat.id,style:{marginBottom:10}},
-                  React.createElement('div',{style:{display:'flex',justifyContent:'space-between',fontSize:12,marginBottom:3}},
-                    React.createElement('span',{style:{color:'#475569'}},cat.label),
-                    React.createElement('span',{style:{fontWeight:600,color:cat.color}},fmt(cat.total))
-                  ),
-                  React.createElement('div',{style:{backgroundColor:'#F1F5F9',borderRadius:4,height:6}},
-                    React.createElement('div',{style:{width:pct+'%',height:6,backgroundColor:cat.color,borderRadius:4,transition:'width 0.3s'}})
-                  )
-                );
-              })
-        ),
-
-        // Ganancia GJF (duplicate removed)
-        false && React.createElement('div', { style: { ...card, marginTop: 16, marginBottom: 16 } },
+        React.createElement('div', { style: { ...card, marginTop: 16, marginBottom: 16 } },
             React.createElement('div', { style: { fontSize: 13, fontWeight: 700, color: NAVY, marginBottom: 12 } }, '📈 Origen de los Ingresos (ARS)'),
             React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: 12 } },
               React.createElement('div', null,
@@ -6223,7 +6203,27 @@ function IngresosView({quotes, egresos, onSaveEgresos, activeTab, setActiveTab})
           ),
 
           )
-    ),
+    ),// Categorías
+        React.createElement('div',{style:{...card}},
+          React.createElement('div',{style:{fontSize:13,fontWeight:700,color:NAVY,marginBottom:12}},'\u{1F4B8} Egresos por categoría'),
+          porCat.length===0
+            ? React.createElement('div',{style:{color:'#94A3B8',fontSize:12,textAlign:'center',padding:'20px 0'}},'Sin egresos en el período')
+            : porCat.map(function(cat){
+                const pct = totalEgresosDash>0?Math.round((cat.total/totalEgresosDash)*100):0;
+                return React.createElement('div',{key:cat.id,style:{marginBottom:10}},
+                  React.createElement('div',{style:{display:'flex',justifyContent:'space-between',fontSize:12,marginBottom:3}},
+                    React.createElement('span',{style:{color:'#475569'}},cat.label),
+                    React.createElement('span',{style:{fontWeight:600,color:cat.color}},fmt(cat.total))
+                  ),
+                  React.createElement('div',{style:{backgroundColor:'#F1F5F9',borderRadius:4,height:6}},
+                    React.createElement('div',{style:{width:pct+'%',height:6,backgroundColor:cat.color,borderRadius:4,transition:'width 0.3s'}})
+                  )
+                );
+              })
+        ),
+
+        // Ganancia GJF (duplicate removed)
+        false && 
 
     // ── COBROS TAB ───────────────────────────────────────────────────────────
     tab==='movimientos' && React.createElement('div',null,
