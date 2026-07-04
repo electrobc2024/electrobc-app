@@ -6187,7 +6187,7 @@ function IngresosView({quotes, egresos, onSaveEgresos, activeTab, setActiveTab})
   var _curMonth = _now.getMonth() + 1;
   var anos = Array.from({length: _curYear - 2025}, function(_,i){return String(2026+i);});
   var meses = ['01','02','03','04','05','06','07','08','09','10','11','12'].filter(function(m){ return _curYear > 2026 || m >= '06'; }).slice(0, _curYear > 2026 ? 12 : _curMonth);
-  var mesLabels = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'].slice(0, _curYear > 2026 ? 12 : _curMonth);
+  var mesLabels = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'].filter(function(_,i){ return _curYear > 2026 || i >= 5; }).slice(0, _curYear > 2026 ? 12 : _curMonth - 5);
   var tab = activeTab||'dashboard'; var setTab = setActiveTab||function(){};
   const [showForm, setShowForm] = React.useState(false);
   const [tipoFilter, setTipoFilter] = React.useState('todos');
