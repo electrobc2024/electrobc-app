@@ -6510,7 +6510,15 @@ function IngresosView({quotes, egresos, onSaveEgresos, activeTab, setActiveTab})
             )
           ),
 
-          )
+          ),
+
+      // Evolution chart
+      React.createElement(DashboardEvolutionChart,{
+        quotes:quotes,
+        egresos:egresos,
+        dashAnosVer:dashAnosVer
+      })
+      )
     ),
 
     // ── COBROS TAB ───────────────────────────────────────────────────────────
