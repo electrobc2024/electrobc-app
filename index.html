@@ -2780,13 +2780,13 @@ function PrintDoc({
     cy: "26",
     rx: "20",
     ry: "8",
-    stroke: NAVY,
+    stroke: "#0A0F1E",
     strokeWidth: "2.2",
     fill: "none",
     transform: "rotate(-20 24 26)"
   }), /*#__PURE__*/React.createElement("path", {
     d: "M28 5 L16 26 H23 L20 43 L32 22 H25 Z",
-    fill: ORANGE
+    fill: "#F26B1D"
   })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
     style: {
       fontFamily: "'Oswald',system-ui",
@@ -3088,6 +3088,7 @@ function PdfOverlay({
           html2canvas: {
             scale: 2,
             useCORS: true,
+            allowTaint: true,
             logging: false
           },
           jsPDF: {
