@@ -3259,7 +3259,18 @@ function PaymentsPanel({
     onChange: e => {
       var val = e.target.value;
       setPago(p.id, "moneda", val);
-      if (val === "USD" && !p.tcambio) fetchBlue(p.id);
+      if (val === "USD" && !p.tcambio) {
+        fetch("https://api.bluelytics.com.ar/v2/latest")
+          .then(function(r){return r.json();})
+          .then(function(d){
+            var blue = d && d.blue && d.blue.value_sell ? String(d.blue.value_sell) : null;
+            if (blue) {
+              onUpdatePagos(qid, pagos.map(function(x){
+                return x.id === p.id ? {...x, moneda: val, tcambio: blue} : x;
+              }));
+            }
+          }).catch(function(){});
+      }
     },
     style: {
       ...iS,
