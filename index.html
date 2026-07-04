@@ -3931,7 +3931,7 @@ function Tracker({
         minWidth: 165,
         boxShadow: "0 12px 36px rgba(0,0,0,0.18)"
       }
-    }, Object.entries(STATUS_MAP).filter(([k])=>k!=="recotizar"&&(k===effectiveStatus(q)||canTransition(effectiveStatus(q),k))).map(([k, v]) => {
+    }, Object.entries(STATUS_MAP).filter(([k])=>k!=="recotizar"&&k!=="recotizado").map(([k, v]) => {
       const isCurrent = q.status === k || k === "recotizar" && isVencido(q);
       return /*#__PURE__*/React.createElement("button", {
         key: k,
