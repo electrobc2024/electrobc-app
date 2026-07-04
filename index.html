@@ -6088,7 +6088,10 @@ function IngresosView({quotes, egresos, onSaveEgresos, activeTab, setActiveTab})
 
   // By category (Dashboard) — solo egresos en pesos
   const porCat = EGRESO_CATS.map(function(cat){
-    const total = egresosFiltradosDash.filter(function(e){return e.cat===cat.id;}).reduce(function(s,e){return s+(parseFloat(e.monto)||0);},0);
+    const total = egresosFiltradosDash.filter(function(e){return e.cat===cat.id;}).reduce(function(s,e){
+      if((e.moneda||'$')==='USD') return s+(parseFloat(e.monto)||0)*(parseFloat(e.tcambio)||0);
+      return s+(parseFloat(e.monto)||0);
+    },0);
     return {...cat, total};
   }).sort(function(a,b){return b.total-a.total;});
 
