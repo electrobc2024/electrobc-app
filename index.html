@@ -6222,6 +6222,37 @@ function IngresosView({quotes, egresos, onSaveEgresos, activeTab, setActiveTab})
             )
           ),
 
+          React.createElement('div',{style:{...card}},
+          React.createElement('div',{style:{fontSize:13,fontWeight:700,color:NAVY,marginBottom:12}},'\u{1F91D} Distribución de la ganancia'),
+          React.createElement('div',{style:{backgroundColor:'#F8FAFC',borderRadius:8,padding:'12px 14px',marginBottom:12}},
+            React.createElement('div',{style:{fontSize:11,color:'#94A3B8',fontWeight:700,textTransform:'uppercase',marginBottom:6}},'Ganancia neta ARS'),
+            React.createElement('div',{style:{fontFamily:"'Oswald',system-ui",fontSize:24,fontWeight:700,color:gananciaDashPuroARS>=0?'#065F46':'#DC2626'}},fmt(gananciaDashPuroARS))
+          ),
+          React.createElement('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}},
+            ['Guille','Fede'].map(function(nombre){
+              return React.createElement('div',{key:nombre,style:{backgroundColor:'#EFF6FF',borderRadius:8,padding:'10px 12px',textAlign:'center'}},
+                React.createElement('div',{style:{fontSize:11,color:'#1D4ED8',fontWeight:700,marginBottom:4}},nombre),
+                React.createElement('div',{style:{fontFamily:"'Oswald',system-ui",fontSize:16,fontWeight:700,color:'#1D4ED8'}},fmt(gananciaDashPuroARS/2))
+              );
+            })
+          ),
+          gananciaUSDDash !== 0 && React.createElement('div',null,
+            React.createElement('div',{style:{backgroundColor:'#F0FDF4',borderRadius:8,padding:'12px 14px',marginBottom:12,marginTop:12,border:'1px solid #BBF7D0'}},
+              React.createElement('div',{style:{fontSize:11,color:'#15803D',fontWeight:700,textTransform:'uppercase',marginBottom:4}},'Ganancia neta USD'),
+              React.createElement('div',{style:{fontFamily:"'Oswald',system-ui",fontSize:22,fontWeight:700,color:gananciaUSDDash>=0?'#166534':'#991B1B'}},(gananciaUSDDash>=0?'':'- ')+'USD '+Math.abs(gananciaUSDDash).toLocaleString('es-AR',{maximumFractionDigits:0}))
+            ),
+            React.createElement('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}},
+              ['Guille','Fede'].map(function(nombre){
+                return React.createElement('div',{key:nombre,style:{backgroundColor:'#F0FDF4',borderRadius:8,padding:'10px 12px',textAlign:'center',border:'1px solid #BBF7D0'}},
+                  React.createElement('div',{style:{fontSize:11,color:'#166534',fontWeight:700,marginBottom:4}},nombre),
+                  React.createElement('div',{style:{fontFamily:"'Oswald',system-ui",fontSize:16,fontWeight:700,color:'#166534'}},(gananciaUSDDash/2>=0?'':'- ')+'USD '+Math.abs(gananciaUSDDash/2).toLocaleString('es-AR',{maximumFractionDigits:0}))
+                );
+              })
+            )
+          ),
+          React.createElement('div',{style:{fontSize:10,color:'#94A3B8',marginTop:8,textAlign:'center'}},'División 50/50 — ajust\u00e1 manualmente seg\u00fan lo acordado')
+        )
+      )
     ),
 
     // ── COBROS TAB ───────────────────────────────────────────────────────────
