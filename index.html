@@ -5999,7 +5999,7 @@ function IngresosView({quotes, egresos, onSaveEgresos, activeTab, setActiveTab})
 
   // ── Datos filtrados para el DASHBOARD (usa dashAnosVer/dashMesesVer) ───────
   const cobrosFiltradosDash = allCobros.filter(function(c){return inPeriod(c.fecha, dashAnosVer, dashMesesVer);});
-  const egresosFiltradosDash = (egresos||[]).filter(function(e){return inPeriod(e.fecha, dashAnosVer, dashMesesVer) && e.tipo!=='ingreso' && (e.moneda||'$')==='$';});
+  const egresosFiltradosDash = (egresos||[]).filter(function(e){return inPeriod(e.fecha, dashAnosVer, dashMesesVer) && e.tipo!=='ingreso';});
   const ingresosManualesDash = (egresos||[]).filter(function(e){return inPeriod(e.fecha, dashAnosVer, dashMesesVer) && e.tipo==='ingreso' && (e.moneda||'$')==='$';});
   const allCobrosCombinadosDash = cobrosFiltradosDash.concat(ingresosManualesDash.map(function(e){
     return {qNumero:'',qCliente:'',monto:parseFloat(e.monto)||0,fecha:e.fecha,desc:e.desc,manual:true,moneda:e.moneda||'$',tcambio:e.tcambio||null};
