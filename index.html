@@ -6163,11 +6163,17 @@ function DashboardPdfOverlay({onClose, data}) {
           React.createElement("div",{style:{fontSize:12,fontWeight:700,color:NAVY,marginBottom:10}},"💸 Egresos por categoría"),
           porCat.map(function(cat){
             return React.createElement("div",{key:cat.id,style:rowS},
-              React.createElement("span",{style:{fontSize:12,color:"#475569"}},cat.icon+" "+cat.label),
+              React.createElement("span",{style:{fontSize:12,color:"#475569"}},cat.label),
               React.createElement("span",{style:{fontSize:13,fontWeight:700,color:cat.total>0?"#991B1B":"#94A3B8"}},"$ "+fmt(cat.total))
             );
           })
         ),
+        // Chart
+        data.quotes && React.createElement(DashboardEvolutionChart,{
+          quotes:data.quotes,
+          egresos:data.egresos,
+          dashAnosVer:data.dashAnosVer
+        }),
         // Footer
         React.createElement("div",{style:{textAlign:"center",fontSize:9,color:"#CBD5E1",marginTop:16,paddingTop:12,borderTop:"1px solid #E2E8F0"}},
           "ELECTRO BC — Servicios Integrales — Generado el "+fechaHoy
