@@ -6153,7 +6153,7 @@ function IngresosView({quotes, egresos, onSaveEgresos, activeTab, setActiveTab})
           style:{padding:'4px 8px',borderRadius:20,fontSize:11,cursor:'pointer',border:'1.5px solid #E2E8F0',backgroundColor:'#fff',color:'#94A3B8'}},'✕ Limpiar'):null
       ),
       // KPI cards
-      React.createElement('div',{style:{display:'grid',gridTemplateColumns:'repeat(5,1fr)',gap:12,marginBottom:(totalIngresosUSDDash>0||totalEgresosUSDDash>0)?12:20}},
+      React.createElement('div',{style:{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:12,marginBottom:20}},
         [
           {label:'Cobrado',val:fmt(totalCobradoDash + cobradoUSDenARS),color:'#065F46',bg:'#ECFDF5',icon:'\u{1F4B5}'},
           {label:'Pendiente de cobro',val:fmt(pendienteCobroDash),color:'#92400E',bg:'#FFFBEB',icon:'\u23F3'},
