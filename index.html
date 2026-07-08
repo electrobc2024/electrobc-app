@@ -351,7 +351,7 @@ const pdfName = q => {
   const ap = [cl.calle, cl.numero].filter(Boolean);
   const addr = ap.length ? ap.join(" ") : (q.referencia || "");
   const who = cl.administracion || cl.nombre || "";
-  return [q.numero, addr, who].filter(Boolean).join(" — ").replace(/[/\\?%*:|"<>]/g, "_");
+  return [q.numero, addr, who].filter(Boolean).join(" - ").replace(/[/\\?%*:|"<>]/g, "_");
 };
 
 // ── Validation ────────────────────────────────────────────────────────────────
