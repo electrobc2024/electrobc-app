@@ -4645,7 +4645,7 @@ function QuoteForm({
   }));
   React.useEffect(function(){setTouch({});setErrors([]);},[quote.numero]);
   const [viaticosKm, setViaticosKm] = React.useState(0);
-  const [precioPorKm, setPrecioPorKm] = React.useState(10000);
+  const [precioPorKm, setPrecioPorKm] = React.useState(500);
   const viaticosTotal = (parseFloat(viaticosKm)||0) * (parseFloat(precioPorKm)||10000);
   const [viaticosLoading, setViaticosLoading] = React.useState(false);
   const calcDistancia = async () => {
