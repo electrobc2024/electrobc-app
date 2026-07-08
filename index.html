@@ -4649,7 +4649,12 @@ function QuoteForm({
   const viaticosTotal = (parseFloat(viaticosKm)||0) * (parseFloat(precioPorKm)||10000);
   const [viaticosLoading, setViaticosLoading] = React.useState(false);
   const calcDistancia = async () => {
-    const addr = [quote.cliente.calle, quote.cliente.numero || quote.cliente.entreCalles].filter(Boolean).join(" ");
+    var _calle = quote.cliente.calle || "";
+    var _num = quote.cliente.numero || "";
+    var _barrio = quote.cliente.entreCalles || "";
+    var addr = _num && /\d/.test(_num)
+      ? [_calle, _num].filter(Boolean).join(" ")
+      : [_calle, _num || _barrio].filter(Boolean).join(", ");
     if(!addr.trim()){alert("Ingresá la dirección primero.");return;}
     setViaticosLoading(true);
     try {
