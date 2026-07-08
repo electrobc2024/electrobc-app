@@ -361,7 +361,6 @@ const validateQuote = q => {
     const cl = q.cliente || {};
     if (!(cl.nombre || "").trim()) e.push("Nombre del cliente");
     if (!(cl.calle || "").trim()) e.push("Calle del proyecto");
-    if (!(cl.numero || "").trim()) e.push("Número del proyecto");
     if (!(cl.telefono || "").trim() && !(cl.telefonoAdm || "").trim()) e.push("Teléfono del cliente o administración");
     if (!q.mdo || !q.mdo.some(r => r.desc && r.desc.trim() && parseFloat(r.pu) > 0)) e.push("Al menos 1 ítem en Mano de Obra");
     return e;
