@@ -5196,7 +5196,13 @@ const updCli = (f, v) => {
   type:"text",
   placeholder:"O escribí la dirección manualmente (ej: Grand Bell, La Plata)",
   style:{fontSize:11,border:"1px solid #E2E8F0",borderRadius:6,padding:"5px 10px",width:"100%",marginTop:6,outline:"none",color:"#475569"},
-  onChange:function(e){
+  onBlur:function(e){
+    var v=e.target.value.trim();
+    if(!v) return;
+    setViaticosLoading(true);
+  },
+  onKeyDown:function(e){
+    if(e.key!=='Enter') return;
     var v=e.target.value.trim();
     if(!v) return;
     setViaticosLoading(true);
