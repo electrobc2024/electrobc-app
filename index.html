@@ -3774,6 +3774,12 @@ function Tracker({
     style: {
       ...thS,
       textAlign: "center",
+      width: 150
+    }
+  }, "Progreso"), /*#__PURE__*/React.createElement("th", {
+    style: {
+      ...thS,
+      textAlign: "center",
       width: 124
     }
   }, "Acciones"))), /*#__PURE__*/React.createElement("tbody", null, filtered.map((q, ri) => {
@@ -4045,35 +4051,35 @@ function Tracker({
         fontSize: 11,
         color: "#DC2626"
       }
-    }, "\u2715")))),
-    q.status === "aceptado" && /*#__PURE__*/React.createElement("tr", {
-      key: q.id + "prog",
-      style: {backgroundColor: "#FAFBFF"}
-    },
-      /*#__PURE__*/React.createElement("td", {colSpan: 7, style: {padding: "4px 14px 8px"}},
-        (function(){
-          var cobradoARS = pagos.filter(function(p){return (p.moneda||"$")==="$";}).reduce(function(s,p){return s+parseFloat(p.monto||0);},0);
-          var cobradoUSD = pagos.filter(function(p){return p.moneda==="USD";}).reduce(function(s,p){return s+(parseFloat(p.monto||0)*parseFloat(p.tcambio||0));},0);
-          var cobrado = cobradoARS + cobradoUSD;
-          var pct = total > 0 ? Math.min(100, Math.round((cobrado/total)*100)) : 0;
-          var color = pct >= 100 ? "#059669" : pct >= 50 ? "#2563EB" : "#F59E0B";
-          return /*#__PURE__*/React.createElement("div", {style:{display:"flex",alignItems:"center",gap:8}},
-            /*#__PURE__*/React.createElement("div", {style:{flex:1,height:6,backgroundColor:"#E2E8F0",borderRadius:3,overflow:"hidden"}},
-              /*#__PURE__*/React.createElement("div", {style:{width:pct+"%",height:"100%",backgroundColor:color,borderRadius:3,transition:"width 0.3s"}})
-            ),
-            /*#__PURE__*/React.createElement("span", {style:{fontSize:10,color:color,fontWeight:700,whiteSpace:"nowrap"}}, pct+"% cobrado"),
-            /*#__PURE__*/React.createElement("span", {style:{fontSize:10,color:"#94A3B8",whiteSpace:"nowrap"}}, "Resta: $"+Math.max(0,total-cobrado).toLocaleString("es-AR",{maximumFractionDigits:0}))
-          );
-        })()
-      )
-    ),
+    }, "\u2715"))), /*#__PURE__*/React.createElement("td", {
+      style: {
+        padding: "10px 10px",
+        textAlign: "center",
+        verticalAlign: "middle"
+      }
+    }, q.status === "aceptado" && (function(){
+      var cobradoARS = pagos.filter(function(p){return (p.moneda||"$")==="$";}).reduce(function(s,p){return s+parseFloat(p.monto||0);},0);
+      var cobradoUSD = pagos.filter(function(p){return p.moneda==="USD";}).reduce(function(s,p){return s+(parseFloat(p.monto||0)*parseFloat(p.tcambio||0));},0);
+      var cobrado = cobradoARS + cobradoUSD;
+      var pct = total > 0 ? Math.min(100, Math.round((cobrado/total)*100)) : 0;
+      var color = pct >= 100 ? "#059669" : pct >= 50 ? "#2563EB" : "#F59E0B";
+      return /*#__PURE__*/React.createElement("div", {style:{display:"flex",flexDirection:"column",gap:3}},
+        /*#__PURE__*/React.createElement("div", {style:{height:6,backgroundColor:"#E2E8F0",borderRadius:3,overflow:"hidden"}},
+          /*#__PURE__*/React.createElement("div", {style:{width:pct+"%",height:"100%",backgroundColor:color,borderRadius:3,transition:"width 0.3s"}})
+        ),
+        /*#__PURE__*/React.createElement("div", {style:{display:"flex",justifyContent:"space-between",gap:6}},
+          /*#__PURE__*/React.createElement("span", {style:{fontSize:9,color:color,fontWeight:700,whiteSpace:"nowrap"}}, pct+"% cobrado"),
+          /*#__PURE__*/React.createElement("span", {style:{fontSize:9,color:"#94A3B8",whiteSpace:"nowrap"}}, "Resta $"+Math.max(0,total-cobrado).toLocaleString("es-AR",{maximumFractionDigits:0}))
+        )
+      );
+    })())),
     isExp && /*#__PURE__*/React.createElement("tr", {
       key: q.id + "e",
       style: {
         backgroundColor: "#F8FAFC"
       }
     }, /*#__PURE__*/React.createElement("td", {
-      colSpan: 7,
+      colSpan: 8,
       style: {
         padding: "16px",
         borderBottom: "2px solid #E2E8F0"
@@ -4310,7 +4316,7 @@ function Tracker({
     }, q.aclaraciones)))), editInlineId === q.id && /*#__PURE__*/React.createElement("tr", {
       key: q.id + "edit"
     }, /*#__PURE__*/React.createElement("td", {
-      colSpan: 7,
+      colSpan: 8,
       style: {
         padding: "16px 20px",
         backgroundColor: "#F0F4FF",
