@@ -3541,7 +3541,8 @@ function Tracker({
   }, filterOptions.map(function(o){
     var c = STATUS_MAP[o.k];
     var fg = c ? c.fg : NAVY;
-    var bg = c ? c.bg : "#F1F5F9";
+    var bg = c ? c.bg : "#fff";
+    var br = c ? (c.br || "#E2E8F0") : "#E2E8F0";
     var active = filter === o.k;
     return /*#__PURE__*/React.createElement("button", {
       key: o.k,
@@ -3549,16 +3550,16 @@ function Tracker({
       title: "Filtrar: " + o.label,
       style: {
         cursor:"pointer", textAlign:"left", minWidth:112, flex:"1 1 112px", maxWidth:210,
-        backgroundColor: active ? bg : "#fff",
-        border: "2px solid " + (active ? fg : "#E2E8F0"),
-        borderRadius: 10, padding: "10px 14px", transition:"all 0.15s",
-        boxShadow: active ? "0 2px 8px rgba(0,0,0,0.08)" : "none"
+        backgroundColor: bg,
+        border: active ? ("2px solid " + fg) : ("1px solid " + br),
+        borderRadius: 10, padding: active ? "10px 14px" : "11px 15px", transition:"all 0.15s",
+        boxShadow: active ? ("0 3px 10px " + fg + "40") : "none"
       },
-      onMouseEnter: function(e){ if(!active){ e.currentTarget.style.borderColor="#CBD5E1"; e.currentTarget.style.backgroundColor="#F8FAFC"; } },
-      onMouseLeave: function(e){ if(!active){ e.currentTarget.style.borderColor="#E2E8F0"; e.currentTarget.style.backgroundColor="#fff"; } }
+      onMouseEnter: function(e){ e.currentTarget.style.boxShadow = active ? ("0 3px 10px " + fg + "40") : "0 2px 8px rgba(0,0,0,0.10)"; },
+      onMouseLeave: function(e){ if(!active){ e.currentTarget.style.boxShadow = "none"; } }
     },
-      /*#__PURE__*/React.createElement("div",{style:{fontSize:10,fontWeight:700,color: active ? fg : "#94A3B8",textTransform:"uppercase",letterSpacing:"0.07em",marginBottom:5,whiteSpace:"nowrap"}}, o.label),
-      /*#__PURE__*/React.createElement("div",{style:{fontFamily:"'Oswald',system-ui",fontSize:24,fontWeight:700,color: active ? fg : NAVY,lineHeight:1}}, o.count)
+      /*#__PURE__*/React.createElement("div",{style:{fontSize:10,fontWeight:700,color: fg,opacity:0.9,textTransform:"uppercase",letterSpacing:"0.07em",marginBottom:5,whiteSpace:"nowrap"}}, o.label),
+      /*#__PURE__*/React.createElement("div",{style:{fontFamily:"'Oswald',system-ui",fontSize:24,fontWeight:700,color: fg,lineHeight:1}}, o.count)
     );
   })),/*#__PURE__*/React.createElement("div", {
     style: {
