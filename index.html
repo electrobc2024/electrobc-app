@@ -3432,16 +3432,22 @@ function Tracker({
   const [sortTr, setSortTr] = useState("num_desc");
   const [searchTr, setSearchTr] = useState("");
   const [searchDir, setSearchDir] = useState("");
+  const [colFilterOpen, setColFilterOpen] = useState(null);
+  const _tot = q => calcSub(q.mdo) + calcSub(q.mat);
   const sorted = [...quotes].sort((a, b) => {
     if (sortTr === "num_asc") return parseInt(a.numero || 0) - parseInt(b.numero || 0);
     if (sortTr === "num_desc") return parseInt(b.numero || 0) - parseInt(a.numero || 0);
     if (sortTr === "az") return (a.cliente.nombre || "").localeCompare(b.cliente.nombre || "");
     if (sortTr === "za") return (b.cliente.nombre || "").localeCompare(a.cliente.nombre || "");
+    if (sortTr === "tot_desc") return _tot(b) - _tot(a);
+    if (sortTr === "tot_asc") return _tot(a) - _tot(b);
+    if (sortTr === "fec_desc") return (b.fecha || "").localeCompare(a.fecha || "");
+    if (sortTr === "fec_asc") return (a.fecha || "").localeCompare(b.fecha || "");
     return 0;
   });
   // unique client names for filter
   const clientNames = [...new Set(quotes.map(q => q.cliente.nombre).filter(Boolean))].sort();
-  const filtered = sorted.filter(q => filter === "todos" || q.status === filter || (filter === "recotizar" && isVencido(q)) || (filter === "recotizado" && q.status === "recotizado")).filter(q => !clientFilter || q.cliente.nombre === clientFilter).filter(q => !searchTr.trim() || (q.cliente.nombre || "").toLowerCase().includes(searchTr.toLowerCase()) || (q.cliente.administracion || "").toLowerCase().includes(searchTr.toLowerCase()) || (q.numero || "").includes(searchTr) || (q.referencia || "").toLowerCase().includes(searchTr.toLowerCase())).filter(q => !searchDir.trim() || [q.cliente.calle, q.cliente.numero, q.cliente.depto, q.cliente.entreCalles].filter(Boolean).join(" ").toLowerCase().includes(searchDir.toLowerCase())).filter(function(q){if(!dateFrom&&!dateTo)return true;var fd=(q.fecha||"").slice(0,10);return(!dateFrom||fd>=dateFrom)&&(!dateTo||fd<=dateTo);});
+  const filtered = sorted.filter(q => filter === "todos" || q.status === filter || (filter === "recotizar" && isVencido(q)) || (filter === "recotizado" && q.status === "recotizado")).filter(q => !clientFilter || q.cliente.nombre === clientFilter).filter(q => !searchTr.trim() || (q.cliente.nombre || "").toLowerCase().includes(searchTr.toLowerCase()) || (q.cliente.administracion || "").toLowerCase().includes(searchTr.toLowerCase()) || (q.numero || "").includes(searchTr) || (q.referencia || "").toLowerCase().includes(searchTr.toLowerCase()) || [q.cliente.calle,q.cliente.numero,q.cliente.depto,q.cliente.entreCalles].filter(Boolean).join(" ").toLowerCase().includes(searchTr.toLowerCase())).filter(q => !searchDir.trim() || [q.cliente.calle, q.cliente.numero, q.cliente.depto, q.cliente.entreCalles].filter(Boolean).join(" ").toLowerCase().includes(searchDir.toLowerCase())).filter(function(q){if(!dateFrom&&!dateTo)return true;var fd=(q.fecha||"").slice(0,10);return(!dateFrom||fd>=dateFrom)&&(!dateTo||fd<=dateTo);});
   // per-client stats when filter active
   const clientStats = clientFilter ? {
     total: filtered.length,
@@ -3510,87 +3516,51 @@ function Tracker({
     label: "Rechazado",
     count: counts.rechazado
   }].filter(o => o.k === "todos" || o.count > 0);
+  // Embudo de filtro por columna (estilo Excel)
+  function colFunnel(colKey, active, popover){
+    var open = colFilterOpen === colKey;
+    return /*#__PURE__*/React.createElement("span",{style:{position:"relative",display:"inline-flex",alignItems:"center",marginLeft:5}},
+      /*#__PURE__*/React.createElement("button",{type:"button",title:"Filtrar",
+        onClick:function(e){e.stopPropagation();setColFilterOpen(open?null:colKey);},
+        style:{background:active?"#FFF7ED":"none",border:active?"1px solid #FDBA74":"1px solid transparent",borderRadius:5,cursor:"pointer",padding:"2px 3px",lineHeight:1,color:active?ORANGE:"#94A3B8",display:"inline-flex"}},
+        /*#__PURE__*/React.createElement("svg",{viewBox:"0 0 24 24",width:12,height:12,fill:"currentColor"},
+          /*#__PURE__*/React.createElement("path",{d:"M3 4h18l-7 8v7l-4-2v-5z"}))
+      ),
+      open && /*#__PURE__*/React.createElement(React.Fragment,null,
+        /*#__PURE__*/React.createElement("div",{onClick:function(){setColFilterOpen(null);},style:{position:"fixed",inset:0,zIndex:200}}),
+        /*#__PURE__*/React.createElement("div",{onClick:function(e){e.stopPropagation();},style:{position:"absolute",top:"calc(100% + 6px)",left:0,zIndex:201,backgroundColor:"#fff",border:"1px solid #E2E8F0",borderRadius:8,padding:10,boxShadow:"0 8px 24px rgba(0,0,0,0.15)",minWidth:210,textTransform:"none",letterSpacing:"normal",fontWeight:400}},
+          popover)
+      )
+    );
+  }
   return /*#__PURE__*/React.createElement(Pane, null, /*#__PURE__*/React.createElement(H1, null, "Seguimiento de Presupuestos"), /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: "grid",
-      gridTemplateColumns: "repeat(4,1fr)",
-      gap: 12,
-      marginBottom: 14
-    }
-  }, [{
-    label: "Total",
-    val: counts.total,
-    color: NAVY,
-    bg: "#fff"
-  }, {
-    label: "Aceptados",
-    val: counts.aceptado,
-    color: "#065F46",
-    bg: "#ECFDF5"
-  }, {
-    label: "En espera",
-    val: counts.espera + counts.recotizar,
-    color: "#B45309",
-    bg: "#FFFBEB"
-  }, {
-    label: "Rechazados",
-    val: counts.rechazado,
-    color: "#991B1B",
-    bg: "#FFF1F2"
-  }].map(s => /*#__PURE__*/React.createElement("div", {
-    key: s.label,
-    style: {
-      backgroundColor: s.bg,
-      border: "1px solid #E2E8F0",
-      borderRadius: 10,
-      padding: "12px 14px"
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: 10,
-      fontWeight: 700,
-      color: "#94A3B8",
-      textTransform: "uppercase",
-      letterSpacing: "0.08em",
-      marginBottom: 6
-    }
-  }, s.label), /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontFamily: "'Oswald',system-ui",
-      fontSize: 26,
-      fontWeight: 700,
-      color: s.color,
-      lineHeight: 1
-    }
-  }, s.val)))), /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: "flex",
-      gap: 6,
-      flexWrap: "wrap",
-      marginBottom: 14
-    }
-  }, filterOptions.map(o => {
-    const c = STATUS_MAP[o.k];
-    const active = filter === o.k;
+    style: {display:"flex",alignItems:"center",gap:6,marginBottom:8}
+  }, /*#__PURE__*/React.createElement("span",{style:{fontSize:11,color:"#94A3B8",fontWeight:600}},"👆 Tocá una tarjeta para filtrar por estado")),
+  /*#__PURE__*/React.createElement("div", {
+    style: {display:"flex",flexWrap:"wrap",gap:10,marginBottom:16}
+  }, filterOptions.map(function(o){
+    var c = STATUS_MAP[o.k];
+    var fg = c ? c.fg : NAVY;
+    var bg = c ? c.bg : "#F1F5F9";
+    var active = filter === o.k;
     return /*#__PURE__*/React.createElement("button", {
       key: o.k,
-      onClick: () => setFilter(o.k),
+      onClick: function(){ setFilter(o.k); },
+      title: "Filtrar: " + o.label,
       style: {
-        padding: "5px 12px",
-        borderRadius: 20,
-        fontSize: 11,
-        fontWeight: 600,
-        border: active ? `2px solid ${c ? c.fg : NAVY}` : "2px solid transparent",
-        backgroundColor: active ? c ? c.bg : "#EEF0F5" : "#fff",
-        color: active ? c ? c.fg : NAVY : "#64748B",
-        boxShadow: active ? "0 0 0 1px rgba(0,0,0,0.05)" : "none"
-      }
-    }, o.label, " ", o.count > 0 && /*#__PURE__*/React.createElement("span", {
-      style: {
-        opacity: 0.7
-      }
-    }, "(", o.count, ")"));
-  })), /*#__PURE__*/React.createElement("div", {
+        cursor:"pointer", textAlign:"left", minWidth:112, flex:"1 1 112px", maxWidth:210,
+        backgroundColor: active ? bg : "#fff",
+        border: "2px solid " + (active ? fg : "#E2E8F0"),
+        borderRadius: 10, padding: "10px 14px", transition:"all 0.15s",
+        boxShadow: active ? "0 2px 8px rgba(0,0,0,0.08)" : "none"
+      },
+      onMouseEnter: function(e){ if(!active){ e.currentTarget.style.borderColor="#CBD5E1"; e.currentTarget.style.backgroundColor="#F8FAFC"; } },
+      onMouseLeave: function(e){ if(!active){ e.currentTarget.style.borderColor="#E2E8F0"; e.currentTarget.style.backgroundColor="#fff"; } }
+    },
+      /*#__PURE__*/React.createElement("div",{style:{fontSize:10,fontWeight:700,color: active ? fg : "#94A3B8",textTransform:"uppercase",letterSpacing:"0.07em",marginBottom:5,whiteSpace:"nowrap"}}, o.label),
+      /*#__PURE__*/React.createElement("div",{style:{fontFamily:"'Oswald',system-ui",fontSize:24,fontWeight:700,color: active ? fg : NAVY,lineHeight:1}}, o.count)
+    );
+  })),/*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
       gap: 8,
@@ -3601,79 +3571,22 @@ function Tracker({
   }, /*#__PURE__*/React.createElement(SearchInput, {
     value: searchTr,
     onChange: setSearchTr,
-    placeholder: "Buscar por cliente, N\xB0 o referencia\u2026"
-  }), /*#__PURE__*/React.createElement(SearchInput, {
-    value: searchDir,
-    onChange: setSearchDir,
-    placeholder: "Buscar por direcci\xF3n\u2026"
-  }), /*#__PURE__*/React.createElement("div",{style:{display:"inline-flex",alignItems:"center",gap:4,marginLeft:4}}, /*#__PURE__*/React.createElement("input",{type:"date",value:dateFrom,min:"2026-06-01",max:todayStr(),onChange:function(e){setDateFrom(e.target.value);},title:"Desde",style:{border:"1px solid #E2E8F0",borderRadius:6,padding:"5px 8px",fontSize:12,color:"#475569",backgroundColor:"#fff"}}), /*#__PURE__*/React.createElement("span",{style:{fontSize:11,color:"#94A3B8"}},"\u2192"), /*#__PURE__*/React.createElement("input",{type:"date",value:dateTo,min:"2026-06-01",max:todayStr(),onChange:function(e){setDateTo(e.target.value);},title:"Hasta",style:{border:"1px solid #E2E8F0",borderRadius:6,padding:"5px 8px",fontSize:12,color:"#475569",backgroundColor:"#fff"}}), (dateFrom||dateTo)?/*#__PURE__*/React.createElement("button",{type:"button",onClick:function(){setDateFrom("");setDateTo("");},style:{background:"none",border:"none",color:"#94A3B8",cursor:"pointer",fontSize:14}},"\u2715"):null), /*#__PURE__*/React.createElement(SortBar, {
+    placeholder: "Buscar por cliente, direcci\xF3n, N\xB0 o referencia\u2026"
+  }), /*#__PURE__*/React.createElement("div",{style:{display:"inline-flex",alignItems:"center",gap:4,marginLeft:4}}, /*#__PURE__*/React.createElement("input",{type:"date",value:dateFrom,min:"2026-06-01",max:todayStr(),onChange:function(e){setDateFrom(e.target.value);},title:"Desde",style:{border:"1px solid #E2E8F0",borderRadius:6,padding:"5px 8px",fontSize:12,color:"#475569",backgroundColor:"#fff"}}), /*#__PURE__*/React.createElement("span",{style:{fontSize:11,color:"#94A3B8"}},"\u2192"), /*#__PURE__*/React.createElement("input",{type:"date",value:dateTo,min:"2026-06-01",max:todayStr(),onChange:function(e){setDateTo(e.target.value);},title:"Hasta",style:{border:"1px solid #E2E8F0",borderRadius:6,padding:"5px 8px",fontSize:12,color:"#475569",backgroundColor:"#fff"}}), (dateFrom||dateTo)?/*#__PURE__*/React.createElement("button",{type:"button",onClick:function(){setDateFrom("");setDateTo("");},style:{background:"none",border:"none",color:"#94A3B8",cursor:"pointer",fontSize:14}},"\u2715"):null), /*#__PURE__*/React.createElement("select", {
     value: sortTr,
-    onChange: setSortTr,
-    options: [{
-      k: "num_desc",
-      label: "N° ↓"
-    }, {
-      k: "num_asc",
-      label: "N° ↑"
-    }, {
-      k: "az",
-      label: "Cliente A→Z"
-    }, {
-      k: "za",
-      label: "Cliente Z→A"
-    }]
-  })), /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: "flex",
-      gap: 8,
-      alignItems: "center",
-      marginBottom: 14,
-      flexWrap: "wrap"
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: "flex",
-      alignItems: "center",
-      gap: 6,
-      flex: 1,
-      minWidth: 200
-    }
-  }, /*#__PURE__*/React.createElement("span", {
-    style: {
-      fontSize: 10,
-      fontWeight: 700,
-      color: "#94A3B8",
-      textTransform: "uppercase",
-      letterSpacing: "0.08em",
-      whiteSpace: "nowrap"
-    }
-  }, "Filtrar cliente:"), /*#__PURE__*/React.createElement("select", {
-    value: clientFilter,
-    onChange: e => setClientFilter(e.target.value),
-    style: {
-      flex: 1,
-      border: "1px solid #E2E8F0",
-      borderRadius: 7,
-      padding: "7px 10px",
-      fontSize: 12,
-      color: "#1E293B",
-      backgroundColor: "#fff"
-    }
-  }, /*#__PURE__*/React.createElement("option", {
-    value: ""
-  }, "Todos los clientes"), clientNames.map(n => /*#__PURE__*/React.createElement("option", {
-    key: n,
-    value: n
-  }, n))), clientFilter && /*#__PURE__*/React.createElement("button", {
-    onClick: () => setClientFilter(""),
-    style: {
-      background: "none",
-      border: "none",
-      fontSize: 16,
-      color: "#94A3B8",
-      padding: "0 4px"
-    }
-  }, "\u2715"))), clientStats && /*#__PURE__*/React.createElement("div", {
+    onChange: function(e){ setSortTr(e.target.value); },
+    title: "Ordenar",
+    style: {border:"1px solid #E2E8F0",borderRadius:7,padding:"7px 10px",fontSize:12,color:"#1E293B",backgroundColor:"#fff",cursor:"pointer",marginLeft:"auto"}
+  },
+    /*#__PURE__*/React.createElement("option",{value:"num_desc"},"Ordenar: N° ↓"),
+    /*#__PURE__*/React.createElement("option",{value:"num_asc"},"Ordenar: N° ↑"),
+    /*#__PURE__*/React.createElement("option",{value:"fec_desc"},"Ordenar: Fecha (recientes)"),
+    /*#__PURE__*/React.createElement("option",{value:"fec_asc"},"Ordenar: Fecha (antiguas)"),
+    /*#__PURE__*/React.createElement("option",{value:"tot_desc"},"Ordenar: Total (mayor)"),
+    /*#__PURE__*/React.createElement("option",{value:"tot_asc"},"Ordenar: Total (menor)"),
+    /*#__PURE__*/React.createElement("option",{value:"az"},"Ordenar: Cliente A→Z"),
+    /*#__PURE__*/React.createElement("option",{value:"za"},"Ordenar: Cliente Z→A")
+  )),clientStats && /*#__PURE__*/React.createElement("div", {
     style: {
       backgroundColor: "#F0F4FF",
       border: "1px solid #C7D7FD",
@@ -3752,13 +3665,28 @@ function Tracker({
       ...thS,
       textAlign: "left"
     }
-  }, "Cliente"), /*#__PURE__*/React.createElement("th", {
+  }, /*#__PURE__*/React.createElement("span",{style:{display:"inline-flex",alignItems:"center"}}, "Cliente", colFunnel("cliente", !!clientFilter,
+    /*#__PURE__*/React.createElement("div",null,
+      /*#__PURE__*/React.createElement("div",{style:{fontSize:10,fontWeight:700,color:"#94A3B8",marginBottom:6,textTransform:"uppercase",letterSpacing:"0.06em"}},"Filtrar por cliente"),
+      /*#__PURE__*/React.createElement("select",{value:clientFilter,onChange:function(e){setClientFilter(e.target.value);setColFilterOpen(null);},style:{width:"100%",border:"1px solid #E2E8F0",borderRadius:6,padding:"6px 8px",fontSize:12,color:"#1E293B",backgroundColor:"#fff"}},
+        /*#__PURE__*/React.createElement("option",{value:""},"Todos los clientes"),
+        clientNames.map(function(n){return /*#__PURE__*/React.createElement("option",{key:n,value:n},n);})
+      ),
+      clientFilter && /*#__PURE__*/React.createElement("button",{type:"button",onClick:function(){setClientFilter("");setColFilterOpen(null);},style:{marginTop:8,background:"none",border:"none",color:"#DC2626",fontSize:11,cursor:"pointer",fontWeight:600,padding:0}},"✕ Quitar filtro")
+    )
+  ))), /*#__PURE__*/React.createElement("th", {
     style: {
       ...thS,
       textAlign: "left",
       width: 160
     }
-  }, "Direcci\xF3n"), /*#__PURE__*/React.createElement("th", {
+  }, /*#__PURE__*/React.createElement("span",{style:{display:"inline-flex",alignItems:"center"}}, "Dirección", colFunnel("direccion", !!(searchDir && searchDir.trim()),
+    /*#__PURE__*/React.createElement("div",null,
+      /*#__PURE__*/React.createElement("div",{style:{fontSize:10,fontWeight:700,color:"#94A3B8",marginBottom:6,textTransform:"uppercase",letterSpacing:"0.06em"}},"Filtrar por dirección"),
+      /*#__PURE__*/React.createElement("input",{type:"text",value:searchDir,onChange:function(e){setSearchDir(e.target.value);},placeholder:"Contiene…",style:{width:"100%",border:"1px solid #E2E8F0",borderRadius:6,padding:"6px 8px",fontSize:12,color:"#1E293B",backgroundColor:"#fff",boxSizing:"border-box"}}),
+      searchDir && /*#__PURE__*/React.createElement("button",{type:"button",onClick:function(){setSearchDir("");},style:{marginTop:8,background:"none",border:"none",color:"#DC2626",fontSize:11,cursor:"pointer",fontWeight:600,padding:0}},"✕ Quitar filtro")
+    )
+  ))), /*#__PURE__*/React.createElement("th", {
     style: {
       ...thS,
       textAlign: "right",
