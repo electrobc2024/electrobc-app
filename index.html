@@ -3594,21 +3594,7 @@ function Tracker({
         meta.i+" "+meta.l);
     }),
     tipoFilter.length>0 && /*#__PURE__*/React.createElement("button",{type:"button",onClick:function(){setTipoFilter([]);},title:"Limpiar tipo",style:{background:"none",border:"none",color:"#94A3B8",cursor:"pointer",fontSize:13}},"\u2715")
-  ), /*#__PURE__*/React.createElement("div",{style:{display:"inline-flex",alignItems:"center",gap:4,marginLeft:4}}, /*#__PURE__*/React.createElement("input",{type:"date",value:dateFrom,min:"2026-06-01",max:todayStr(),onChange:function(e){setDateFrom(e.target.value);},title:"Desde",style:{border:"1px solid #E2E8F0",borderRadius:6,padding:"5px 8px",fontSize:12,color:"#475569",backgroundColor:"#fff"}}), /*#__PURE__*/React.createElement("span",{style:{fontSize:11,color:"#94A3B8"}},"\u2192"), /*#__PURE__*/React.createElement("input",{type:"date",value:dateTo,min:"2026-06-01",max:todayStr(),onChange:function(e){setDateTo(e.target.value);},title:"Hasta",style:{border:"1px solid #E2E8F0",borderRadius:6,padding:"5px 8px",fontSize:12,color:"#475569",backgroundColor:"#fff"}}), (dateFrom||dateTo)?/*#__PURE__*/React.createElement("button",{type:"button",onClick:function(){setDateFrom("");setDateTo("");},style:{background:"none",border:"none",color:"#94A3B8",cursor:"pointer",fontSize:14}},"\u2715"):null), /*#__PURE__*/React.createElement("select", {
-    value: sortTr,
-    onChange: function(e){ setSortTr(e.target.value); },
-    title: "Ordenar",
-    style: {border:"1px solid #E2E8F0",borderRadius:7,padding:"7px 10px",fontSize:12,color:"#1E293B",backgroundColor:"#fff",cursor:"pointer",marginLeft:"auto"}
-  },
-    /*#__PURE__*/React.createElement("option",{value:"num_desc"},"Ordenar: N° ↓"),
-    /*#__PURE__*/React.createElement("option",{value:"num_asc"},"Ordenar: N° ↑"),
-    /*#__PURE__*/React.createElement("option",{value:"fec_desc"},"Ordenar: Fecha (recientes)"),
-    /*#__PURE__*/React.createElement("option",{value:"fec_asc"},"Ordenar: Fecha (antiguas)"),
-    /*#__PURE__*/React.createElement("option",{value:"tot_desc"},"Ordenar: Total (mayor)"),
-    /*#__PURE__*/React.createElement("option",{value:"tot_asc"},"Ordenar: Total (menor)"),
-    /*#__PURE__*/React.createElement("option",{value:"az"},"Ordenar: Cliente A→Z"),
-    /*#__PURE__*/React.createElement("option",{value:"za"},"Ordenar: Cliente Z→A")
-  )),clientStats && /*#__PURE__*/React.createElement("div", {
+  ), /*#__PURE__*/React.createElement("div",{style:{display:"inline-flex",alignItems:"center",gap:4,marginLeft:4}}, /*#__PURE__*/React.createElement("input",{type:"date",value:dateFrom,min:"2026-06-01",max:todayStr(),onChange:function(e){setDateFrom(e.target.value);},title:"Desde",style:{border:"1px solid #E2E8F0",borderRadius:6,padding:"5px 8px",fontSize:12,color:"#475569",backgroundColor:"#fff"}}), /*#__PURE__*/React.createElement("span",{style:{fontSize:11,color:"#94A3B8"}},"\u2192"), /*#__PURE__*/React.createElement("input",{type:"date",value:dateTo,min:"2026-06-01",max:todayStr(),onChange:function(e){setDateTo(e.target.value);},title:"Hasta",style:{border:"1px solid #E2E8F0",borderRadius:6,padding:"5px 8px",fontSize:12,color:"#475569",backgroundColor:"#fff"}}), (dateFrom||dateTo)?/*#__PURE__*/React.createElement("button",{type:"button",onClick:function(){setDateFrom("");setDateTo("");},style:{background:"none",border:"none",color:"#94A3B8",cursor:"pointer",fontSize:14}},"\u2715"):null)),clientStats && /*#__PURE__*/React.createElement("div", {
     style: {
       backgroundColor: "#F0F4FF",
       border: "1px solid #C7D7FD",
@@ -3976,6 +3962,7 @@ function Tracker({
         color: "#475569"
       }
     }, "\uD83D\uDC41"), /*#__PURE__*/React.createElement("button", {
+      title: "Editar presupuesto",
       onClick: () => {
         setEditInlineId(q.id);
         setEditForm({
@@ -4013,6 +4000,7 @@ function Tracker({
         color: "#0369A1"
       }
     }, "📋"), /*#__PURE__*/React.createElement("button", {
+      title: "Eliminar presupuesto",
       onClick: () => onDelete(q.id),
       style: {
         background: "none",
@@ -4025,245 +4013,34 @@ function Tracker({
     }, "\u2715")))),
     isExp && /*#__PURE__*/React.createElement("tr", {
       key: q.id + "e",
-      style: {
-        backgroundColor: "#F8FAFC"
-      }
+      style: { backgroundColor: "#F8FAFC" }
     }, /*#__PURE__*/React.createElement("td", {
       colSpan: 8,
-      style: {
-        padding: "16px",
-        borderBottom: "2px solid #E2E8F0"
-      }
-    }, /*#__PURE__*/React.createElement("div", {
-      style: {
-        display: "grid",
-        gridTemplateColumns: "1fr 1fr 1fr",
-        gap: 16
-      }
-    }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
-      style: {
-        fontSize: 10,
-        fontWeight: 700,
-        color: ORANGE,
-        textTransform: "uppercase",
-        letterSpacing: "0.1em",
-        marginBottom: 8
-      }
-    }, "Cliente"), [["Nombre", q.cliente.nombre], ["Administración", q.cliente.administracion], ["Dirección", addrOf(q.cliente)]].map(([l, v]) => /*#__PURE__*/React.createElement("div", {
-      key: l,
-      style: {
-        marginBottom: 4
-      }
-    }, /*#__PURE__*/React.createElement("div", {
-      style: {
-        fontSize: 10,
-        color: "#94A3B8"
-      }
-    }, l), /*#__PURE__*/React.createElement("div", {
-      style: {
-        fontSize: 12,
-        fontWeight: 500
-      }
-    }, v || "—"))), q.referencia && /*#__PURE__*/React.createElement("div", {
-      style: {
-        marginBottom: 4
-      }
-    }, /*#__PURE__*/React.createElement("div", {
-      style: {
-        fontSize: 10,
-        color: "#94A3B8"
-      }
-    }, "Referencia interna"), /*#__PURE__*/React.createElement("div", {
-      style: {
-        fontSize: 12,
-        fontWeight: 600,
-        color: "#475569",
-        fontStyle: "italic"
-      }
-    }, q.referencia)), (q.cliente.telefonoAdm || q.cliente.telefono) && /*#__PURE__*/React.createElement("div", {
-      style: {
-        marginBottom: 4
-      }
-    }, /*#__PURE__*/React.createElement("div", {
-      style: {
-        fontSize: 10,
-        color: "#94A3B8"
-      }
-    }, "Tel\xE9fono"), q.cliente.telefonoAdm && /*#__PURE__*/React.createElement("div", {
-      style: {
-        display: "flex",
-        alignItems: "center",
-        gap: 5,
-        marginBottom: 2
-      }
-    }, /*#__PURE__*/React.createElement("span", {
-      style: {
-        fontSize: 11,
-        color: "#94A3B8"
-      }
-    }, "Adm:"), /*#__PURE__*/React.createElement("a", {
-      href: "tel:" + (q.cliente.telefonoAdm || "").replace(/\D/g, ""),
-      style: {
-        fontSize: 12,
-        color: "#475569",
-        textDecoration: "none",
-        fontWeight: 500
-      }
-    }, q.cliente.telefonoAdm), waLink(q.cliente.telefonoAdm) && /*#__PURE__*/React.createElement("a", {
-      href: waLink(q.cliente.telefonoAdm),
-      target: "_blank",
-      rel: "noopener noreferrer",
-      style: {
-        color: "#25D366",
-        textDecoration: "none",
-        fontSize: 14
-      }
-    }, "\uD83D\uDCAC")), q.cliente.telefono && /*#__PURE__*/React.createElement("div", {
-      style: {
-        display: "flex",
-        alignItems: "center",
-        gap: 5
-      }
-    }, /*#__PURE__*/React.createElement("a", {
-      href: "tel:" + (q.cliente.telefono || "").replace(/\D/g, ""),
-      style: {
-        fontSize: 12,
-        color: "#475569",
-        textDecoration: "none",
-        fontWeight: 500
-      }
-    }, q.cliente.telefono), waLink(q.cliente.telefono) && /*#__PURE__*/React.createElement("a", {
-      href: waLink(q.cliente.telefono),
-      target: "_blank",
-      rel: "noopener noreferrer",
-      style: {
-        color: "#25D366",
-        textDecoration: "none",
-        fontSize: 14
-      }
-    }, "\uD83D\uDCAC")))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
-      style: {
-        fontSize: 10,
-        fontWeight: 700,
-        color: ORANGE,
-        textTransform: "uppercase",
-        letterSpacing: "0.1em",
-        marginBottom: 8
-      }
-    }, "Desglose"), [{
-      t: "Mano de Obra",
-      rows: q.mdo,
-      sub: subMdo
-    }, {
-      t: "Materiales",
-      rows: q.mat,
-      sub: subMat
-    }].map(({
-      t,
-      rows,
-      sub
-    }) => /*#__PURE__*/React.createElement("div", {
-      key: t,
-      style: {
-        marginBottom: 10
-      }
-    }, /*#__PURE__*/React.createElement("div", {
-      style: {
-        fontSize: 10,
-        fontWeight: 600,
-        color: "#64748B",
-        marginBottom: 4
-      }
-    }, t), rows.filter(r => r.desc).map(r => /*#__PURE__*/React.createElement("div", {
-      key: r.id,
-      style: {
-        display: "flex",
-        justifyContent: "space-between",
-        padding: "2px 0",
-        fontSize: 11,
-        borderBottom: "1px solid #F1F5F9"
-      }
-    }, /*#__PURE__*/React.createElement("span", {
-      style: {
-        color: "#475569"
-      }
-    }, /*#__PURE__*/React.createElement("span", null, r.qty && parseFloat(r.qty) !== 1 ? r.qty + " × " : "", r.desc)), /*#__PURE__*/React.createElement("span", {
-      style: {
-        fontVariantNumeric: "tabular-nums",
-        color: NAVY
-      }
-    }, "$ ", fmt(parseFloat(r.pu || 0) * parseFloat(r.qty || 0))))), /*#__PURE__*/React.createElement("div", {
-      style: {
-        textAlign: "right",
-        fontSize: 11,
-        fontWeight: 700,
-        color: NAVY,
-        marginTop: 2,
-        fontVariantNumeric: "tabular-nums"
-      }
-    }, "Subtotal: $ ", fmt(sub)))), /*#__PURE__*/React.createElement("div", {
-      style: {
-        borderTop: "1px solid #E2E8F0",
-        paddingTop: 6,
-        display: "flex",
-        justifyContent: "space-between"
-      }
-    }, /*#__PURE__*/React.createElement("span", {
-      style: {
-        fontFamily: "'Oswald',system-ui",
-        fontSize: 13,
-        fontWeight: 700,
-        color: NAVY
-      }
-    }, "TOTAL"), /*#__PURE__*/React.createElement("span", {
-      style: {
-        fontFamily: "'Oswald',system-ui",
-        fontSize: 13,
-        fontWeight: 700,
-        color: NAVY,
-        fontVariantNumeric: "tabular-nums"
-      }
-    }, "$ ", fmt(total)))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
-      style: {
-        fontSize: 10,
-        fontWeight: 700,
-        color: ORANGE,
-        textTransform: "uppercase",
-        letterSpacing: "0.1em",
-        marginBottom: 8
-      }
-    }, "Pagos"), /*#__PURE__*/React.createElement(PaymentsPanel, {
-      qid: q.id,
-      pagos: pagos,
-      total: total,
-      onUpdatePagos: function(qid, newPagos) {
-        var incompletos = newPagos.filter(function(p){return !p.monto||!p.fecha||!p.fecha.trim();});
-        setPagosPendientes(function(prev){var n=Object.assign({},prev);n[qid]=incompletos.length;return n;});
-        onUpdatePagos(qid, newPagos);
-      },
-      qstatus: q.status
-    }))), q.aclaraciones && /*#__PURE__*/React.createElement("div", {
-      style: {
-        marginTop: 12,
-        borderTop: "1px solid #E2E8F0",
-        paddingTop: 10
-      }
-    }, /*#__PURE__*/React.createElement("div", {
-      style: {
-        fontSize: 10,
-        fontWeight: 700,
-        color: "#94A3B8",
-        textTransform: "uppercase",
-        letterSpacing: "0.1em",
-        marginBottom: 4
-      }
-    }, "Aclaraciones"), /*#__PURE__*/React.createElement("div", {
-      style: {
-        fontSize: 12,
-        color: "#475569",
-        whiteSpace: "pre-wrap"
-      }
-    }, q.aclaraciones)))), editInlineId === q.id && /*#__PURE__*/React.createElement("tr", {
+      style: { padding: "16px", borderBottom: "2px solid #E2E8F0" }
+    }, /*#__PURE__*/React.createElement("div", { style:{display:"flex",flexDirection:"column",gap:14} },
+      /*#__PURE__*/React.createElement("div", { style:{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:12} },
+        [["Total Mano de Obra", subMdo, "#475569"],["Total Materiales", subMat, "#475569"],["Total Presupuesto", total, NAVY]].map(function(it){
+          return /*#__PURE__*/React.createElement("div",{key:it[0],style:{backgroundColor:"#fff",border:"1px solid #E2E8F0",borderRadius:8,padding:"10px 14px"}},
+            /*#__PURE__*/React.createElement("div",{style:{fontSize:10,fontWeight:700,color:"#94A3B8",textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:5}}, it[0]),
+            /*#__PURE__*/React.createElement("div",{style:{fontFamily:"'Oswald',system-ui",fontSize:18,fontWeight:700,color:it[2],fontVariantNumeric:"tabular-nums"}}, "$ "+fmt(it[1]))
+          );
+        })
+      ),
+      /*#__PURE__*/React.createElement("div", null,
+        /*#__PURE__*/React.createElement("div",{style:{fontSize:10,fontWeight:700,color:ORANGE,textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:8}}, "Pagos"),
+        /*#__PURE__*/React.createElement(PaymentsPanel, {
+          qid: q.id,
+          pagos: pagos,
+          total: total,
+          onUpdatePagos: function(qid, newPagos) {
+            var incompletos = newPagos.filter(function(p){return !p.monto||!p.fecha||!p.fecha.trim();});
+            setPagosPendientes(function(prev){var n=Object.assign({},prev);n[qid]=incompletos.length;return n;});
+            onUpdatePagos(qid, newPagos);
+          },
+          qstatus: q.status
+        })
+      )
+    ))), editInlineId === q.id && /*#__PURE__*/React.createElement("tr", {
       key: q.id + "edit"
     }, /*#__PURE__*/React.createElement("td", {
       colSpan: 8,
