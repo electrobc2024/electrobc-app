@@ -3224,7 +3224,7 @@ function PaymentsPanel({
     color: "#1E293B",
     fontVariantNumeric: "tabular-nums"
   };
-  return /*#__PURE__*/React.createElement("div", null, pagos.map((p, i) => /*#__PURE__*/React.createElement("div", {
+  return /*#__PURE__*/React.createElement("div", {style:{maxWidth:560}}, pagos.map((p, i) => /*#__PURE__*/React.createElement("div", {
     key: p.id,
     style: {
       display: "flex",
@@ -3309,12 +3309,11 @@ function PaymentsPanel({
   }), p.monto && p.fecha && qstatus==='aceptado' && !savedIds.has(p.id) && /*#__PURE__*/React.createElement("button", {
     title: "Guardar pago",
     onClick: () => { onUpdatePagos(qid, pagos); setSavedIds(function(s){var n=new Set(s);n.add(p.id);return n;}); },
-    style: {marginLeft:"auto",background:'none',border:'1px solid #86EFAC',borderRadius:4,color:'#16A34A',fontSize:11,padding:'3px 8px',cursor:'pointer',fontWeight:700}
+    style: {background:'none',border:'1px solid #86EFAC',borderRadius:4,color:'#16A34A',fontSize:11,padding:'3px 8px',cursor:'pointer',fontWeight:700}
   }, '\u2713'), /*#__PURE__*/React.createElement("button", {
     title: "Eliminar pago",
     onClick: () => delPago(p.id),
     style: {
-      marginLeft: (p.monto && p.fecha && qstatus==='aceptado' && !savedIds.has(p.id)) ? 0 : "auto",
       background: "none",
       border: "1px solid #FECACA",
       borderRadius: 4,
