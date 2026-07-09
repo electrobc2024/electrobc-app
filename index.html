@@ -6191,20 +6191,22 @@ function DashboardPdfOverlay({onClose, data}) {
             React.createElement("span",{style:{fontSize:13,fontWeight:700,color:NAVY}},"$ "+fmt(noPresupuestados))
           )
         ),
-        // Indicadores analíticos
-        React.createElement("div",{style:cardS},
-          React.createElement("div",{style:{fontSize:12,fontWeight:700,color:NAVY,marginBottom:10}},"📊 Indicadores"),
-          React.createElement("div",{style:rowS},
-            React.createElement("span",{style:{fontSize:12,color:"#475569"}},"✅ Aprobación (aceptados / emitidos)"),
-            React.createElement("span",{style:{fontSize:13,fontWeight:700,color:NAVY}},(metricas.tasaAprobacion||0)+"%  ("+(metricas.aceptadosN||0)+" / "+(metricas.emitidosN||0)+")")
+        // Indicadores analíticos (cards)
+        React.createElement("div",{style:{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10,marginBottom:16}},
+          React.createElement("div",{style:{...cardS,backgroundColor:"#ECFDF5",marginBottom:0}},
+            React.createElement("div",{style:{fontSize:10,color:"#94A3B8",fontWeight:700,textTransform:"uppercase",marginBottom:4}},"✅ Aprobación"),
+            React.createElement("div",{style:{fontFamily:"'Oswald',system-ui",fontSize:20,fontWeight:700,color:"#065F46"}},(metricas.tasaAprobacion||0)+"%"),
+            React.createElement("div",{style:{fontSize:9,color:"#94A3B8",marginTop:3}},(metricas.aceptadosN||0)+" / "+(metricas.emitidosN||0)+" presupuestos")
           ),
-          React.createElement("div",{style:rowS},
-            React.createElement("span",{style:{fontSize:12,color:"#475569"}},"🏗️ Materiales s/ presupuestado"),
-            React.createElement("span",{style:{fontSize:13,fontWeight:700,color:NAVY}},(metricas.pesoMateriales||0)+"%  ($ "+fmt(metricas.matCotizadoTodos)+" / $ "+fmt(metricas.totalCotizadoTodos)+")")
+          React.createElement("div",{style:{...cardS,backgroundColor:"#F5F3FF",marginBottom:0}},
+            React.createElement("div",{style:{fontSize:10,color:"#94A3B8",fontWeight:700,textTransform:"uppercase",marginBottom:4}},"🏗️ Materiales s/ presup."),
+            React.createElement("div",{style:{fontFamily:"'Oswald',system-ui",fontSize:20,fontWeight:700,color:"#6D28D9"}},(metricas.pesoMateriales||0)+"%"),
+            React.createElement("div",{style:{fontSize:9,color:"#94A3B8",marginTop:3}},"$ "+fmt(metricas.matCotizadoTodos)+" / $ "+fmt(metricas.totalCotizadoTodos))
           ),
-          React.createElement("div",{style:rowS},
-            React.createElement("span",{style:{fontSize:12,color:"#475569"}},"🏪 Materiales pagado vs cotizado (Borello)"),
-            React.createElement("span",{style:{fontSize:13,fontWeight:700,color:NAVY}},(metricas.ratioBorello||0)+"%  ($ "+fmt(metricas.pagadoBorello)+" / $ "+fmt(metricas.matCotizadoAceptados)+")")
+          React.createElement("div",{style:{...cardS,backgroundColor:"#FFFBEB",marginBottom:0}},
+            React.createElement("div",{style:{fontSize:10,color:"#94A3B8",fontWeight:700,textTransform:"uppercase",marginBottom:4}},"🏪 Mat. pagado vs cotiz."),
+            React.createElement("div",{style:{fontFamily:"'Oswald',system-ui",fontSize:20,fontWeight:700,color:"#B45309"}},(metricas.ratioBorello||0)+"%"),
+            React.createElement("div",{style:{fontSize:9,color:"#94A3B8",marginTop:3}},"$ "+fmt(metricas.pagadoBorello)+" / $ "+fmt(metricas.matCotizadoAceptados))
           )
         ),
         // Egresos por categoría
