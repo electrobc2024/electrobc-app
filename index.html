@@ -1876,6 +1876,7 @@ function ClientesView({
     setForm(mkClient());
     setEditId(null);
     setErrs([]);
+    setShowForm(false);
   }, [form, editId, clients, onSave]);
 
   // Inline edit helpers
