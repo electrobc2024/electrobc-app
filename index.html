@@ -6089,6 +6089,12 @@ function DashboardEvolutionChart({quotes, egresos, dashAnosVer}) {
         allData.map(function(p,i){
           return React.createElement('text',{key:i,x:xScale(i),y:H-8,textAnchor:'middle',fontSize:10,fill:'#94A3B8'},p.label);
         }),
+        // Etiquetas fijas del monto Cobrado sobre cada punto
+        allData.map(function(p,i){
+          var lbl = p.cobrado>=1000000 ? '$'+(p.cobrado/1000000).toFixed(1)+'M' : (p.cobrado>=1000 ? '$'+Math.round(p.cobrado/1000)+'K' : '$'+Math.round(p.cobrado));
+          var anchor = i===0 ? 'start' : (i===allData.length-1 ? 'end' : 'middle');
+          return React.createElement('text',{key:'lbl'+i,x:xScale(i),y:Math.max(12,yScale(p.cobrado)-10),textAnchor:anchor,fontSize:9,fontWeight:'bold',fill:'#059669'},lbl);
+        }),
         // Tooltip (se voltea a la izquierda si no entra a la derecha)
         tooltip && (function(){
           var tw = 140, th = 70;
@@ -6206,24 +6212,42 @@ function DashboardPdfOverlay({onClose, data}) {
         // Origen de ingresos
         React.createElement("div",{style:cardS},
           React.createElement("div",{style:{fontSize:12,fontWeight:700,color:NAVY,marginBottom:10}},"📈 Origen de los Ingresos (ARS)"),
-          React.createElement("div",{style:rowS},
-            React.createElement("span",{style:{fontSize:12,color:"#475569"}},"📋 Trabajos Presupuestados"),
-            React.createElement("span",{style:{fontSize:13,fontWeight:700,color:NAVY}},"$ "+fmt(presupuestados))
-          ),
-          React.createElement("div",{style:rowS},
-            React.createElement("span",{style:{fontSize:12,color:"#475569"}},"⚡ Directos / No Presupuestados"),
-            React.createElement("span",{style:{fontSize:13,fontWeight:700,color:NAVY}},"$ "+fmt(noPresupuestados))
-          )
+          (function(){
+            var maxIng = Math.max(presupuestados||0, noPresupuestados||0, 1);
+            var mkRow = function(label,val,color){
+              var w = val>0 ? Math.max(2,(val/maxIng)*100) : 0;
+              return React.createElement("div",{key:label,style:{marginBottom:8}},
+                React.createElement("div",{style:{display:"flex",justifyContent:"space-between",marginBottom:3}},
+                  React.createElement("span",{style:{fontSize:12,color:"#475569"}},label),
+                  React.createElement("span",{style:{fontSize:13,fontWeight:700,color:NAVY}},"$ "+fmt(val))
+                ),
+                React.createElement("div",{style:{height:6,backgroundColor:"#F1F5F9",borderRadius:3,overflow:"hidden"}},
+                  React.createElement("div",{style:{width:w+"%",height:"100%",backgroundColor:color,borderRadius:3}})
+                )
+              );
+            };
+            return [mkRow("📋 Trabajos Presupuestados", presupuestados, "#2563EB"),
+                    mkRow("⚡ Directos / No Presupuestados", noPresupuestados, "#059669")];
+          })()
         ),
         // Egresos por categoría
         React.createElement("div",{style:cardS},
           React.createElement("div",{style:{fontSize:12,fontWeight:700,color:NAVY,marginBottom:10}},"💸 Egresos por categoría"),
-          porCat.map(function(cat){
-            return React.createElement("div",{key:cat.id,style:rowS},
-              React.createElement("span",{style:{fontSize:12,color:"#475569"}},cat.label),
-              React.createElement("span",{style:{fontSize:13,fontWeight:700,color:cat.total>0?"#991B1B":"#94A3B8"}},"$ "+fmt(cat.total))
-            );
-          })
+          (function(){
+            var maxCat = Math.max.apply(null, porCat.map(function(c){return c.total||0;}).concat([1]));
+            return porCat.map(function(cat){
+              var w = cat.total>0 ? Math.max(2,(cat.total/maxCat)*100) : 0;
+              return React.createElement("div",{key:cat.id,style:{marginBottom:8}},
+                React.createElement("div",{style:{display:"flex",justifyContent:"space-between",marginBottom:3}},
+                  React.createElement("span",{style:{fontSize:12,color:"#475569"}},cat.label),
+                  React.createElement("span",{style:{fontSize:13,fontWeight:700,color:cat.total>0?cat.color:"#94A3B8"}},"$ "+fmt(cat.total))
+                ),
+                React.createElement("div",{style:{height:6,backgroundColor:"#F1F5F9",borderRadius:3,overflow:"hidden"}},
+                  React.createElement("div",{style:{width:w+"%",height:"100%",backgroundColor:cat.color,borderRadius:3}})
+                )
+              );
+            });
+          })()
         ),
         // Chart
         data.quotes && React.createElement(DashboardEvolutionChart,{
