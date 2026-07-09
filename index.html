@@ -3516,6 +3516,16 @@ function Tracker({
     label: "Rechazado",
     count: counts.rechazado
   }].filter(o => o.k === "todos" || o.count > 0);
+  // Encabezado clickeable para ordenar por esa columna (estilo Excel)
+  function sortHeader(text, ascKey, descKey){
+    var isAsc = sortTr === ascKey, isDesc = sortTr === descKey, activeS = isAsc || isDesc;
+    return /*#__PURE__*/React.createElement("button",{type:"button",title:"Ordenar por "+text,
+      onClick:function(){ setSortTr(isDesc ? ascKey : descKey); },
+      style:{background:"none",border:"none",cursor:"pointer",padding:0,font:"inherit",color:activeS?ORANGE:"inherit",display:"inline-flex",alignItems:"center",gap:3,textTransform:"inherit",letterSpacing:"inherit",fontWeight:"inherit"}},
+      text,
+      /*#__PURE__*/React.createElement("span",{style:{fontSize:9,opacity:activeS?1:0.4}}, isAsc?"▲":isDesc?"▼":"⇅")
+    );
+  }
   // Embudo de filtro por columna (estilo Excel)
   function colFunnel(colKey, active, popover){
     var open = colFilterOpen === colKey;
@@ -3655,18 +3665,18 @@ function Tracker({
       textAlign: "left",
       width: 66
     }
-  }, "N\xB0"), /*#__PURE__*/React.createElement("th", {
+  }, sortHeader("N\xB0","num_asc","num_desc")), /*#__PURE__*/React.createElement("th", {
     style: {
       ...thS,
       textAlign: "left",
       width: 76
     }
-  }, "Fecha"), /*#__PURE__*/React.createElement("th", {
+  }, sortHeader("Fecha","fec_asc","fec_desc")), /*#__PURE__*/React.createElement("th", {
     style: {
       ...thS,
       textAlign: "left"
     }
-  }, /*#__PURE__*/React.createElement("span",{style:{display:"inline-flex",alignItems:"center"}}, "Cliente", colFunnel("cliente", !!clientFilter,
+  }, /*#__PURE__*/React.createElement("span",{style:{display:"inline-flex",alignItems:"center"}}, sortHeader("Cliente","az","za"), colFunnel("cliente", !!clientFilter,
     /*#__PURE__*/React.createElement("div",null,
       /*#__PURE__*/React.createElement("div",{style:{fontSize:10,fontWeight:700,color:"#94A3B8",marginBottom:6,textTransform:"uppercase",letterSpacing:"0.06em"}},"Filtrar por cliente"),
       /*#__PURE__*/React.createElement("select",{value:clientFilter,onChange:function(e){setClientFilter(e.target.value);setColFilterOpen(null);},style:{width:"100%",border:"1px solid #E2E8F0",borderRadius:6,padding:"6px 8px",fontSize:12,color:"#1E293B",backgroundColor:"#fff"}},
@@ -3693,7 +3703,7 @@ function Tracker({
       textAlign: "right",
       width: 108
     }
-  }, "Total"), /*#__PURE__*/React.createElement("th", {
+  }, sortHeader("Total","tot_asc","tot_desc")), /*#__PURE__*/React.createElement("th", {
     style: {
       ...thS,
       textAlign: "center",
