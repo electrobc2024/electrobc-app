@@ -6146,12 +6146,13 @@ function DashboardPdfOverlay({onClose, data}) {
       React.createElement("div",{id:"dashboard-pdf-preview-area",style:{padding:"24px",backgroundColor:"#fff",borderRadius:"0 0 12px 12px"}},
         // Header con logo
         React.createElement("div",{style:{display:"flex",alignItems:"center",gap:12,marginBottom:20,paddingBottom:16,borderBottom:"3px solid "+ORANGE}},
-          React.createElement("div",{style:{backgroundColor:NAVY,borderRadius:8,padding:"8px 12px",display:"flex",alignItems:"center",justifyContent:"center"}},
-            React.createElement(LogoIcon,{size:24})
-          ),
+          React.createElement("img",{
+            src:"data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgNDggNDgiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgd2lkdGg9IjQ0IiBoZWlnaHQ9IjQ0Ij4KICA8ZWxsaXBzZSBjeD0iMjQiIGN5PSIyNiIgcng9IjIwIiByeT0iOCIgc3Ryb2tlPSIjMEEwRjFFIiBzdHJva2Utd2lkdGg9IjIuMiIgZmlsbD0ibm9uZSIgdHJhbnNmb3JtPSJyb3RhdGUoLTIwIDI0IDI2KSIvPgogIDxwYXRoIGQ9Ik0yOCA1IEwxNiAyNiBIMjMgTDIwIDQzIEwzMiAyMiBIMjUgWiIgZmlsbD0iI0YyNkIxRCIvPgo8L3N2Zz4=",
+            style:{width:44,height:44,flexShrink:0}
+          }),
           React.createElement("div",null,
-            React.createElement("div",{style:{fontFamily:"'Oswald',system-ui",fontSize:22,fontWeight:700,color:NAVY,letterSpacing:"0.05em"}},"ELECTRO BC"),
-            React.createElement("div",{style:{fontSize:10,color:"#94A3B8",letterSpacing:"0.15em",textTransform:"uppercase"}},"Servicios Integrales")
+            React.createElement("div",{style:{fontFamily:"'Oswald',system-ui",fontSize:24,fontWeight:700,color:NAVY,lineHeight:1}},"ELECTRO BC"),
+            React.createElement("div",{style:{fontSize:9,color:"#64748B",letterSpacing:"0.22em",textTransform:"uppercase",marginTop:4}},"SERVICIOS INTEGRALES")
           ),
           React.createElement("div",{style:{marginLeft:"auto",textAlign:"right"}},
             React.createElement("div",{style:{fontFamily:"'Oswald',system-ui",fontSize:14,fontWeight:700,color:NAVY}},"Dashboard Financiero"),
