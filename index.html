@@ -6089,14 +6089,20 @@ function DashboardEvolutionChart({quotes, egresos, dashAnosVer}) {
         allData.map(function(p,i){
           return React.createElement('text',{key:i,x:xScale(i),y:H-8,textAnchor:'middle',fontSize:10,fill:'#94A3B8'},p.label);
         }),
-        // Tooltip
-        tooltip && React.createElement('g',null,
-          React.createElement('rect',{x:tooltip.x+8,y:tooltip.y-50,width:140,height:70,fill:'#fff',stroke:'#E2E8F0',strokeWidth:1,rx:6}),
-          React.createElement('text',{x:tooltip.x+16,y:tooltip.y-33,fontSize:10,fontWeight:'bold',fill:NAVY},tooltip.data.label),
-          React.createElement('text',{x:tooltip.x+16,y:tooltip.y-18,fontSize:9,fill:'#059669'},'Cobrado: '+fmtV(tooltip.data.cobrado)),
-          React.createElement('text',{x:tooltip.x+16,y:tooltip.y-6,fontSize:9,fill:'#DC2626'},'Egresos: '+fmtV(tooltip.data.egresos)),
-          React.createElement('text',{x:tooltip.x+16,y:tooltip.y+8,fontSize:9,fill:'#2563EB'},'Ganancia: '+fmtV(tooltip.data.ganancia))
-        )
+        // Tooltip (se voltea a la izquierda si no entra a la derecha)
+        tooltip && (function(){
+          var tw = 140, th = 70;
+          var bx = (tooltip.x + 8 + tw > W - 2) ? tooltip.x - 8 - tw : tooltip.x + 8;
+          var by = Math.min(Math.max(4, tooltip.y - th/2), H - th - 4);
+          var tx = bx + 8;
+          return React.createElement('g',null,
+            React.createElement('rect',{x:bx,y:by,width:tw,height:th,fill:'#fff',stroke:'#E2E8F0',strokeWidth:1,rx:6}),
+            React.createElement('text',{x:tx,y:by+17,fontSize:10,fontWeight:'bold',fill:NAVY},tooltip.data.label),
+            React.createElement('text',{x:tx,y:by+32,fontSize:9,fill:'#059669'},'Cobrado: '+fmtV(tooltip.data.cobrado)),
+            React.createElement('text',{x:tx,y:by+44,fontSize:9,fill:'#DC2626'},'Egresos: '+fmtV(tooltip.data.egresos)),
+            React.createElement('text',{x:tx,y:by+56,fontSize:9,fill:'#2563EB'},'Ganancia: '+fmtV(tooltip.data.ganancia))
+          );
+        })()
       )
     )
   );
