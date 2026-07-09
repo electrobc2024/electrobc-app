@@ -3560,7 +3560,7 @@ function Tracker({
       onClick: function(){ setFilter(o.k); },
       title: "Filtrar: " + o.label,
       style: {
-        cursor:"pointer", textAlign:"left", minWidth:112, flex:"1 1 112px", maxWidth:210,
+        cursor:"pointer", textAlign:"left", minWidth:120, flex:"1 1 0",
         backgroundColor: bg,
         border: active ? ("2px solid " + fg) : ("1px solid " + br),
         borderRadius: 10, padding: active ? "10px 14px" : "11px 15px", transition:"all 0.15s",
@@ -3580,11 +3580,21 @@ function Tracker({
       marginBottom: 10,
       flexWrap: "wrap"
     }
-  }, /*#__PURE__*/React.createElement(SearchInput, {
+  }, /*#__PURE__*/React.createElement("div",{style:{flex:"1 1 240px",maxWidth:440,display:"flex"}}, /*#__PURE__*/React.createElement(SearchInput, {
     value: searchTr,
     onChange: setSearchTr,
     placeholder: "Buscar por cliente, direcci\xF3n, N\xB0 o referencia\u2026"
-  }), /*#__PURE__*/React.createElement("div",{style:{display:"inline-flex",alignItems:"center",gap:4,marginLeft:4}}, /*#__PURE__*/React.createElement("input",{type:"date",value:dateFrom,min:"2026-06-01",max:todayStr(),onChange:function(e){setDateFrom(e.target.value);},title:"Desde",style:{border:"1px solid #E2E8F0",borderRadius:6,padding:"5px 8px",fontSize:12,color:"#475569",backgroundColor:"#fff"}}), /*#__PURE__*/React.createElement("span",{style:{fontSize:11,color:"#94A3B8"}},"\u2192"), /*#__PURE__*/React.createElement("input",{type:"date",value:dateTo,min:"2026-06-01",max:todayStr(),onChange:function(e){setDateTo(e.target.value);},title:"Hasta",style:{border:"1px solid #E2E8F0",borderRadius:6,padding:"5px 8px",fontSize:12,color:"#475569",backgroundColor:"#fff"}}), (dateFrom||dateTo)?/*#__PURE__*/React.createElement("button",{type:"button",onClick:function(){setDateFrom("");setDateTo("");},style:{background:"none",border:"none",color:"#94A3B8",cursor:"pointer",fontSize:14}},"\u2715"):null), /*#__PURE__*/React.createElement("select", {
+  })), /*#__PURE__*/React.createElement("div",{style:{display:"inline-flex",alignItems:"center",gap:5,flexWrap:"wrap"}},
+    TIPOS_TRABAJO.map(function(t){
+      var on = tipoFilter.indexOf(t)>=0;
+      var meta = t==="electricidad"?{i:"\u26a1",l:"Electricidad",fg:"#B45309",bg:"#FFF7ED"}:t==="pintura"?{i:"\ud83c\udfa8",l:"Pintura",fg:"#065F46",bg:"#ECFDF5"}:{i:"\ud83d\udd27",l:"Plomer\u00eda",fg:"#1D4ED8",bg:"#EFF6FF"};
+      return /*#__PURE__*/React.createElement("button",{key:t,type:"button",title:"Filtrar por "+meta.l,
+        onClick:function(){ setTipoFilter(on ? tipoFilter.filter(function(x){return x!==t;}) : tipoFilter.concat([t])); },
+        style:{padding:"5px 11px",borderRadius:20,fontSize:12,fontWeight:on?700:500,cursor:"pointer",border:"1.5px solid "+(on?meta.fg:"#E2E8F0"),backgroundColor:on?meta.bg:"#fff",color:on?meta.fg:"#64748B",whiteSpace:"nowrap"}},
+        meta.i+" "+meta.l);
+    }),
+    tipoFilter.length>0 && /*#__PURE__*/React.createElement("button",{type:"button",onClick:function(){setTipoFilter([]);},title:"Limpiar tipo",style:{background:"none",border:"none",color:"#94A3B8",cursor:"pointer",fontSize:13}},"\u2715")
+  ), /*#__PURE__*/React.createElement("div",{style:{display:"inline-flex",alignItems:"center",gap:4,marginLeft:4}}, /*#__PURE__*/React.createElement("input",{type:"date",value:dateFrom,min:"2026-06-01",max:todayStr(),onChange:function(e){setDateFrom(e.target.value);},title:"Desde",style:{border:"1px solid #E2E8F0",borderRadius:6,padding:"5px 8px",fontSize:12,color:"#475569",backgroundColor:"#fff"}}), /*#__PURE__*/React.createElement("span",{style:{fontSize:11,color:"#94A3B8"}},"\u2192"), /*#__PURE__*/React.createElement("input",{type:"date",value:dateTo,min:"2026-06-01",max:todayStr(),onChange:function(e){setDateTo(e.target.value);},title:"Hasta",style:{border:"1px solid #E2E8F0",borderRadius:6,padding:"5px 8px",fontSize:12,color:"#475569",backgroundColor:"#fff"}}), (dateFrom||dateTo)?/*#__PURE__*/React.createElement("button",{type:"button",onClick:function(){setDateFrom("");setDateTo("");},style:{background:"none",border:"none",color:"#94A3B8",cursor:"pointer",fontSize:14}},"\u2715"):null), /*#__PURE__*/React.createElement("select", {
     value: sortTr,
     onChange: function(e){ setSortTr(e.target.value); },
     title: "Ordenar",
@@ -3598,18 +3608,7 @@ function Tracker({
     /*#__PURE__*/React.createElement("option",{value:"tot_asc"},"Ordenar: Total (menor)"),
     /*#__PURE__*/React.createElement("option",{value:"az"},"Ordenar: Cliente A→Z"),
     /*#__PURE__*/React.createElement("option",{value:"za"},"Ordenar: Cliente Z→A")
-  )), /*#__PURE__*/React.createElement("div",{style:{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap",marginBottom:14}},
-    /*#__PURE__*/React.createElement("span",{style:{fontSize:10,fontWeight:700,color:"#94A3B8",textTransform:"uppercase",letterSpacing:"0.08em",marginRight:2}},"Tipo de trabajo:"),
-    TIPOS_TRABAJO.map(function(t){
-      var on = tipoFilter.indexOf(t)>=0;
-      var meta = t==="electricidad"?{i:"⚡",l:"Electricidad",fg:"#B45309",bg:"#FFF7ED"}:t==="pintura"?{i:"🎨",l:"Pintura",fg:"#065F46",bg:"#ECFDF5"}:{i:"🔧",l:"Plomería",fg:"#1D4ED8",bg:"#EFF6FF"};
-      return /*#__PURE__*/React.createElement("button",{key:t,type:"button",
-        onClick:function(){ setTipoFilter(on ? tipoFilter.filter(function(x){return x!==t;}) : tipoFilter.concat([t])); },
-        style:{padding:"5px 12px",borderRadius:20,fontSize:12,fontWeight:on?700:500,cursor:"pointer",border:"1.5px solid "+(on?meta.fg:"#E2E8F0"),backgroundColor:on?meta.bg:"#fff",color:on?meta.fg:"#64748B"}},
-        meta.i+" "+meta.l);
-    }),
-    tipoFilter.length>0 && /*#__PURE__*/React.createElement("button",{type:"button",onClick:function(){setTipoFilter([]);},style:{background:"none",border:"none",color:"#94A3B8",cursor:"pointer",fontSize:12}},"✕ Limpiar")
-  ), clientStats && /*#__PURE__*/React.createElement("div", {
+  )),clientStats && /*#__PURE__*/React.createElement("div", {
     style: {
       backgroundColor: "#F0F4FF",
       border: "1px solid #C7D7FD",
