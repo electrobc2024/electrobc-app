@@ -3433,6 +3433,7 @@ function Tracker({
   const [searchTr, setSearchTr] = useState("");
   const [searchDir, setSearchDir] = useState("");
   const [colFilterOpen, setColFilterOpen] = useState(null);
+  const [tipoFilter, setTipoFilter] = useState([]);
   const _tot = q => calcSub(q.mdo) + calcSub(q.mat);
   const sorted = [...quotes].sort((a, b) => {
     if (sortTr === "num_asc") return parseInt(a.numero || 0) - parseInt(b.numero || 0);
@@ -3447,7 +3448,7 @@ function Tracker({
   });
   // unique client names for filter
   const clientNames = [...new Set(quotes.map(q => q.cliente.nombre).filter(Boolean))].sort();
-  const filtered = sorted.filter(q => filter === "todos" || q.status === filter || (filter === "recotizar" && isVencido(q)) || (filter === "recotizado" && q.status === "recotizado")).filter(q => !clientFilter || q.cliente.nombre === clientFilter).filter(q => !searchTr.trim() || (q.cliente.nombre || "").toLowerCase().includes(searchTr.toLowerCase()) || (q.cliente.administracion || "").toLowerCase().includes(searchTr.toLowerCase()) || (q.numero || "").includes(searchTr) || (q.referencia || "").toLowerCase().includes(searchTr.toLowerCase()) || [q.cliente.calle,q.cliente.numero,q.cliente.depto,q.cliente.entreCalles].filter(Boolean).join(" ").toLowerCase().includes(searchTr.toLowerCase())).filter(q => !searchDir.trim() || [q.cliente.calle, q.cliente.numero, q.cliente.depto, q.cliente.entreCalles].filter(Boolean).join(" ").toLowerCase().includes(searchDir.toLowerCase())).filter(function(q){if(!dateFrom&&!dateTo)return true;var fd=(q.fecha||"").slice(0,10);return(!dateFrom||fd>=dateFrom)&&(!dateTo||fd<=dateTo);});
+  const filtered = sorted.filter(q => filter === "todos" || q.status === filter || (filter === "recotizar" && isVencido(q)) || (filter === "recotizado" && q.status === "recotizado")).filter(q => !clientFilter || q.cliente.nombre === clientFilter).filter(q => !searchTr.trim() || (q.cliente.nombre || "").toLowerCase().includes(searchTr.toLowerCase()) || (q.cliente.administracion || "").toLowerCase().includes(searchTr.toLowerCase()) || (q.numero || "").includes(searchTr) || (q.referencia || "").toLowerCase().includes(searchTr.toLowerCase()) || [q.cliente.calle,q.cliente.numero,q.cliente.depto,q.cliente.entreCalles].filter(Boolean).join(" ").toLowerCase().includes(searchTr.toLowerCase())).filter(q => !searchDir.trim() || [q.cliente.calle, q.cliente.numero, q.cliente.depto, q.cliente.entreCalles].filter(Boolean).join(" ").toLowerCase().includes(searchDir.toLowerCase())).filter(function(q){if(!dateFrom&&!dateTo)return true;var fd=(q.fecha||"").slice(0,10);return(!dateFrom||fd>=dateFrom)&&(!dateTo||fd<=dateTo);}).filter(function(q){if(!tipoFilter.length)return true;var _tt=Array.isArray(q.tipoTrabajo)?q.tipoTrabajo:[q.tipoTrabajo||"electricidad"];return _tt.some(function(t){return tipoFilter.indexOf(t)>=0;});});
   // per-client stats when filter active
   const clientStats = clientFilter ? {
     total: filtered.length,
@@ -3597,7 +3598,18 @@ function Tracker({
     /*#__PURE__*/React.createElement("option",{value:"tot_asc"},"Ordenar: Total (menor)"),
     /*#__PURE__*/React.createElement("option",{value:"az"},"Ordenar: Cliente A→Z"),
     /*#__PURE__*/React.createElement("option",{value:"za"},"Ordenar: Cliente Z→A")
-  )),clientStats && /*#__PURE__*/React.createElement("div", {
+  )), /*#__PURE__*/React.createElement("div",{style:{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap",marginBottom:14}},
+    /*#__PURE__*/React.createElement("span",{style:{fontSize:10,fontWeight:700,color:"#94A3B8",textTransform:"uppercase",letterSpacing:"0.08em",marginRight:2}},"Tipo de trabajo:"),
+    TIPOS_TRABAJO.map(function(t){
+      var on = tipoFilter.indexOf(t)>=0;
+      var meta = t==="electricidad"?{i:"⚡",l:"Electricidad",fg:"#B45309",bg:"#FFF7ED"}:t==="pintura"?{i:"🎨",l:"Pintura",fg:"#065F46",bg:"#ECFDF5"}:{i:"🔧",l:"Plomería",fg:"#1D4ED8",bg:"#EFF6FF"};
+      return /*#__PURE__*/React.createElement("button",{key:t,type:"button",
+        onClick:function(){ setTipoFilter(on ? tipoFilter.filter(function(x){return x!==t;}) : tipoFilter.concat([t])); },
+        style:{padding:"5px 12px",borderRadius:20,fontSize:12,fontWeight:on?700:500,cursor:"pointer",border:"1.5px solid "+(on?meta.fg:"#E2E8F0"),backgroundColor:on?meta.bg:"#fff",color:on?meta.fg:"#64748B"}},
+        meta.i+" "+meta.l);
+    }),
+    tipoFilter.length>0 && /*#__PURE__*/React.createElement("button",{type:"button",onClick:function(){setTipoFilter([]);},style:{background:"none",border:"none",color:"#94A3B8",cursor:"pointer",fontSize:12}},"✕ Limpiar")
+  ), clientStats && /*#__PURE__*/React.createElement("div", {
     style: {
       backgroundColor: "#F0F4FF",
       border: "1px solid #C7D7FD",
