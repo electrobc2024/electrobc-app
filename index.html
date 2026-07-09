@@ -218,7 +218,8 @@ const mkPago = () => ({
   desc: "",
   monto: "",
   fecha: new Date().toISOString().slice(0,10),
-  moneda: "$"
+  moneda: "$",
+  medio: "efectivo"
 });
 const mkQuote = n => ({
   id: uid(),
@@ -1830,6 +1831,8 @@ function ClientesView({
   const [sortCl, setSortCl] = useState("az");
   const [searchCl, setSearchCl] = useState(initialSearch);
   const [tipoFilter, setTipoFilter] = useState("todos");
+  const [showForm, setShowForm] = useState(false);
+  const [colFilterOpen, setColFilterOpen] = useState(null);
   // Auto-expand when arriving from Tracker
   useEffect(() => {
     if (initialSearch) {
@@ -1926,7 +1929,54 @@ function ClientesView({
     width: "100%",
     backgroundColor: "#fff"
   };
-  return /*#__PURE__*/React.createElement(Pane, null, /*#__PURE__*/React.createElement(H1, null, "Clientes"), /*#__PURE__*/React.createElement(CardBox, {
+  const TIPO_LABELS = {particular:"Particular", admin:"Admin", empresa:"Empresa", licitacion:"Licitación"};
+  function sortHeaderCl(text, ascKey, descKey){
+    var isAsc = sortCl===ascKey, isDesc = sortCl===descKey, act = isAsc||isDesc;
+    return /*#__PURE__*/React.createElement("button",{type:"button",title:"Ordenar por "+text,
+      onClick:function(){ setSortCl(isDesc ? ascKey : descKey); },
+      style:{background:"none",border:"none",cursor:"pointer",padding:0,font:"inherit",color:act?ORANGE:"inherit",display:"inline-flex",alignItems:"center",gap:3,textTransform:"inherit",letterSpacing:"inherit",fontWeight:"inherit"}},
+      text,
+      /*#__PURE__*/React.createElement("span",{style:{fontSize:9,opacity:act?1:0.4}}, isAsc?"▲":isDesc?"▼":"⇅")
+    );
+  }
+  function tipoFunnel(){
+    var open = colFilterOpen==="tipo";
+    var active = tipoFilter!=="todos";
+    return /*#__PURE__*/React.createElement("span",{style:{position:"relative",display:"inline-flex",alignItems:"center",marginLeft:5}},
+      /*#__PURE__*/React.createElement("button",{type:"button",title:"Filtrar por tipo",
+        onClick:function(e){e.stopPropagation();setColFilterOpen(open?null:"tipo");},
+        style:{background:active?"#FFF7ED":"none",border:active?"1px solid #FDBA74":"1px solid transparent",borderRadius:5,cursor:"pointer",padding:"2px 3px",lineHeight:1,color:active?ORANGE:"#94A3B8",display:"inline-flex"}},
+        /*#__PURE__*/React.createElement("svg",{viewBox:"0 0 24 24",width:12,height:12,fill:"currentColor"},/*#__PURE__*/React.createElement("path",{d:"M3 4h18l-7 8v7l-4-2v-5z"}))
+      ),
+      open && /*#__PURE__*/React.createElement(React.Fragment,null,
+        /*#__PURE__*/React.createElement("div",{onClick:function(){setColFilterOpen(null);},style:{position:"fixed",inset:0,zIndex:200}}),
+        /*#__PURE__*/React.createElement("div",{onClick:function(e){e.stopPropagation();},style:{position:"absolute",top:"calc(100% + 6px)",left:0,zIndex:201,backgroundColor:"#fff",border:"1px solid #E2E8F0",borderRadius:8,padding:8,boxShadow:"0 8px 24px rgba(0,0,0,0.15)",minWidth:170,textTransform:"none",letterSpacing:"normal",fontWeight:400}},
+          ["todos"].concat(TIPOS_CLIENTE).map(function(t){
+            var sel = tipoFilter===t;
+            return /*#__PURE__*/React.createElement("button",{key:t,type:"button",
+              onClick:function(){ setTipoFilter(t); setColFilterOpen(null); },
+              style:{display:"block",width:"100%",textAlign:"left",padding:"6px 8px",fontSize:12,border:"none",borderRadius:5,cursor:"pointer",backgroundColor:sel?"#FFF7ED":"transparent",color:sel?ORANGE:"#475569",fontWeight:sel?700:400}},
+              t==="todos"?"Todos":(TIPO_LABELS[t]||t));
+          })
+        )
+      )
+    );
+  }
+  return /*#__PURE__*/React.createElement(Pane, null, /*#__PURE__*/React.createElement(H1, null, "Clientes"), /*#__PURE__*/React.createElement("button", {
+    onClick: function(){ setShowForm(function(v){return !v;}); },
+    onMouseDown: function(e){ e.preventDefault(); },
+    style: {
+      marginBottom: 14,
+      backgroundColor: showForm ? "#fff" : ORANGE,
+      color: showForm ? "#64748B" : "#fff",
+      border: showForm ? "1px solid #E2E8F0" : "none",
+      borderRadius: 9,
+      padding: "10px 18px",
+      fontSize: 14,
+      fontWeight: 700,
+      cursor: "pointer"
+    }
+  }, showForm ? "✕ Cerrar" : "+ Nuevo cliente"), showForm && /*#__PURE__*/React.createElement(CardBox, {
     title: "Nuevo cliente"
   }, /*#__PURE__*/React.createElement(ErrBox, {
     errors: errs
@@ -2083,27 +2133,6 @@ function ClientesView({
   }, "Sin clientes todav\xEDa.") : /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
-      gap: 6,
-      flexWrap: "wrap",
-      marginBottom: 8
-    }
-  }, ["todos", ...TIPOS_CLIENTE].map(t => /*#__PURE__*/React.createElement("button", {
-    key: t,
-    onClick: () => setTipoFilter(t),
-    style: {
-      padding: "4px 12px",
-      borderRadius: 20,
-      fontSize: 11,
-      fontWeight: 600,
-      border: "none",
-      cursor: "pointer",
-      backgroundColor: tipoFilter === t ? t === "todos" ? NAVY : "#F1F5F9" : "#fff",
-      color: tipoFilter === t ? t === "todos" ? "#fff" : NAVY : "#64748B",
-      outline: tipoFilter === t && t !== "todos" ? "2px solid " + NAVY : "none"
-    }
-  }, t === "todos" ? "Todos" : t === "empresa" ? "Empresa" : t === "particular" ? "Particular" : t === "admin" ? "Admin" : "Licitación"))), /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: "flex",
       gap: 8,
       alignItems: "center",
       marginBottom: 10,
@@ -2113,22 +2142,6 @@ function ClientesView({
     value: searchCl,
     onChange: setSearchCl,
     placeholder: "Buscar por nombre, empresa o administraci\xF3n\u2026"
-  }), /*#__PURE__*/React.createElement(SortBar, {
-    value: sortCl,
-    onChange: setSortCl,
-    options: [{
-      k: "az",
-      label: "Nombre A→Z"
-    }, {
-      k: "za",
-      label: "Nombre Z→A"
-    }, {
-      k: "recent",
-      label: "Más recientes"
-    }, {
-      k: "oldest",
-      label: "Más antiguos"
-    }]
   })), /*#__PURE__*/React.createElement("div", {
     style: {
       backgroundColor: "#fff",
@@ -2141,21 +2154,12 @@ function ClientesView({
       width: "100%",
       borderCollapse: "collapse"
     }
-  }, /*#__PURE__*/React.createElement("thead", null, /*#__PURE__*/React.createElement("tr", null, ["Nombre", "Teléfono", "Últ. presupuesto", ""].map((h, i) => /*#__PURE__*/React.createElement("th", {
-    key: i,
-    style: {
-      padding: "9px 12px",
-      fontSize: 10,
-      fontWeight: 700,
-      color: "#94A3B8",
-      textTransform: "uppercase",
-      letterSpacing: "0.08em",
-      backgroundColor: "#F8FAFC",
-      borderBottom: "1px solid #E2E8F0",
-      textAlign: "left",
-      whiteSpace: "nowrap"
-    }
-  }, h)))), /*#__PURE__*/React.createElement("tbody", null, [...clients].filter(cl => {
+  }, /*#__PURE__*/React.createElement("thead", null, /*#__PURE__*/React.createElement("tr", null,
+    /*#__PURE__*/React.createElement("th", {style:{padding:"9px 12px",fontSize:10,fontWeight:700,color:"#94A3B8",textTransform:"uppercase",letterSpacing:"0.08em",backgroundColor:"#F8FAFC",borderBottom:"1px solid #E2E8F0",textAlign:"left",whiteSpace:"nowrap"}}, /*#__PURE__*/React.createElement("span",{style:{display:"inline-flex",alignItems:"center"}}, sortHeaderCl("Nombre","az","za"), tipoFunnel())),
+    /*#__PURE__*/React.createElement("th", {style:{padding:"9px 12px",fontSize:10,fontWeight:700,color:"#94A3B8",textTransform:"uppercase",letterSpacing:"0.08em",backgroundColor:"#F8FAFC",borderBottom:"1px solid #E2E8F0",textAlign:"left",whiteSpace:"nowrap"}}, "Tel\xE9fono"),
+    /*#__PURE__*/React.createElement("th", {style:{padding:"9px 12px",fontSize:10,fontWeight:700,color:"#94A3B8",textTransform:"uppercase",letterSpacing:"0.08em",backgroundColor:"#F8FAFC",borderBottom:"1px solid #E2E8F0",textAlign:"left",whiteSpace:"nowrap"}}, sortHeaderCl("\xDAlt. presupuesto","oldest","recent")),
+    /*#__PURE__*/React.createElement("th", {style:{padding:"9px 12px",fontSize:10,fontWeight:700,color:"#94A3B8",textTransform:"uppercase",letterSpacing:"0.08em",backgroundColor:"#F8FAFC",borderBottom:"1px solid #E2E8F0",textAlign:"right",whiteSpace:"nowrap"}}, "Acciones")
+  )), /*#__PURE__*/React.createElement("tbody", null, [...clients].filter(cl => {
     if (tipoFilter === "todos") return true;
     const t = cl.tipo || "particular";
     return Array.isArray(t) ? t.includes(tipoFilter) : t === tipoFilter;
@@ -2269,7 +2273,8 @@ function ClientesView({
       }
     }, last ? /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("button", {
       onMouseDown: e => e.preventDefault(),
-      onClick: () => onPreviewQuote && onPreviewQuote(last),
+      onClick: () => onGoToTracker && onGoToTracker(last.id),
+      title: "Ver en Seguimiento",
       style: {
         fontWeight: 700,
         color: ORANGE,
@@ -3224,7 +3229,7 @@ function PaymentsPanel({
     color: "#1E293B",
     fontVariantNumeric: "tabular-nums"
   };
-  return /*#__PURE__*/React.createElement("div", {style:{maxWidth:560}}, pagos.map((p, i) => /*#__PURE__*/React.createElement("div", {
+  return /*#__PURE__*/React.createElement("div", {style:{maxWidth:560,marginLeft:"auto"}}, pagos.map((p, i) => /*#__PURE__*/React.createElement("div", {
     key: p.id,
     style: {
       display: "flex",
@@ -3306,7 +3311,16 @@ function PaymentsPanel({
       ...iS,
       width: 108
     }
-  }), p.monto && p.fecha && qstatus==='aceptado' && !savedIds.has(p.id) && /*#__PURE__*/React.createElement("button", {
+  }), /*#__PURE__*/React.createElement("select", {
+    value: p.medio || "efectivo",
+    onChange: e => setPago(p.id, "medio", e.target.value),
+    title: "Medio de pago",
+    style: {...iS, width: 104, fontSize: 10, cursor: "pointer"}
+  },
+    /*#__PURE__*/React.createElement("option", {value:"efectivo"}, "Efectivo"),
+    /*#__PURE__*/React.createElement("option", {value:"transferencia"}, "Transferencia"),
+    /*#__PURE__*/React.createElement("option", {value:"cheque"}, "Cheque")
+  ), p.monto && p.fecha && qstatus==='aceptado' && !savedIds.has(p.id) && /*#__PURE__*/React.createElement("button", {
     title: "Guardar pago",
     onClick: () => { onUpdatePagos(qid, pagos); setSavedIds(function(s){var n=new Set(s);n.add(p.id);return n;}); },
     style: {background:'none',border:'1px solid #86EFAC',borderRadius:4,color:'#16A34A',fontSize:11,padding:'3px 8px',cursor:'pointer',fontWeight:700}
@@ -3592,7 +3606,8 @@ function Tracker({
     value: searchTr,
     onChange: setSearchTr,
     placeholder: "Buscar por cliente, direcci\xF3n, N\xB0 o referencia\u2026"
-  })), /*#__PURE__*/React.createElement("div",{style:{display:"inline-flex",alignItems:"center",gap:5,flexWrap:"wrap"}},
+  })), /*#__PURE__*/React.createElement("div",{title:"Filtrá por tipo de trabajo",style:{display:"inline-flex",alignItems:"center",gap:5,flexWrap:"wrap"}},
+    /*#__PURE__*/React.createElement("span",{style:{fontSize:9,fontWeight:700,color:"#94A3B8",textTransform:"uppercase",letterSpacing:"0.06em",marginRight:2}},"Tipo:"),
     TIPOS_TRABAJO.map(function(t){
       var on = tipoFilter.indexOf(t)>=0;
       var meta = t==="electricidad"?{i:"\u26a1",l:"Electricidad",fg:"#B45309",bg:"#FFF7ED"}:t==="pintura"?{i:"\ud83c\udfa8",l:"Pintura",fg:"#065F46",bg:"#ECFDF5"}:{i:"\ud83d\udd27",l:"Plomer\u00eda",fg:"#1D4ED8",bg:"#EFF6FF"};
@@ -3602,7 +3617,7 @@ function Tracker({
         meta.i+" "+meta.l);
     }),
     tipoFilter.length>0 && /*#__PURE__*/React.createElement("button",{type:"button",onClick:function(){setTipoFilter([]);},title:"Limpiar tipo",style:{background:"none",border:"none",color:"#94A3B8",cursor:"pointer",fontSize:13}},"\u2715")
-  ), /*#__PURE__*/React.createElement("div",{style:{display:"inline-flex",alignItems:"center",gap:4,marginLeft:4}}, /*#__PURE__*/React.createElement("input",{type:"date",value:dateFrom,min:"2026-06-01",max:todayStr(),onChange:function(e){setDateFrom(e.target.value);},title:"Desde",style:{border:"1px solid #E2E8F0",borderRadius:6,padding:"5px 8px",fontSize:12,color:"#475569",backgroundColor:"#fff"}}), /*#__PURE__*/React.createElement("span",{style:{fontSize:11,color:"#94A3B8"}},"\u2192"), /*#__PURE__*/React.createElement("input",{type:"date",value:dateTo,min:"2026-06-01",max:todayStr(),onChange:function(e){setDateTo(e.target.value);},title:"Hasta",style:{border:"1px solid #E2E8F0",borderRadius:6,padding:"5px 8px",fontSize:12,color:"#475569",backgroundColor:"#fff"}}), (dateFrom||dateTo)?/*#__PURE__*/React.createElement("button",{type:"button",onClick:function(){setDateFrom("");setDateTo("");},style:{background:"none",border:"none",color:"#94A3B8",cursor:"pointer",fontSize:14}},"\u2715"):null)),clientStats && /*#__PURE__*/React.createElement("div", {
+  ), /*#__PURE__*/React.createElement("div",{title:"Filtrá por fechas",style:{display:"inline-flex",alignItems:"center",gap:4,marginLeft:4}}, /*#__PURE__*/React.createElement("span",{style:{fontSize:9,fontWeight:700,color:"#94A3B8",textTransform:"uppercase",letterSpacing:"0.06em",marginRight:2}},"Fechas:"), /*#__PURE__*/React.createElement("input",{type:"date",value:dateFrom,min:"2026-06-01",max:todayStr(),onChange:function(e){setDateFrom(e.target.value);},title:"Desde",style:{border:"1px solid #E2E8F0",borderRadius:6,padding:"5px 8px",fontSize:12,color:"#475569",backgroundColor:"#fff"}}), /*#__PURE__*/React.createElement("span",{style:{fontSize:11,color:"#94A3B8"}},"\u2192"), /*#__PURE__*/React.createElement("input",{type:"date",value:dateTo,min:"2026-06-01",max:todayStr(),onChange:function(e){setDateTo(e.target.value);},title:"Hasta",style:{border:"1px solid #E2E8F0",borderRadius:6,padding:"5px 8px",fontSize:12,color:"#475569",backgroundColor:"#fff"}}), (dateFrom||dateTo)?/*#__PURE__*/React.createElement("button",{type:"button",onClick:function(){setDateFrom("");setDateTo("");},style:{background:"none",border:"none",color:"#94A3B8",cursor:"pointer",fontSize:14}},"\u2715"):null)),clientStats && /*#__PURE__*/React.createElement("div", {
     style: {
       backgroundColor: "#F0F4FF",
       border: "1px solid #C7D7FD",
