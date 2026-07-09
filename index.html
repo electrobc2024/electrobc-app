@@ -3227,8 +3227,8 @@ function PaymentsPanel({
   return /*#__PURE__*/React.createElement("div", null, pagos.map((p, i) => /*#__PURE__*/React.createElement("div", {
     key: p.id,
     style: {
-      display: "grid",
-      gridTemplateColumns: "1fr auto auto auto auto",
+      display: "flex",
+      flexWrap: "wrap",
       gap: 8,
       alignItems: "center",
       padding: "6px 0",
@@ -3238,7 +3238,8 @@ function PaymentsPanel({
     style: {
       fontSize: 11,
       color: "#64748B",
-      fontWeight: 600
+      fontWeight: 600,
+      minWidth: 48
     }
   }, "Pago ", i + 1), /*#__PURE__*/React.createElement("select", {
     value: p.moneda || "$",
@@ -3305,20 +3306,25 @@ function PaymentsPanel({
       ...iS,
       width: 108
     }
-  }), /*#__PURE__*/React.createElement("button", {
+  }), p.monto && p.fecha && qstatus==='aceptado' && !savedIds.has(p.id) && /*#__PURE__*/React.createElement("button", {
+    title: "Guardar pago",
+    onClick: () => { onUpdatePagos(qid, pagos); setSavedIds(function(s){var n=new Set(s);n.add(p.id);return n;}); },
+    style: {marginLeft:"auto",background:'none',border:'1px solid #86EFAC',borderRadius:4,color:'#16A34A',fontSize:11,padding:'3px 8px',cursor:'pointer',fontWeight:700}
+  }, '\u2713'), /*#__PURE__*/React.createElement("button", {
+    title: "Eliminar pago",
     onClick: () => delPago(p.id),
     style: {
+      marginLeft: (p.monto && p.fecha && qstatus==='aceptado' && !savedIds.has(p.id)) ? 0 : "auto",
       background: "none",
-      border: "none",
-      color: "#FCA5A5",
-      fontSize: 12,
-      padding: "2px"
+      border: "1px solid #FECACA",
+      borderRadius: 4,
+      color: "#DC2626",
+      fontSize: 11,
+      padding: "3px 8px",
+      cursor: "pointer",
+      fontWeight: 700
     }
-  }, "\u2715"),
-  p.monto && p.fecha && qstatus==='aceptado' && !savedIds.has(p.id) && /*#__PURE__*/React.createElement("button", {
-    onClick: () => { onUpdatePagos(qid, pagos); setSavedIds(function(s){var n=new Set(s);n.add(p.id);return n;}); },
-    style: {background:'none',border:'1px solid #86EFAC',borderRadius:4,color:'#16A34A',fontSize:10,padding:'2px 6px',cursor:'pointer',fontWeight:700}
-  }, '\u2713')
+  }, "\u2715")
   )), /*#__PURE__*/React.createElement("button", {
     onClick: addPago,
     onMouseDown: e => e.preventDefault(),
