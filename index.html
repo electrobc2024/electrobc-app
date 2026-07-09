@@ -6179,18 +6179,6 @@ function DashboardPdfOverlay({onClose, data}) {
             React.createElement("div",{style:{fontFamily:"'Oswald',system-ui",fontSize:20,fontWeight:700,color:ganancia>=0?"#065F46":"#991B1B"}},(ganancia<0?"- ":"")+"$ "+fmt(ganancia))
           )
         ),
-        // Origen de ingresos
-        React.createElement("div",{style:cardS},
-          React.createElement("div",{style:{fontSize:12,fontWeight:700,color:NAVY,marginBottom:10}},"📈 Origen de los Ingresos (ARS)"),
-          React.createElement("div",{style:rowS},
-            React.createElement("span",{style:{fontSize:12,color:"#475569"}},"📋 Trabajos Presupuestados"),
-            React.createElement("span",{style:{fontSize:13,fontWeight:700,color:NAVY}},"$ "+fmt(presupuestados))
-          ),
-          React.createElement("div",{style:rowS},
-            React.createElement("span",{style:{fontSize:12,color:"#475569"}},"⚡ Directos / No Presupuestados"),
-            React.createElement("span",{style:{fontSize:13,fontWeight:700,color:NAVY}},"$ "+fmt(noPresupuestados))
-          )
-        ),
         // Indicadores analíticos (cards)
         React.createElement("div",{style:{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10,marginBottom:16}},
           React.createElement("div",{style:{...cardS,backgroundColor:"#ECFDF5",marginBottom:0}},
@@ -6207,6 +6195,18 @@ function DashboardPdfOverlay({onClose, data}) {
             React.createElement("div",{style:{fontSize:10,color:"#94A3B8",fontWeight:700,textTransform:"uppercase",marginBottom:4}},"🏪 Mat. pagado vs cotiz."),
             React.createElement("div",{style:{fontFamily:"'Oswald',system-ui",fontSize:20,fontWeight:700,color:"#B45309"}},(metricas.ratioBorello||0)+"%"),
             React.createElement("div",{style:{fontSize:9,color:"#94A3B8",marginTop:3}},"$ "+fmt(metricas.pagadoBorello)+" / $ "+fmt(metricas.matCotizadoAceptados))
+          )
+        ),
+        // Origen de ingresos
+        React.createElement("div",{style:cardS},
+          React.createElement("div",{style:{fontSize:12,fontWeight:700,color:NAVY,marginBottom:10}},"📈 Origen de los Ingresos (ARS)"),
+          React.createElement("div",{style:rowS},
+            React.createElement("span",{style:{fontSize:12,color:"#475569"}},"📋 Trabajos Presupuestados"),
+            React.createElement("span",{style:{fontSize:13,fontWeight:700,color:NAVY}},"$ "+fmt(presupuestados))
+          ),
+          React.createElement("div",{style:rowS},
+            React.createElement("span",{style:{fontSize:12,color:"#475569"}},"⚡ Directos / No Presupuestados"),
+            React.createElement("span",{style:{fontSize:13,fontWeight:700,color:NAVY}},"$ "+fmt(noPresupuestados))
           )
         ),
         // Egresos por categoría
