@@ -6377,6 +6377,25 @@ function IngresosView({quotes, egresos, onSaveEgresos, activeTab, setActiveTab})
     return {...cat, total};
   }).sort(function(a,b){return b.total-a.total;});
 
+  // ── Métricas analíticas (siguen el filtro AÑO/MES del Dashboard) ────────────
+  function _sumLineas(arr){return (arr||[]).reduce(function(a,r){return a+(parseFloat(r.pu)||0)*(parseFloat(r.qty)||1);},0);}
+  var quotesPeriodoDash = (quotes||[]).filter(function(q){return inPeriod(q.fecha, dashAnosVer, dashMesesVer);});
+  // 1) Tasa de aprobación = aceptados / emitidos (excluye recotizados)
+  var emitidosDash = quotesPeriodoDash.filter(function(q){return q.status!=='recotizado';});
+  var aceptadosDash = emitidosDash.filter(function(q){return q.status==='aceptado';});
+  var tasaAprobacionDash = emitidosDash.length>0 ? Math.round((aceptadosDash.length/emitidosDash.length)*100) : 0;
+  // 2) Peso de materiales sobre presupuestos cobrados (con al menos un cobro)
+  var cobradosDash = quotesPeriodoDash.filter(function(q){return (q.pagos||[]).some(function(p){return (parseFloat(p.monto)||0)>0;});});
+  var matCotizadoCobrados = cobradosDash.reduce(function(s,q){return s+_sumLineas(q.mat);},0);
+  var totalCotizadoCobrados = cobradosDash.reduce(function(s,q){return s+_sumLineas(q.mdo)+_sumLineas(q.mat);},0);
+  var pesoMaterialesDash = totalCotizadoCobrados>0 ? Math.round((matCotizadoCobrados/totalCotizadoCobrados)*100) : 0;
+  // 3) Materiales: pagado a Borello vs cotizado (de los cobrados)
+  var pagadoBorelloDash = egresosFiltradosDash.filter(function(e){return e.cat==='materiales';}).reduce(function(s,e){
+    if((e.moneda||'$')==='USD') return s+(parseFloat(e.monto)||0)*(parseFloat(e.tcambio)||0);
+    return s+(parseFloat(e.monto)||0);
+  },0);
+  var ratioBorelloDash = matCotizadoCobrados>0 ? Math.round((pagadoBorelloDash/matCotizadoCobrados)*100) : 0;
+
   // ── Form ───────────────────────────────────────────────────────────────────
   function handleSaveEgreso() {
     if((!egForm.cat&&egForm.tipo==='egreso')||!egForm.desc.trim()||!egForm.monto||!egForm.fecha||!egForm.medio){alert('Complet\u00e1 todos los campos antes de guardar.');return;}
@@ -6473,6 +6492,20 @@ function IngresosView({quotes, egresos, onSaveEgresos, activeTab, setActiveTab})
           return React.createElement('div',{key:k.label,style:{...card,backgroundColor:k.bg,border:'1px solid '+k.color+'33'}},
             React.createElement('div',{style:{fontSize:11,fontWeight:700,color:k.color,textTransform:'uppercase',letterSpacing:'0.07em',marginBottom:4}},k.icon+' '+k.label),
             React.createElement('div',{style:{fontFamily:"'Oswald',system-ui",fontSize:22,fontWeight:700,color:k.color}},k.val)
+          );
+        })
+      ),
+      // KPI cards analíticos (aprobación / materiales)
+      React.createElement('div',{style:{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:12,marginBottom:20}},
+        [
+          {label:'Aprobación',val:tasaAprobacionDash+'%',sub:aceptadosDash.length+' de '+emitidosDash.length+' presupuestos',color:'#065F46',bg:'#ECFDF5',icon:'✅'},
+          {label:'Materiales s/ cobrado',val:pesoMaterialesDash+'%',sub:'Materiales dentro de lo cobrado',color:'#6D28D9',bg:'#F5F3FF',icon:'\u{1F3D7}️'},
+          {label:'Materiales pagado vs cotizado',val:ratioBorelloDash+'%',sub:fmt(pagadoBorelloDash)+' Borello / '+fmt(matCotizadoCobrados)+' cotiz.',color:'#B45309',bg:'#FFFBEB',icon:'\u{1F3EA}'},
+        ].map(function(k){
+          return React.createElement('div',{key:k.label,style:{...card,backgroundColor:k.bg,border:'1px solid '+k.color+'33'}},
+            React.createElement('div',{style:{fontSize:11,fontWeight:700,color:k.color,textTransform:'uppercase',letterSpacing:'0.07em',marginBottom:4}},k.icon+' '+k.label),
+            React.createElement('div',{style:{fontFamily:"'Oswald',system-ui",fontSize:22,fontWeight:700,color:k.color}},k.val),
+            React.createElement('div',{style:{fontSize:10,color:'#94A3B8',marginTop:2}},k.sub)
           );
         })
       ),
