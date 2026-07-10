@@ -24,7 +24,7 @@
 <script src="https://unpkg.com/react@18.2.0/umd/react.production.min.js"></script>
 <script src="https://unpkg.com/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
 <script>
 if(typeof React==='undefined'){document.body.innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:system-ui;text-align:center;flex-direction:column;gap:12px"><h2>ELECTRO BC</h2><p style="color:#64748B">Abrí desde Vercel.</p></div>';}
 else{"use strict";const {useState,useEffect,useCallback,useRef}=React;
@@ -251,15 +251,55 @@ function downloadCSV(filename, rows){
     var a = document.createElement("a"); a.href=url; a.download=filename; document.body.appendChild(a); a.click(); document.body.removeChild(a); setTimeout(function(){URL.revokeObjectURL(url);},1000);
   }catch(e){ console.error(e); alert("No se pudo exportar el Excel."); }
 }
+// Paleta de marca para Excel
+var XL_NAVY="0A0F1E", XL_ORANGE="F26B1D", XL_LINE="D9DEE8", XL_ZEBRA="F5F7FB",
+    XL_SECT_BG="FDE9DC", XL_TOT_BG="FFF3E9";
+function _xlThinBorder(color){ var b={style:"thin",color:{rgb:color||XL_LINE}}; return {top:b,bottom:b,left:b,right:b}; }
+function _xlxLink(cell){ return cell && cell.l ? {color:{rgb:"1D4ED8"},underline:true} : null; }
 function _xlsxSheet(rows, opts){
   opts=opts||{};
   var ws=XLSX.utils.aoa_to_sheet(rows);
   if(!ws['!ref']) return ws;
   var range=XLSX.utils.decode_range(ws['!ref']);
-  (opts.money||[]).forEach(function(ci){ for(var r=1;r<=range.e.r;r++){ var a=XLSX.utils.encode_cell({r:r,c:ci}); var c=ws[a]; if(c&&c.v!==""&&c.v!=null&&!isNaN(parseFloat(c.v))){ c.t='n'; c.v=parseFloat(c.v); c.z='"$" #,##0.00'; } } });
+  var headerRow = (opts.noHeader ? -1 : (opts.headerRow!=null ? opts.headerRow : 0));
+  var titleRows = opts.titleRows||[];
+  var sectionRows = opts.sectionRows||[];
+  var totalRow = (opts.totalRow!=null ? opts.totalRow : -1);
+  // Formato moneda
+  (opts.money||[]).forEach(function(ci){ for(var r=1;r<=range.e.r;r++){ var a=XLSX.utils.encode_cell({r:r,c:ci}); var c=ws[a]; if(c&&c.v!==""&&c.v!=null&&!isNaN(parseFloat(c.v))){ c.t='n'; c.v=parseFloat(c.v); c.z='"$" #,##0'; } } });
+  // WhatsApp
   (opts.phoneCols||[]).forEach(function(ci){ for(var r=1;r<=range.e.r;r++){ var a=XLSX.utils.encode_cell({r:r,c:ci}); var c=ws[a]; if(c&&c.v){ var d=String(c.v).replace(/\D/g,''); if(d) c.l={Target:'https://wa.me/'+d,Tooltip:'WhatsApp'}; } } });
+  // Links a la app
   (opts.links||[]).forEach(function(lk){ for(var r=1;r<=range.e.r;r++){ var a=XLSX.utils.encode_cell({r:r,c:lk.col}); var c=ws[a]; if(c&&c.v!=null&&c.v!==""){ c.l={Target:lk.base+encodeURIComponent(String(c.v)),Tooltip:lk.tooltip||"Abrir"}; } } });
-  var cols=[]; for(var col=0;col<=range.e.c;col++){ var mw=8; for(var rr=0;rr<=range.e.r;rr++){ var aa=XLSX.utils.encode_cell({r:rr,c:col}); var cc=ws[aa]; if(cc&&cc.v!=null){ var l=String(cc.v).length; if(l>mw)mw=l; } } cols.push({wch:Math.min(mw+2,42)}); } ws['!cols']=cols;
+  // Estilos por celda
+  var border=_xlThinBorder();
+  for(var r=0;r<=range.e.r;r++){
+    var isHeader = (r===headerRow);
+    var isTitle = titleRows.indexOf(r)>=0;
+    var isSection = sectionRows.indexOf(r)>=0;
+    var isTotal = (r===totalRow);
+    for(var col=0;col<=range.e.c;col++){
+      var addr=XLSX.utils.encode_cell({r:r,c:col});
+      var cell=ws[addr]; if(!cell){ cell={t:'s',v:''}; ws[addr]=cell; }
+      var s={ alignment:{vertical:"center",wrapText:false}, border:border };
+      if(isTitle){ s={ font:{bold:true,sz:15,color:{rgb:XL_ORANGE}}, fill:{fgColor:{rgb:XL_NAVY}}, alignment:{vertical:"center",horizontal:"left"} }; }
+      else if(isHeader){ s={ font:{bold:true,sz:11,color:{rgb:"FFFFFF"}}, fill:{fgColor:{rgb:XL_NAVY}}, alignment:{vertical:"center",horizontal:"left"}, border:border }; }
+      else if(isSection){ s={ font:{bold:true,sz:11,color:{rgb:XL_NAVY}}, fill:{fgColor:{rgb:XL_SECT_BG}}, alignment:{vertical:"center",horizontal:"left"} }; }
+      else if(isTotal){ s={ font:{bold:true,sz:11,color:{rgb:XL_NAVY}}, fill:{fgColor:{rgb:XL_TOT_BG}}, alignment:{vertical:"center"}, border:{top:{style:"medium",color:{rgb:XL_ORANGE}},bottom:border.bottom,left:border.left,right:border.right} }; }
+      else if(opts.zebra && r>headerRow && (r-headerRow)%2===0){ s.fill={fgColor:{rgb:XL_ZEBRA}}; }
+      var lk=_xlxLink(cell); if(lk){ s.font=Object.assign({},s.font,lk); }
+      cell.s=s;
+    }
+  }
+  // Autofiltro sobre la fila de encabezado
+  if(headerRow>=0 && !opts.noFilter){ ws['!autofilter']={ref:XLSX.utils.encode_range({s:{r:headerRow,c:0},e:{r:(totalRow>headerRow?totalRow-1:range.e.r),c:range.e.c}})}; }
+  if(opts.merges){ ws['!merges']=opts.merges; }
+  // Alto de filas destacadas
+  var rowsMeta=[]; if(titleRows.length){ titleRows.forEach(function(tr){ rowsMeta[tr]={hpt:26}; }); if(headerRow>=0) rowsMeta[headerRow]={hpt:20}; }
+  else if(headerRow>=0){ rowsMeta[headerRow]={hpt:20}; }
+  if(rowsMeta.length) ws['!rows']=rowsMeta;
+  // Anchos de columna
+  var cols=[]; for(var cc2=0;cc2<=range.e.c;cc2++){ var mw=8; for(var rr=0;rr<=range.e.r;rr++){ var aa=XLSX.utils.encode_cell({r:rr,c:cc2}); var ce=ws[aa]; if(ce&&ce.v!=null){ var l=String(ce.v).length; if(l>mw)mw=l; } } cols.push({wch:Math.min(mw+2,44)}); } ws['!cols']=cols;
   return ws;
 }
 function exportXLSX(filename, sheets){
@@ -270,22 +310,91 @@ function exportXLSX(filename, sheets){
     XLSX.writeFile(wb, filename);
   }catch(e){ console.error(e); alert('No se pudo exportar el Excel.'); }
 }
-function buildConsolidado(quotes, clients, catalog, egresos, year, monthsArr, periodoLabel){
+function buildConsolidado(quotes, clients, catalog, egresos, fromDate, toDate, periodoLabel){
   var AU="https://electrobc-app.vercel.app/";
-  var inPer=function(f){ if(!f) return false; var y=String(f).slice(0,4), mo=String(f).slice(5,7); if(year && y!==String(year)) return false; if(monthsArr && monthsArr.length>0 && monthsArr.indexOf(mo)<0) return false; return true; };
-  var movs=[];
-  (egresos||[]).forEach(function(e){ if(!inPer(e.fecha)) return; if(e.tipo==='ingreso'){ movs.push({fecha:e.fecha,detalle:'—',desc:e.desc,monto:parseFloat(e.monto)||0,moneda:e.moneda||'$',tcambio:e.tcambio||null}); } else { var cat=EGRESO_CATS.find(function(x){return x.id===e.cat;})||EGRESO_CATS[5]; movs.push({fecha:e.fecha,detalle:cat.label,desc:e.desc,monto:-(parseFloat(e.monto)||0),moneda:e.moneda||'$',tcambio:e.tcambio||null}); } });
-  movs.sort(function(a,b){return (b.fecha||'').localeCompare(a.fecha||'');});
-  var totND=movs.reduce(function(s,m){ if(m.moneda==='USD') return s+(m.monto*(parseFloat(m.tcambio)||0)); return s+m.monto; },0);
-  var porCat=EGRESO_CATS.map(function(cat){ var t=(egresos||[]).filter(function(e){return e.tipo!=='ingreso'&&e.cat===cat.id&&inPer(e.fecha);}).reduce(function(s,e){ if((e.moneda||'$')==='USD') return s+(parseFloat(e.monto)||0)*(parseFloat(e.tcambio)||0); return s+(parseFloat(e.monto)||0); },0); return {label:cat.label,color:cat.color,id:cat.id,total:t}; }).sort(function(a,b){return b.total-a.total;});
+  var inPer=function(f){ if(!f) return false; var d=String(f).slice(0,10); if(fromDate && d<fromDate) return false; if(toDate && d>toDate) return false; return true; };
   var fmtA=function(n){return "$ "+(Math.abs(Math.round(n))||0).toLocaleString('es-AR');};
-  var resumen=[["ELECTRO BC — Consolidado",""],["Período",periodoLabel],["Generado",fmtFecha(new Date())],["",""],["Total neto del período (ARS)",(totND<0?"- ":"")+fmtA(totND)],["",""],["Egresos por categoría",""]].concat(porCat.filter(function(c){return c.total>0;}).map(function(c){return [c.label, fmtA(c.total)];}));
+  var arsOf=function(m){ return m.moneda==='USD' ? m.monto*(parseFloat(m.tcambio)||0) : m.monto; };
+  // ── Movimientos: ingresos manuales + egresos + cobros de presupuestos ──
+  var movs=[];
+  (egresos||[]).forEach(function(e){ if(!inPer(e.fecha)) return; if(e.tipo==='ingreso'){ movs.push({fecha:e.fecha,detalle:'Ingreso manual',desc:e.desc,monto:parseFloat(e.monto)||0,moneda:e.moneda||'$',tcambio:e.tcambio||null}); } else { var cat=EGRESO_CATS.find(function(x){return x.id===e.cat;})||EGRESO_CATS[5]; movs.push({fecha:e.fecha,detalle:cat.label,desc:e.desc,monto:-(parseFloat(e.monto)||0),moneda:e.moneda||'$',tcambio:e.tcambio||null}); } });
+  (quotes||[]).forEach(function(q){ (q.pagos||[]).forEach(function(p){ if(!inPer(p.fecha)) return; movs.push({fecha:p.fecha,detalle:'Cobro presupuesto',desc:'#'+(q.numero||'')+' '+((q.cliente&&q.cliente.nombre)||''),monto:parseFloat(p.monto)||0,moneda:p.moneda||'$',tcambio:p.tcambio||null}); }); });
+  movs.sort(function(a,b){return (b.fecha||'').localeCompare(a.fecha||'');});
+  var totIngresos=movs.filter(function(m){return m.monto>0;}).reduce(function(s,m){return s+arsOf(m);},0);
+  var totEgresos=movs.filter(function(m){return m.monto<0;}).reduce(function(s,m){return s+Math.abs(arsOf(m));},0);
+  var gan=totIngresos-totEgresos;
+  var porCat=EGRESO_CATS.map(function(cat){ var t=(egresos||[]).filter(function(e){return e.tipo!=='ingreso'&&e.cat===cat.id&&inPer(e.fecha);}).reduce(function(s,e){ if((e.moneda||'$')==='USD') return s+(parseFloat(e.monto)||0)*(parseFloat(e.tcambio)||0); return s+(parseFloat(e.monto)||0); },0); return {label:cat.label,color:cat.color,id:cat.id,total:t}; }).sort(function(a,b){return b.total-a.total;});
+  // ── Presupuestos y métricas ──
+  var quotesPer=(quotes||[]).filter(function(q){return inPer(q.fecha);});
+  var emitidos=quotesPer.filter(function(q){return q.status!=='recotizado';});
+  var aceptados=emitidos.filter(function(q){return q.status==='aceptado';});
+  var tasa=emitidos.length>0?Math.round(aceptados.length/emitidos.length*100):0;
+  var cobradoDe=function(q){ return (q.pagos||[]).reduce(function(a,p){var m=parseFloat(p.monto||0); if(p.moneda==='USD')m=m*parseFloat(p.tcambio||0); return a+m;},0); };
+  var pend=aceptados.reduce(function(s,q){ var total=calcSub(q.mdo)+calcSub(q.mat); return s+Math.max(0,total-cobradoDe(q)); },0);
+  var matCotAcep=aceptados.reduce(function(s,q){return s+calcSub(q.mat);},0);
+  var pagadoBorello=(egresos||[]).filter(function(e){return e.tipo!=='ingreso'&&e.cat==='materiales'&&inPer(e.fecha);}).reduce(function(s,e){ if((e.moneda||'$')==='USD') return s+(parseFloat(e.monto)||0)*(parseFloat(e.tcambio)||0); return s+(parseFloat(e.monto)||0); },0);
+  var ratioBorello=matCotAcep>0?Math.round(pagadoBorello/matCotAcep*100):0;
+  // ── Semáforo (mismos umbrales que el Dashboard) ──
+  var margenPct=totIngresos>0?(gan/totIngresos)*100:0;
+  var estMargen=gan<0?{e:'atencion',n:'Pérdida en el período'}:(margenPct<15?{e:'revisar',n:'Margen '+Math.round(margenPct)+'% — ajustado'}:{e:'bien',n:'Margen '+Math.round(margenPct)+'% — saludable'});
+  var facturado=totIngresos+pend; var pendPct=facturado>0?(pend/facturado)*100:0;
+  var estPend=pendPct>45?{e:'atencion',n:Math.round(pendPct)+'% sin cobrar — mucho'}:(pendPct>25?{e:'revisar',n:Math.round(pendPct)+'% sin cobrar — vigilar'}:{e:'bien',n:Math.round(pendPct)+'% sin cobrar — sano'});
+  var estAprob=tasa>=45?{e:'bien',n:'Conversión buena'}:(tasa>=25?{e:'revisar',n:'Conversión mejorable'}:{e:'atencion',n:'Conversión baja'});
+  var estBor=ratioBorello<=65?{e:'bien',n:'Buen margen en materiales'}:(ratioBorello<=85?{e:'revisar',n:'Margen ajustado'}:{e:'atencion',n:'Casi sin margen'});
+  var semLbl=function(e){ return e==='bien'?'🟢 Bien':e==='revisar'?'🟡 Revisar':'🔴 Atención'; };
+  var blue=null; try{ var bj=JSON.parse(localStorage.getItem('ebc-blue')||'null'); if(bj&&bj.buy) blue=parseFloat(bj.buy); }catch(e){}
+  var usdStr = blue?('USD '+(Math.round(gan/blue)||0).toLocaleString('es-AR')):'';
+  // ── Hoja Resumen (brandeada) ──
+  var R=[], titleRows=[], sectionRows=[], merges=[];
+  var push=function(row){ R.push(row); return R.length-1; };
+  var section=function(txt){ var i=push([txt,"",""]); sectionRows.push(i); merges.push({s:{r:i,c:0},e:{r:i,c:2}}); return i; };
+  var t0=push(["ELECTRO BC — SERVICIOS INTEGRALES","",""]); titleRows.push(t0); merges.push({s:{r:t0,c:0},e:{r:t0,c:2}});
+  var t1=push(["Consolidado de gestión","",""]); merges.push({s:{r:t1,c:0},e:{r:t1,c:2}});
+  push(["Período", periodoLabel||"", ""]);
+  push(["Generado", fmtFecha(new Date()), ""]);
+  push(["","",""]);
+  section("RESUMEN DEL PERÍODO");
+  push(["Ingresos cobrados", fmtA(totIngresos), ""]);
+  push(["Egresos", fmtA(totEgresos), ""]);
+  push(["Ganancia neta (ARS)", (gan<0?"- ":"")+fmtA(gan), ""]);
+  if(usdStr) push(["Ganancia neta (USD aprox.)", usdStr, ""]);
+  push(["","",""]);
+  section("PRESUPUESTOS");
+  push(["Emitidos", emitidos.length, ""]);
+  push(["Aceptados", aceptados.length, ""]);
+  push(["Tasa de aprobación", tasa+"%", ""]);
+  push(["Pendiente de cobro", fmtA(pend), ""]);
+  push(["","",""]);
+  section("SEMÁFORO (orientativo)");
+  push(["Margen neto", semLbl(estMargen.e), estMargen.n]);
+  push(["Conversión de presupuestos", semLbl(estAprob.e), estAprob.n]);
+  push(["Costo de materiales (Borello)", semLbl(estBor.e), estBor.n]);
+  push(["Cobranza", semLbl(estPend.e), estPend.n]);
+  push(["","",""]);
+  section("EGRESOS POR CATEGORÍA");
+  porCat.filter(function(c){return c.total>0;}).forEach(function(c){ push([c.label, fmtA(c.total), ""]); });
+  push(["","",""]);
+  var nf=push(["🟢 Bien · 🟡 Revisar · 🔴 Atención — Guía orientativa; no reemplaza el análisis de un contador con tus números reales.","",""]); merges.push({s:{r:nf,c:0},e:{r:nf,c:2}});
+  // ── Ingresos y Egresos (con fila de total) ──
   var movRows=[["Fecha","Tipo","Categoría","Descripción","Monto","Moneda","TC"]].concat(movs.map(function(m){return [fmtFecha(m.fecha), m.monto>=0?'Ingreso':'Egreso', m.detalle||'', m.desc||'', m.monto, m.moneda||'$', m.tcambio||''];}));
-  var segRows=[["N°","Fecha","Cliente","Administración","Dirección","Mano de Obra","Materiales","Total","Estado","Cobrado","Resta","Autor"]].concat((quotes||[]).map(function(q){ var mdo=calcSub(q.mdo),mat=calcSub(q.mat),total=mdo+mat; var cob=(q.pagos||[]).reduce(function(s,p){var m=parseFloat(p.monto||0); if(p.moneda==="USD") m=m*parseFloat(p.tcambio||0); return s+m;},0); var est=STATUS_MAP[q.status]?STATUS_MAP[q.status].label:q.status; return [q.numero||"", fmtFecha(q.fecha), q.cliente.nombre||"", q.cliente.administracion||"", [q.cliente.calle,q.cliente.numero,q.cliente.depto].filter(Boolean).join(" "), mdo, mat, total, est, Math.round(cob), Math.round(Math.max(0,total-cob)), ebcUserLabel(q.autor||"guille")];}));
+  movRows.push(["TOTAL NETO","","","", gan, "", ""]); var movTotalRow=movRows.length-1;
+  // ── Seguimiento (con % cobrado y fila de total) ──
+  var sumMdo=0,sumMat=0,sumTot=0,sumCob=0,sumResta=0;
+  var segBody=(quotes||[]).map(function(q){ var mdo=calcSub(q.mdo),mat=calcSub(q.mat),total=mdo+mat; var cob=cobradoDe(q); var resta=Math.max(0,total-cob); var pc=total>0?Math.round(cob/total*100)+'%':''; sumMdo+=mdo;sumMat+=mat;sumTot+=total;sumCob+=cob;sumResta+=resta; var est=STATUS_MAP[q.status]?STATUS_MAP[q.status].label:q.status; return [q.numero||"", fmtFecha(q.fecha), q.cliente.nombre||"", q.cliente.administracion||"—", [q.cliente.calle,q.cliente.numero,q.cliente.depto].filter(Boolean).join(" "), mdo, mat, total, est, Math.round(cob), Math.round(resta), pc, ebcUserLabel(q.autor||"guille")];});
+  var segRows=[["N°","Fecha","Cliente","Administración","Dirección","Mano de Obra","Materiales","Total","Estado","Cobrado","Resta","% Cobrado","Autor"]].concat(segBody);
+  segRows.push(["TOTAL","","","","", sumMdo, sumMat, sumTot, "", Math.round(sumCob), Math.round(sumResta), "", ""]); var segTotalRow=segRows.length-1;
+  // ── Clientes / catálogo ──
   var cliRows=[["Nombre","Tipo","Empresa","Administración","Teléfono","Teléfono Adm","Cargado por"]].concat((clients||[]).map(function(c){ var t=Array.isArray(c.tipo)?c.tipo.join("/"):(c.tipo||""); return [c.nombre||"", t, c.empresa||"", c.administracion||"", c.telefono||"", c.telefonoAdm||"", ebcUserLabel(c.autor||"guille")];}));
   var mdoRows=[["Nombre","Precio actual","N° de precios","Cargado por"]].concat(((catalog&&catalog.mdo)||[]).map(function(it){return [it.nombre||"", it.precioBase||"", (it.historial||[]).length, ebcUserLabel(it.autor||"guille")];}));
   var matRows=[["Nombre","Precio actual","N° de precios","Cargado por"]].concat(((catalog&&catalog.mat)||[]).map(function(it){return [it.nombre||"", it.precioBase||"", (it.historial||[]).length, ebcUserLabel(it.autor||"guille")];}));
-  return [ {name:"Resumen",rows:resumen}, {name:"Ingresos y Egresos",money:[4],rows:movRows}, {name:"Seguimiento",money:[5,6,7,9,10],links:[{col:0,base:AU+"?p=",tooltip:"Ver en la app"},{col:2,base:AU+"?c=",tooltip:"Ver cliente en la app"}],rows:segRows}, {name:"Clientes",phoneCols:[4,5],links:[{col:0,base:AU+"?c=",tooltip:"Ver cliente en la app"}],rows:cliRows}, {name:"Mano de Obra",money:[1],rows:mdoRows}, {name:"Materiales",money:[1],rows:matRows} ];
+  return [
+    {name:"Resumen",rows:R,noHeader:true,noFilter:true,titleRows:titleRows,sectionRows:sectionRows,merges:merges},
+    {name:"Ingresos y Egresos",money:[4],rows:movRows,totalRow:movTotalRow,zebra:true},
+    {name:"Seguimiento",money:[5,6,7,9,10],links:[{col:0,base:AU+"?p=",tooltip:"Ver en la app"},{col:2,base:AU+"?c=",tooltip:"Ver cliente en la app"}],rows:segRows,totalRow:segTotalRow,zebra:true},
+    {name:"Clientes",phoneCols:[4,5],links:[{col:0,base:AU+"?c=",tooltip:"Ver cliente en la app"}],rows:cliRows,zebra:true},
+    {name:"Mano de Obra",money:[1],rows:mdoRows,zebra:true},
+    {name:"Materiales",money:[1],rows:matRows,zebra:true}
+  ];
 }
 const mkPago = () => ({
   id: uid(),
@@ -5320,6 +5429,14 @@ function App() {
   const [pdfQuote, setPdfQuote] = useState(null);
   const [clientsFilter, setClientsFilter] = useState("");
   const [trackerHighlight, setTrackerHighlight] = useState(null);
+  // Consolidado: selector de rango de fechas
+  const _mfrom = (function(){ var n=new Date(); return n.getFullYear()+"-"+String(n.getMonth()+1).padStart(2,'0')+"-01"; })();
+  const _mto = new Date().toISOString().slice(0,10);
+  const _prevFrom = (function(){ var d=new Date(); d.setDate(1); d.setMonth(d.getMonth()-1); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,'0')+"-01"; })();
+  const _prevTo = (function(){ var d=new Date(); d.setDate(0); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,'0')+"-"+String(d.getDate()).padStart(2,'0'); })();
+  const [showConsol, setShowConsol] = useState(false);
+  const [consolFrom, setConsolFrom] = useState(_mfrom);
+  const [consolTo, setConsolTo] = useState(_mto);
   const [egresos, setEgresos] = useState(() => { try { return JSON.parse(localStorage.getItem(EKEY)||"[]"); } catch(e){ return []; } });
   React.useEffect(function(){
     sbGet(EKEY).then(function(val){
@@ -5626,10 +5743,10 @@ function App() {
         alignSelf:"center",margin:"0 6px",flexShrink:0
       }})])
       .concat(navFin.map(function(i){return nbtn(i,true);}))
-      .concat([React.createElement("button",{key:"consolidado",title:"Descargar Excel consolidado del mes en curso",
-        onClick:function(){ var now=new Date(); var y=now.getFullYear(); var mo=String(now.getMonth()+1).padStart(2,'0'); var mesLbl=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'][now.getMonth()]; exportXLSX("ELECTRO BC - Consolidado - "+fmtFechaFile(now)+".xlsx", buildConsolidado(quotes, clients, catalog, egresos, y, [mo], mesLbl+" "+y)); },
+      .concat([React.createElement("button",{key:"consolidado",title:"Descargar Excel consolidado por rango de fechas",
+        onClick:function(){ setShowConsol(true); },
         style:{display:"flex",alignItems:"center",gap:5,padding:"0 12px",marginLeft:8,background:ORANGE,border:"none",borderRadius:6,fontSize:12,fontWeight:700,color:"#fff",whiteSpace:"nowrap",cursor:"pointer",alignSelf:"center",height:32}
-      },"📚 Consolidado del mes")]);
+      },"📚 Consolidado")]);
   })()), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
@@ -5741,7 +5858,34 @@ function App() {
     quote: pdfQuote,
     onClose: () => { setPdfQuote(null); setQuote(mkQuote(nextN(quotesRef.current))); window.scrollTo(0,0); },
     onMarkSent: handleMarkSent
-  }));
+  }), showConsol && /*#__PURE__*/React.createElement("div",{
+    style:{position:"fixed",inset:0,zIndex:10000,backgroundColor:"rgba(0,0,0,0.6)",display:"flex",alignItems:"center",justifyContent:"center",padding:20},
+    onClick:function(){setShowConsol(false);}
+  },
+    React.createElement("div",{onClick:function(e){e.stopPropagation();},style:{background:"#fff",borderRadius:14,width:"100%",maxWidth:400,overflow:"hidden",boxShadow:"0 20px 60px rgba(0,0,0,0.35)"}},
+      React.createElement("div",{style:{background:NAVY,padding:"16px 20px"}},
+        React.createElement("div",{style:{color:"#fff",fontWeight:800,fontSize:16,fontFamily:"'Oswald',system-ui"}},"📚 Consolidado"),
+        React.createElement("div",{style:{color:"rgba(255,255,255,0.6)",fontSize:12,marginTop:2}},"Elegí el rango de fechas a exportar")
+      ),
+      React.createElement("div",{style:{padding:20}},
+        React.createElement("div",{style:{display:"flex",gap:12,marginBottom:14}},
+          React.createElement("label",{style:{flex:1,fontSize:12,color:"#475569",fontWeight:600}},"Desde",
+            React.createElement("input",{type:"date",value:consolFrom,min:"2026-06-01",max:consolTo||undefined,onChange:function(e){setConsolFrom(e.target.value);},style:{display:"block",width:"100%",marginTop:5,border:"1px solid #E2E8F0",borderRadius:8,padding:"8px 10px",fontSize:13,color:"#1E293B",boxSizing:"border-box"}})
+          ),
+          React.createElement("label",{style:{flex:1,fontSize:12,color:"#475569",fontWeight:600}},"Hasta",
+            React.createElement("input",{type:"date",value:consolTo,min:consolFrom||"2026-06-01",onChange:function(e){setConsolTo(e.target.value);},style:{display:"block",width:"100%",marginTop:5,border:"1px solid #E2E8F0",borderRadius:8,padding:"8px 10px",fontSize:13,color:"#1E293B",boxSizing:"border-box"}})
+          )
+        ),
+        React.createElement("div",{style:{display:"flex",gap:8,flexWrap:"wrap",marginBottom:18}},
+          [{lbl:"Este mes",f:_mfrom,t:_mto},{lbl:"Mes pasado",f:_prevFrom,t:_prevTo},{lbl:"Todo",f:"2026-06-01",t:_mto}].map(function(p){ var act=consolFrom===p.f&&consolTo===p.t; return React.createElement("button",{key:p.lbl,type:"button",onClick:function(){setConsolFrom(p.f);setConsolTo(p.t);},style:{background:act?ORANGE:"#F1F5F9",border:"none",borderRadius:6,padding:"5px 11px",fontSize:11,fontWeight:700,color:act?"#fff":"#475569",cursor:"pointer"}},p.lbl); })
+        ),
+        React.createElement("div",{style:{display:"flex",gap:10,justifyContent:"flex-end"}},
+          React.createElement("button",{type:"button",onClick:function(){setShowConsol(false);},style:{background:"none",border:"1px solid #E2E8F0",borderRadius:8,padding:"9px 16px",fontSize:13,fontWeight:600,color:"#64748B",cursor:"pointer"}},"Cancelar"),
+          React.createElement("button",{type:"button",onClick:function(){ if(consolFrom&&consolTo&&consolFrom>consolTo){alert("La fecha 'Desde' no puede ser posterior a 'Hasta'.");return;} var lbl=fmtFecha(consolFrom)+" al "+fmtFecha(consolTo); exportXLSX("ELECTRO BC - Consolidado - "+fmtFechaFile(consolFrom)+" a "+fmtFechaFile(consolTo)+".xlsx", buildConsolidado(quotes, clients, catalog, egresos, consolFrom, consolTo, lbl)); setShowConsol(false); },style:{background:ORANGE,border:"none",borderRadius:8,padding:"9px 18px",fontSize:13,fontWeight:700,color:"#fff",cursor:"pointer"}},"⬇ Descargar Excel")
+        )
+      )
+    )
+  ));
 }
 
 const STATUS_ORDER={generado:0,revision:1,espera:2,aceptado:3,rechazado:3};
@@ -6257,7 +6401,7 @@ function IngresosView({quotes, egresos, onSaveEgresos, clients, catalog, activeT
   React.useEffect(function(){
     fetch('https://api.bluelytics.com.ar/v2/latest')
       .then(function(r){return r.json();})
-      .then(function(d){ if(d&&d.blue) setBlueHoy({buy:d.blue.value_buy||null,sell:d.blue.value_sell||null}); })
+      .then(function(d){ if(d&&d.blue){ setBlueHoy({buy:d.blue.value_buy||null,sell:d.blue.value_sell||null}); try{localStorage.setItem('ebc-blue',JSON.stringify({buy:d.blue.value_buy||null,sell:d.blue.value_sell||null}));}catch(e){} } })
       .catch(function(){});
   }, []);
   var _now = new Date();
