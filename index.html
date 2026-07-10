@@ -24,6 +24,7 @@
 <script src="https://unpkg.com/react@18.2.0/umd/react.production.min.js"></script>
 <script src="https://unpkg.com/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
 if(typeof React==='undefined'){document.body.innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:system-ui;text-align:center;flex-direction:column;gap:12px"><h2>ELECTRO BC</h2><p style="color:#64748B">Abrí desde Vercel.</p></div>';}
 else{"use strict";const {useState,useEffect,useCallback,useRef}=React;
@@ -232,6 +233,24 @@ function downloadCSV(filename, rows){
     var url = URL.createObjectURL(blob);
     var a = document.createElement("a"); a.href=url; a.download=filename; document.body.appendChild(a); a.click(); document.body.removeChild(a); setTimeout(function(){URL.revokeObjectURL(url);},1000);
   }catch(e){ console.error(e); alert("No se pudo exportar el Excel."); }
+}
+function _xlsxSheet(rows, opts){
+  opts=opts||{};
+  var ws=XLSX.utils.aoa_to_sheet(rows);
+  if(!ws['!ref']) return ws;
+  var range=XLSX.utils.decode_range(ws['!ref']);
+  (opts.money||[]).forEach(function(ci){ for(var r=1;r<=range.e.r;r++){ var a=XLSX.utils.encode_cell({r:r,c:ci}); var c=ws[a]; if(c&&c.v!==""&&c.v!=null&&!isNaN(parseFloat(c.v))){ c.t='n'; c.v=parseFloat(c.v); c.z='"$" #,##0.00'; } } });
+  (opts.phoneCols||[]).forEach(function(ci){ for(var r=1;r<=range.e.r;r++){ var a=XLSX.utils.encode_cell({r:r,c:ci}); var c=ws[a]; if(c&&c.v){ var d=String(c.v).replace(/\D/g,''); if(d) c.l={Target:'https://wa.me/'+d,Tooltip:'WhatsApp'}; } } });
+  var cols=[]; for(var col=0;col<=range.e.c;col++){ var mw=8; for(var rr=0;rr<=range.e.r;rr++){ var aa=XLSX.utils.encode_cell({r:rr,c:col}); var cc=ws[aa]; if(cc&&cc.v!=null){ var l=String(cc.v).length; if(l>mw)mw=l; } } cols.push({wch:Math.min(mw+2,42)}); } ws['!cols']=cols;
+  return ws;
+}
+function exportXLSX(filename, sheets){
+  try{
+    if(typeof XLSX==='undefined'){ alert('El generador de Excel todavía se está cargando. Probá de nuevo en unos segundos.'); return; }
+    var wb=XLSX.utils.book_new();
+    sheets.forEach(function(s){ XLSX.utils.book_append_sheet(wb, _xlsxSheet(s.rows, s), (s.name||'Hoja').replace(/[\\\/?*\[\]:]/g,' ').slice(0,31)); });
+    XLSX.writeFile(wb, filename);
+  }catch(e){ console.error(e); alert('No se pudo exportar el Excel.'); }
 }
 const mkPago = () => ({
   id: uid(),
@@ -1595,7 +1614,7 @@ function CatalogView({
     value: searchCat,
     onChange: setSearchCat,
     placeholder: "Buscar \xEDtem\u2026"
-  }), /*#__PURE__*/React.createElement("button",{type:"button",onClick:function(){ downloadCSV("ELECTRO BC - "+(title||"Catalogo")+" - "+new Date().toISOString().slice(0,10)+".csv", [["Nombre","Precio actual","N de precios","Cargado por"]].concat((items||[]).map(function(it){ return [it.nombre||"", it.precioBase||"", (it.historial||[]).length, ebcUserLabel(it.autor||"guille")]; }))); }, style:{background:"none",border:"1px solid #86EFAC",borderRadius:8,padding:"7px 12px",fontSize:12,fontWeight:600,cursor:"pointer",color:"#16A34A",whiteSpace:"nowrap"}},"\ud83d\udcca Exportar Excel")), items.length === 0 ? /*#__PURE__*/React.createElement("div", {
+  }), /*#__PURE__*/React.createElement("button",{type:"button",onClick:function(){ exportXLSX("ELECTRO BC - "+(title||"Catalogo")+" - "+new Date().toISOString().slice(0,10)+".xlsx", [{name:(title||"Catálogo"),money:[1],rows:[["Nombre","Precio actual","N° de precios","Cargado por"]].concat((items||[]).map(function(it){ return [it.nombre||"", it.precioBase||"", (it.historial||[]).length, ebcUserLabel(it.autor||"guille")]; }))}]); }, style:{background:"none",border:"1px solid #86EFAC",borderRadius:8,padding:"7px 12px",fontSize:12,fontWeight:600,cursor:"pointer",color:"#16A34A",whiteSpace:"nowrap"}},"\ud83d\udcca Exportar Excel")), items.length === 0 ? /*#__PURE__*/React.createElement("div", {
     style: {
       textAlign: "center",
       padding: "48px",
@@ -2008,7 +2027,7 @@ function ClientesView({
       fontWeight: 700,
       cursor: "pointer"
     }
-  }, showForm ? "✕ Cerrar" : "+ Nuevo cliente"), /*#__PURE__*/React.createElement("button",{type:"button",onClick:function(){ downloadCSV("ELECTRO BC - Clientes - "+new Date().toISOString().slice(0,10)+".csv", [["Nombre","Tipo","Empresa","Administracion","Telefono","Telefono Adm","Cargado por"]].concat((clients||[]).map(function(c){ var t=Array.isArray(c.tipo)?c.tipo.join("/"):(c.tipo||""); return [c.nombre||"", t, c.empresa||"", c.administracion||"", c.telefono||"", c.telefonoAdm||"", ebcUserLabel(c.autor||"guille")]; }))); }, style:{marginLeft:8,marginBottom:14,background:"none",border:"1px solid #86EFAC",borderRadius:9,padding:"10px 16px",fontSize:14,fontWeight:700,cursor:"pointer",color:"#16A34A"}},"📊 Exportar Excel"), showForm && /*#__PURE__*/React.createElement(CardBox, {
+  }, showForm ? "✕ Cerrar" : "+ Nuevo cliente"), /*#__PURE__*/React.createElement("button",{type:"button",onClick:function(){ exportXLSX("ELECTRO BC - Clientes - "+new Date().toISOString().slice(0,10)+".xlsx", [{name:"Clientes",phoneCols:[4,5],rows:[["Nombre","Tipo","Empresa","Administración","Teléfono","Teléfono Adm","Cargado por"]].concat((clients||[]).map(function(c){ var t=Array.isArray(c.tipo)?c.tipo.join("/"):(c.tipo||""); return [c.nombre||"", t, c.empresa||"", c.administracion||"", c.telefono||"", c.telefonoAdm||"", ebcUserLabel(c.autor||"guille")]; }))}]); }, style:{marginLeft:8,marginBottom:14,background:"none",border:"1px solid #86EFAC",borderRadius:9,padding:"10px 16px",fontSize:14,fontWeight:700,cursor:"pointer",color:"#16A34A"}},"📊 Exportar Excel"), showForm && /*#__PURE__*/React.createElement(CardBox, {
     title: "Nuevo cliente"
   }, /*#__PURE__*/React.createElement(ErrBox, {
     errors: errs
@@ -3660,7 +3679,7 @@ function Tracker({
         meta.i+" "+meta.l);
     }),
     tipoFilter.length>0 && /*#__PURE__*/React.createElement("button",{type:"button",onClick:function(){setTipoFilter([]);},title:"Limpiar tipo",style:{background:"none",border:"none",color:"#94A3B8",cursor:"pointer",fontSize:13}},"\u2715")
-  ), /*#__PURE__*/React.createElement("div",{title:"Filtrá por fechas",style:{display:"inline-flex",alignItems:"center",gap:4,marginLeft:4}}, /*#__PURE__*/React.createElement("span",{style:{fontSize:9,fontWeight:700,color:"#94A3B8",textTransform:"uppercase",letterSpacing:"0.06em",marginRight:2}},"Fechas:"), /*#__PURE__*/React.createElement("input",{type:"date",value:dateFrom,min:"2026-06-01",max:todayStr(),onChange:function(e){setDateFrom(e.target.value);},title:"Desde",style:{border:"1px solid #E2E8F0",borderRadius:6,padding:"5px 8px",fontSize:12,color:"#475569",backgroundColor:"#fff"}}), /*#__PURE__*/React.createElement("span",{style:{fontSize:11,color:"#94A3B8"}},"\u2192"), /*#__PURE__*/React.createElement("input",{type:"date",value:dateTo,min:"2026-06-01",max:todayStr(),onChange:function(e){setDateTo(e.target.value);},title:"Hasta",style:{border:"1px solid #E2E8F0",borderRadius:6,padding:"5px 8px",fontSize:12,color:"#475569",backgroundColor:"#fff"}}), (dateFrom||dateTo)?/*#__PURE__*/React.createElement("button",{type:"button",onClick:function(){setDateFrom("");setDateTo("");},style:{background:"none",border:"none",color:"#94A3B8",cursor:"pointer",fontSize:14}},"\u2715"):null), /*#__PURE__*/React.createElement("button",{type:"button",onClick:function(){ downloadCSV("ELECTRO BC - Seguimiento de Presupuestos - "+new Date().toISOString().slice(0,10)+".csv", [["N","Fecha","Cliente","Administracion","Direccion","Mano de Obra","Materiales","Total","Estado","Cobrado","Resta","Autor"]].concat((quotes||[]).map(function(q){ var mdo=calcSub(q.mdo),mat=calcSub(q.mat),total=mdo+mat; var cob=(q.pagos||[]).reduce(function(s,p){var m=parseFloat(p.monto||0); if(p.moneda==="USD") m=m*parseFloat(p.tcambio||0); return s+m;},0); var est=STATUS_MAP[q.status]?STATUS_MAP[q.status].label:q.status; return [q.numero||"", (q.fecha||"").slice(0,10), q.cliente.nombre||"", q.cliente.administracion||"", [q.cliente.calle,q.cliente.numero,q.cliente.depto].filter(Boolean).join(" "), mdo, mat, total, est, Math.round(cob), Math.round(Math.max(0,total-cob)), ebcUserLabel(q.autor||"guille")]; }))); }, style:{marginLeft:"auto",background:"none",border:"1px solid #86EFAC",borderRadius:8,padding:"6px 12px",fontSize:12,fontWeight:600,cursor:"pointer",color:"#16A34A",whiteSpace:"nowrap"}},"\ud83d\udcca Exportar Excel")),clientStats && /*#__PURE__*/React.createElement("div", {
+  ), /*#__PURE__*/React.createElement("div",{title:"Filtrá por fechas",style:{display:"inline-flex",alignItems:"center",gap:4,marginLeft:4}}, /*#__PURE__*/React.createElement("span",{style:{fontSize:9,fontWeight:700,color:"#94A3B8",textTransform:"uppercase",letterSpacing:"0.06em",marginRight:2}},"Fechas:"), /*#__PURE__*/React.createElement("input",{type:"date",value:dateFrom,min:"2026-06-01",max:todayStr(),onChange:function(e){setDateFrom(e.target.value);},title:"Desde",style:{border:"1px solid #E2E8F0",borderRadius:6,padding:"5px 8px",fontSize:12,color:"#475569",backgroundColor:"#fff"}}), /*#__PURE__*/React.createElement("span",{style:{fontSize:11,color:"#94A3B8"}},"\u2192"), /*#__PURE__*/React.createElement("input",{type:"date",value:dateTo,min:"2026-06-01",max:todayStr(),onChange:function(e){setDateTo(e.target.value);},title:"Hasta",style:{border:"1px solid #E2E8F0",borderRadius:6,padding:"5px 8px",fontSize:12,color:"#475569",backgroundColor:"#fff"}}), (dateFrom||dateTo)?/*#__PURE__*/React.createElement("button",{type:"button",onClick:function(){setDateFrom("");setDateTo("");},style:{background:"none",border:"none",color:"#94A3B8",cursor:"pointer",fontSize:14}},"\u2715"):null), /*#__PURE__*/React.createElement("button",{type:"button",onClick:function(){ exportXLSX("ELECTRO BC - Seguimiento de Presupuestos - "+new Date().toISOString().slice(0,10)+".xlsx", [{name:"Seguimiento",money:[5,6,7,9,10],rows:[["N°","Fecha","Cliente","Administración","Dirección","Mano de Obra","Materiales","Total","Estado","Cobrado","Resta","Autor"]].concat((quotes||[]).map(function(q){ var mdo=calcSub(q.mdo),mat=calcSub(q.mat),total=mdo+mat; var cob=(q.pagos||[]).reduce(function(s,p){var m=parseFloat(p.monto||0); if(p.moneda==="USD") m=m*parseFloat(p.tcambio||0); return s+m;},0); var est=STATUS_MAP[q.status]?STATUS_MAP[q.status].label:q.status; return [q.numero||"", (q.fecha||"").slice(0,10), q.cliente.nombre||"", q.cliente.administracion||"", [q.cliente.calle,q.cliente.numero,q.cliente.depto].filter(Boolean).join(" "), mdo, mat, total, est, Math.round(cob), Math.round(Math.max(0,total-cob)), ebcUserLabel(q.autor||"guille")]; }))}]); }, style:{marginLeft:"auto",background:"none",border:"1px solid #86EFAC",borderRadius:8,padding:"6px 12px",fontSize:12,fontWeight:600,cursor:"pointer",color:"#16A34A",whiteSpace:"nowrap"}},"\ud83d\udcca Exportar Excel")),clientStats && /*#__PURE__*/React.createElement("div", {
     style: {
       backgroundColor: "#F0F4FF",
       border: "1px solid #C7D7FD",
@@ -5686,6 +5705,8 @@ function App() {
     quotes: quotes,
     egresos: egresos,
     onSaveEgresos: saveEgresos,
+    clients: clients,
+    catalog: catalog,
     activeTab: view,
     setActiveTab: setView
   }), pdfQuote && /*#__PURE__*/React.createElement(PdfOverlay, {
@@ -6190,7 +6211,7 @@ function MovimientosPdfOverlay({onClose, data}){
     )
   );
 }
-function IngresosView({quotes, egresos, onSaveEgresos, activeTab, setActiveTab}) {
+function IngresosView({quotes, egresos, onSaveEgresos, clients, catalog, activeTab, setActiveTab}) {
   const isMobile = useIsMobile();
   var [blueHoy, setBlueHoy] = React.useState({buy:null,sell:null});
   var [showDashPdf, setShowDashPdf] = React.useState(false);
@@ -6612,8 +6633,19 @@ function IngresosView({quotes, egresos, onSaveEgresos, activeTab, setActiveTab})
         React.createElement('div',{style:{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap'}},
           React.createElement('button',{type:'button',onClick:function(){setShowMovPdf(true);},
             style:{background:'none',border:'1px solid #E2E8F0',borderRadius:8,padding:'8px 14px',fontSize:13,cursor:'pointer',color:'#475569',fontWeight:600}},'🖨️ Exportar PDF'),
-          React.createElement('button',{type:'button',onClick:function(){ downloadCSV("ELECTRO BC - Ingresos y Egresos - "+new Date().toISOString().slice(0,10)+".csv", [["Fecha","Tipo","Categoria","Descripcion","Monto","Moneda","TC"]].concat(movsPdf.map(function(m){return [(m.fecha||'').slice(0,10), m.monto>=0?'Ingreso':'Egreso', m.detalle||'', m.desc||'', Math.abs(m.monto), m.moneda||'$', m.tcambio||'']; }))); },
+          React.createElement('button',{type:'button',onClick:function(){ exportXLSX("ELECTRO BC - Ingresos y Egresos - "+new Date().toISOString().slice(0,10)+".xlsx", [{name:"Ingresos y Egresos",money:[4],rows:[["Fecha","Tipo","Categoría","Descripción","Monto","Moneda","TC"]].concat(movsPdf.map(function(m){return [(m.fecha||'').slice(0,10), m.monto>=0?'Ingreso':'Egreso', m.detalle||'', m.desc||'', m.monto, m.moneda||'$', m.tcambio||'']; }))}]); },
             style:{background:'none',border:'1px solid #86EFAC',borderRadius:8,padding:'8px 14px',fontSize:13,cursor:'pointer',color:'#16A34A',fontWeight:600}},'📊 Exportar Excel'),
+          React.createElement('button',{type:'button',onClick:function(){
+            var d=new Date().toISOString().slice(0,10);
+            var fmtA=function(n){return "$ "+(Math.abs(Math.round(n))||0).toLocaleString('es-AR');};
+            var resumen=[["ELECTRO BC — Consolidado",""],["Período",movPeriodo],["Generado",new Date().toLocaleDateString('es-AR')],["",""],["Total neto (ARS)",(movTotalPdf<0?"- ":"")+fmtA(movTotalPdf)],["Total neto (USD)","USD "+(Math.round(movTotalUSDPdf)||0).toLocaleString('es-AR')],["",""],["Egresos por categoría",""]].concat(movPorCat.filter(function(c){return c.total>0;}).map(function(c){return [c.label, fmtA(c.total)];}));
+            var movRows=[["Fecha","Tipo","Categoría","Descripción","Monto","Moneda","TC"]].concat(movsPdf.map(function(m){return [(m.fecha||'').slice(0,10), m.monto>=0?'Ingreso':'Egreso', m.detalle||'', m.desc||'', m.monto, m.moneda||'$', m.tcambio||''];}));
+            var segRows=[["N°","Fecha","Cliente","Administración","Dirección","Mano de Obra","Materiales","Total","Estado","Cobrado","Resta","Autor"]].concat((quotes||[]).map(function(q){ var mdo=calcSub(q.mdo),mat=calcSub(q.mat),total=mdo+mat; var cob=(q.pagos||[]).reduce(function(s,p){var m=parseFloat(p.monto||0); if(p.moneda==="USD") m=m*parseFloat(p.tcambio||0); return s+m;},0); var est=STATUS_MAP[q.status]?STATUS_MAP[q.status].label:q.status; return [q.numero||"", (q.fecha||"").slice(0,10), q.cliente.nombre||"", q.cliente.administracion||"", [q.cliente.calle,q.cliente.numero,q.cliente.depto].filter(Boolean).join(" "), mdo, mat, total, est, Math.round(cob), Math.round(Math.max(0,total-cob)), ebcUserLabel(q.autor||"guille")];}));
+            var cliRows=[["Nombre","Tipo","Empresa","Administración","Teléfono","Teléfono Adm","Cargado por"]].concat((clients||[]).map(function(c){ var t=Array.isArray(c.tipo)?c.tipo.join("/"):(c.tipo||""); return [c.nombre||"", t, c.empresa||"", c.administracion||"", c.telefono||"", c.telefonoAdm||"", ebcUserLabel(c.autor||"guille")];}));
+            var mdoRows=[["Nombre","Precio actual","N° de precios","Cargado por"]].concat(((catalog&&catalog.mdo)||[]).map(function(it){return [it.nombre||"", it.precioBase||"", (it.historial||[]).length, ebcUserLabel(it.autor||"guille")];}));
+            var matRows=[["Nombre","Precio actual","N° de precios","Cargado por"]].concat(((catalog&&catalog.mat)||[]).map(function(it){return [it.nombre||"", it.precioBase||"", (it.historial||[]).length, ebcUserLabel(it.autor||"guille")];}));
+            exportXLSX("ELECTRO BC - Consolidado - "+d+".xlsx", [ {name:"Resumen",rows:resumen}, {name:"Ingresos y Egresos",money:[4],rows:movRows}, {name:"Seguimiento",money:[5,6,7,9,10],rows:segRows}, {name:"Clientes",phoneCols:[4,5],rows:cliRows}, {name:"Mano de Obra",money:[1],rows:mdoRows}, {name:"Materiales",money:[1],rows:matRows} ]);
+          }, style:{backgroundColor:'#0A0F1E',color:'#fff',border:'none',borderRadius:8,padding:'8px 14px',fontSize:13,fontWeight:700,cursor:'pointer'}},'📚 Consolidado del mes'),
           React.createElement('button',{type:'button',
             onClick:function(){setShowForm(!showForm);if(showForm){setEgForm({id:'',tipo:'egreso',cat:'sueldos',desc:'',monto:'',fecha:'',medio:'efectivo',moneda:'$',tcambio:''});setEditId(null);}},
             style:{backgroundColor:showForm?'#F1F5F9':ORANGE,color:showForm?'#64748B':'#fff',border:'none',borderRadius:8,padding:'8px 16px',fontSize:13,fontWeight:700,cursor:'pointer'}
