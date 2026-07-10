@@ -5878,7 +5878,7 @@ function DashboardEvolutionChart({quotes, egresos, dashAnosVer}) {
       React.createElement('span',{style:{color:'#2563EB',fontWeight:700}},'● Ganancia')
     ),
     React.createElement('div',{style:{overflowX:'auto'}},
-      React.createElement('svg',{width:Math.max(W, allData.length*60),height:H,style:{display:'block'}},
+      React.createElement('svg',{viewBox:'0 0 '+Math.max(W, allData.length*60)+' '+H,width:'100%',height:'auto',preserveAspectRatio:'xMidYMid meet',style:{display:'block',maxWidth:'100%'}},
         // Grid lines
         ticks.map(function(t,i){
           return React.createElement('g',{key:i},
@@ -6319,7 +6319,7 @@ function IngresosView({quotes, egresos, onSaveEgresos, activeTab, setActiveTab})
 
 
     // ── DASHBOARD TAB ────────────────────────────────────────────────────────
-    tab==='dashboard' && React.createElement('div',{id:'dashboard-pdf-area',style:{maxWidth:'100%',overflowX:'hidden'}},
+    tab==='dashboard' && React.createElement('div',{id:'dashboard-pdf-area',style:{maxWidth:'100%'}},
       // Filtros AÑO/MES (independientes de Cargar Ingresos/Egresos)
       React.createElement('div',{style:{display:'flex',gap:6,flexWrap:'wrap',alignItems:'center',marginBottom:16}},
         React.createElement('span',{style:{fontSize:11,color:'#94A3B8',fontWeight:700}},'AÑO:'),
