@@ -5988,6 +5988,8 @@ function DashboardPdfOverlay({onClose, data}) {
     porCat, periodo, fechaHoy
   } = data;
   const metricas = data.metricas || {};
+  const semaforo = data.semaforo || [];
+  const _semC = function(e){ return e==='bien'?{c:'#065F46',bg:'#DCFCE7',lbl:'🟢 Bien'}:e==='revisar'?{c:'#92400E',bg:'#FEF3C7',lbl:'🟡 Revisar'}:{c:'#991B1B',bg:'#FEE2E2',lbl:'🔴 Atención'}; };
   const fmt = n => Math.abs(Math.round(n)||0).toLocaleString('es-AR');
   const filename = ('ELECTRO BC - Dashboard Financiero - ' + periodo + ' - ' + fechaHoy).replace(/[/\\:]/g, '-');
   const downloadPdf = async () => {
@@ -6074,6 +6076,14 @@ function DashboardPdfOverlay({onClose, data}) {
             React.createElement("div",{style:{fontFamily:"'Oswald',system-ui",fontSize:20,fontWeight:700,color:"#B45309"}},(metricas.ratioBorello||0)+"%"),
             React.createElement("div",{style:{fontSize:9,color:"#94A3B8",marginTop:3}},"$ "+fmt(metricas.pagadoBorello)+" / $ "+fmt(metricas.matCotizadoAceptados))
           )
+        ),
+        semaforo.length>0 && React.createElement("div",{style:cardS},
+          React.createElement("div",{style:{fontSize:12,fontWeight:700,color:NAVY,marginBottom:10}},"🚦 Lectura del período (orientativo)"),
+          semaforo.map(function(s){ var sc=_semC(s.estado); return React.createElement("div",{key:s.label,style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}},
+            React.createElement("div",null, React.createElement("span",{style:{fontSize:12,color:"#475569",fontWeight:600}},s.label), React.createElement("span",{style:{fontSize:10,color:"#94A3B8",marginLeft:8}},s.nota)),
+            React.createElement("span",{style:{fontSize:11,fontWeight:800,color:sc.c,backgroundColor:sc.bg,borderRadius:20,padding:"2px 10px",whiteSpace:"nowrap"}},sc.lbl)
+          ); }),
+          React.createElement("div",{style:{fontSize:9,color:"#CBD5E1",marginTop:8}},"Guía orientativa, no reemplaza el análisis de un contador con tus números reales.")
         ),
         // Origen de ingresos
         React.createElement("div",{style:cardS},
@@ -6528,7 +6538,13 @@ function IngresosView({quotes, egresos, onSaveEgresos, clients, catalog, activeT
             ratioBorello: ratioBorelloDash,
             pagadoBorello: pagadoBorelloDash,
             matCotizadoAceptados: matCotizadoAceptados
-          }
+          },
+          semaforo: [
+            {label:'Margen neto', estado:estMargen.e, nota:estMargen.n},
+            {label:'Conversión de presupuestos', estado:estAprob.e, nota:estAprob.n},
+            {label:'Costo de materiales (Borello)', estado:estBor.e, nota:estBor.n},
+            {label:'Pendiente de cobro', estado:estPend.e, nota:estPend.n}
+          ]
         }
       }),
       // Print + Consolidado buttons
