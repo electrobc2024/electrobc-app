@@ -6611,15 +6611,10 @@ function IngresosView({quotes, egresos, onSaveEgresos, activeTab, setActiveTab})
 }
 
 function LoginScreen({onLogin}){
-  const [u,setU]=React.useState('');const [p,setP]=React.useState('');const [err,setErr]=React.useState('');
-  function submit(e){e.preventDefault();
-    var un=u.trim().toLowerCase();
-    var USERS={electrobc:'electrobcapp2026$', guille:'guille2026', fede:'fede2026'};
-    if(USERS[un]&&USERS[un]===p){sessionStorage.setItem('ebc-auth','1');sessionStorage.setItem('ebc-user',un);onLogin();}
-    else{setErr('Usuario o contraseña incorrectos.');}
-  }
+  function pick(un){ sessionStorage.setItem('ebc-auth','1'); sessionStorage.setItem('ebc-user',un); onLogin(); }
+  var perfiles=[{k:'guille',label:'Guille',icon:'👷'},{k:'fede',label:'Fede',icon:'👷'},{k:'electrobc',label:'Admin',icon:'🛠️'}];
   return React.createElement('div',{style:{position:'fixed',inset:0,backgroundColor:'#0A0F1E',display:'flex',alignItems:'center',justifyContent:'center'}},
-    React.createElement('div',{style:{backgroundColor:'#fff',borderRadius:16,padding:'40px 36px',width:340,boxShadow:'0 8px 40px rgba(0,0,0,0.3)'}},
+    React.createElement('div',{style:{backgroundColor:'#fff',borderRadius:16,padding:'40px 36px',width:360,boxShadow:'0 8px 40px rgba(0,0,0,0.3)'}},
       React.createElement('div',{style:{textAlign:'center',marginBottom:24}},
         React.createElement('div',{style:{display:'flex',alignItems:'center',justifyContent:'center',gap:8}},
           React.createElement('img',{src:"data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgNDggNDgiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgd2lkdGg9IjQ0IiBoZWlnaHQ9IjQ0Ij4KICA8ZWxsaXBzZSBjeD0iMjQiIGN5PSIyNiIgcng9IjIwIiByeT0iOCIgc3Ryb2tlPSIjMEEwRjFFIiBzdHJva2Utd2lkdGg9IjIuMiIgZmlsbD0ibm9uZSIgdHJhbnNmb3JtPSJyb3RhdGUoLTIwIDI0IDI2KSIvPgogIDxwYXRoIGQ9Ik0yOCA1IEwxNiAyNiBIMjMgTDIwIDQzIEwzMiAyMiBIMjUgWiIgZmlsbD0iI0YyNkIxRCIvPgo8L3N2Zz4=",style:{width:32,height:32}}),
@@ -6627,17 +6622,17 @@ function LoginScreen({onLogin}){
         ),
         React.createElement('div',{style:{fontSize:12,color:'#94A3B8',marginTop:4}},'Servicios Integrales')
       ),
-      React.createElement('form',{onSubmit:submit},
-        React.createElement('div',{style:{marginBottom:12}},
-          React.createElement('label',{style:{fontSize:11,fontWeight:700,color:'#64748B',display:'block',marginBottom:4}},'USUARIO'),
-          React.createElement('input',{type:'text',value:u,onChange:function(e){setU(e.target.value);setErr('');},autoFocus:true,style:{width:'100%',border:'1px solid #E2E8F0',borderRadius:8,padding:'10px 12px',fontSize:14,outline:'none',boxSizing:'border-box'}})
-        ),
-        React.createElement('div',{style:{marginBottom:16}},
-          React.createElement('label',{style:{fontSize:11,fontWeight:700,color:'#64748B',display:'block',marginBottom:4}},'CONTRASEÑA'),
-          React.createElement('input',{type:'password',value:p,onChange:function(e){setP(e.target.value);setErr('');},style:{width:'100%',border:'1px solid #E2E8F0',borderRadius:8,padding:'10px 12px',fontSize:14,outline:'none',boxSizing:'border-box'}})
-        ),
-        err&&React.createElement('div',{style:{color:'#DC2626',fontSize:12,marginBottom:12,textAlign:'center'}},err),
-        React.createElement('button',{type:'submit',style:{width:'100%',backgroundColor:'#F26B1D',color:'#fff',border:'none',borderRadius:8,padding:'12px',fontSize:15,fontWeight:700,cursor:'pointer'}},'Ingresar')
+      React.createElement('div',{style:{fontSize:13,color:'#64748B',textAlign:'center',marginBottom:16,fontWeight:600}},'¿Con qué usuario querés entrar?'),
+      React.createElement('div',{style:{display:'flex',flexDirection:'column',gap:10}},
+        perfiles.map(function(us){
+          return React.createElement('button',{key:us.k,type:'button',onClick:function(){pick(us.k);},
+            style:{width:'100%',display:'flex',alignItems:'center',gap:12,backgroundColor:'#fff',color:'#0A0F1E',border:'1.5px solid #E2E8F0',borderRadius:10,padding:'14px 18px',fontSize:16,fontWeight:700,cursor:'pointer',transition:'all 0.15s'},
+            onMouseEnter:function(e){e.currentTarget.style.borderColor='#F26B1D';e.currentTarget.style.backgroundColor='#FFF7ED';},
+            onMouseLeave:function(e){e.currentTarget.style.borderColor='#E2E8F0';e.currentTarget.style.backgroundColor='#fff';}},
+            React.createElement('span',{style:{fontSize:20}},us.icon),
+            us.label
+          );
+        })
       )
     )
   );
