@@ -213,13 +213,17 @@ const mkRow = () => ({
   pu: "",
   qty: 1
 });
+const EBC_USER_LABELS = {electrobc:"Admin", guille:"Guille", fede:"Fede"};
+const ebcUser = () => { try { return sessionStorage.getItem("ebc-user") || ""; } catch(e){ return ""; } };
+const ebcUserLabel = (u) => { var k = u || ebcUser(); return EBC_USER_LABELS[k] || k || ""; };
 const mkPago = () => ({
   id: uid(),
   desc: "",
   monto: "",
   fecha: new Date().toISOString().slice(0,10),
   moneda: "$",
-  medio: "efectivo"
+  medio: "efectivo",
+  autor: ebcUser()
 });
 const mkQuote = n => ({
   id: uid(),
@@ -242,7 +246,8 @@ const mkQuote = n => ({
   tipoTrabajo: ["electricidad"],
   status: "generado",
   pagos: [],
-  createdAt: new Date().toISOString()
+  createdAt: new Date().toISOString(),
+  autor: ebcUser()
 });
 const mkClient = () => ({
   id: uid(),
@@ -3258,7 +3263,7 @@ function PaymentsPanel({
       fontWeight: 600,
       minWidth: 48
     }
-  }, "Pago ", i + 1), /*#__PURE__*/React.createElement("select", {
+  }, "Pago ", i + 1, p.autor && /*#__PURE__*/React.createElement("span",{style:{display:"block",fontSize:9,color:"#94A3B8",fontWeight:700}}, ebcUserLabel(p.autor))), /*#__PURE__*/React.createElement("select", {
     value: p.moneda || "$",
     onChange: e => {
       var val = e.target.value;
@@ -3800,7 +3805,7 @@ function Tracker({
       }
     }, "#", q.numero), /*#__PURE__*/React.createElement(TipoTrabajoBadge, {
       tipo: q.tipoTrabajo
-    })), /*#__PURE__*/React.createElement("td", {
+    }), q.autor && /*#__PURE__*/React.createElement("div",{style:{fontSize:9,color:"#94A3B8",fontWeight:700,marginTop:2}}, "por ", ebcUserLabel(q.autor))), /*#__PURE__*/React.createElement("td", {
       style: {
         padding: "10px 10px",
         fontSize: 12,
@@ -6232,7 +6237,7 @@ function IngresosView({quotes, egresos, onSaveEgresos, activeTab, setActiveTab})
     if(editId) {
       onSaveEgresos(list.map(function(e){return e.id===editId?{...egForm,id:editId}:e;}));
     } else {
-      onSaveEgresos([...list, {...egForm, id:Math.random().toString(36).slice(2,9)}]);
+      onSaveEgresos([...list, {...egForm, id:Math.random().toString(36).slice(2,9), autor:ebcUser()}]);
     }
     setEgForm({id:'',tipo:'egreso',cat:'sueldos',desc:'',monto:'',fecha:'',medio:'efectivo',moneda:'$',tcambio:''});
     setShowForm(false);
@@ -6566,7 +6571,7 @@ function IngresosView({quotes, egresos, onSaveEgresos, activeTab, setActiveTab})
           ),
           React.createElement('table',{style:{width:'100%',borderCollapse:'collapse',backgroundColor:'#fff',borderRadius:12,overflow:'hidden',border:'1px solid #E2E8F0'}},
             React.createElement('thead',null,React.createElement('tr',{style:{backgroundColor:'#F8FAFC'}},
-              ['Fecha','Tipo','Detalle','Descripción','Monto','TC','ARS','USD',''].map(function(h){return React.createElement('th',{key:h,style:{padding:'10px 14px',fontSize:11,fontWeight:700,color:'#94A3B8',textAlign:'left',textTransform:'uppercase',letterSpacing:'0.06em'}},h);})
+              ['Fecha','Tipo','Detalle','Descripción','Monto','TC','ARS','USD','Autor',''].map(function(h){return React.createElement('th',{key:h,style:{padding:'10px 14px',fontSize:11,fontWeight:700,color:'#94A3B8',textAlign:'left',textTransform:'uppercase',letterSpacing:'0.06em'}},h);})
             )),
             React.createElement('tbody',null,
               filtered.map(function(m,i){
@@ -6589,6 +6594,7 @@ function IngresosView({quotes, egresos, onSaveEgresos, activeTab, setActiveTab})
                     m.moneda==='USD'?('USD '+Math.abs(m.monto).toLocaleString('es-AR',{maximumFractionDigits:0})):
                     blueHoy.buy?('USD '+Math.round(Math.abs(m.monto)/blueHoy.buy).toLocaleString('es-AR',{maximumFractionDigits:0})):'—'
                   ),
+                  React.createElement('td',{style:{padding:'9px 14px'}}, (function(){var au=ebcUserLabel(m.autor||(m.eObj&&m.eObj.autor)); return au?React.createElement('span',{style:{fontSize:10,fontWeight:700,color:'#475569',backgroundColor:'#F1F5F9',padding:'2px 8px',borderRadius:20,whiteSpace:'nowrap'}},au):React.createElement('span',{style:{color:'#CBD5E1'}},'—');})()),
                   React.createElement('td',{style:{padding:'9px 14px'}},m.eObj&&React.createElement('div',{style:{display:'flex',gap:4}},
                     React.createElement('button',{type:'button',onClick:function(){handleEditEgreso(m.eObj);},style:{background:'none',border:'1px solid #E2E8F0',borderRadius:5,padding:'3px 8px',fontSize:12,cursor:'pointer',color:'#475569'}},'✏️'),
                     React.createElement('button',{type:'button',onClick:function(){handleDeleteEgreso(m.eObj.id);},style:{background:'none',border:'1px solid #FECACA',borderRadius:5,padding:'3px 8px',fontSize:12,cursor:'pointer',color:'#DC2626'}},'✕')
@@ -6607,7 +6613,9 @@ function IngresosView({quotes, egresos, onSaveEgresos, activeTab, setActiveTab})
 function LoginScreen({onLogin}){
   const [u,setU]=React.useState('');const [p,setP]=React.useState('');const [err,setErr]=React.useState('');
   function submit(e){e.preventDefault();
-    if(u.trim().toLowerCase()==='electrobc'&&p==='electrobcapp2026$'){sessionStorage.setItem('ebc-auth','1');onLogin();}
+    var un=u.trim().toLowerCase();
+    var USERS={electrobc:'electrobcapp2026$', guille:'guille2026', fede:'fede2026'};
+    if(USERS[un]&&USERS[un]===p){sessionStorage.setItem('ebc-auth','1');sessionStorage.setItem('ebc-user',un);onLogin();}
     else{setErr('Usuario o contraseña incorrectos.');}
   }
   return React.createElement('div',{style:{position:'fixed',inset:0,backgroundColor:'#0A0F1E',display:'flex',alignItems:'center',justifyContent:'center'}},
