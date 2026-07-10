@@ -6613,7 +6613,10 @@ function LoginScreen({onLogin}){
   return React.createElement('div',{style:{position:'fixed',inset:0,backgroundColor:'#0A0F1E',display:'flex',alignItems:'center',justifyContent:'center'}},
     React.createElement('div',{style:{backgroundColor:'#fff',borderRadius:16,padding:'40px 36px',width:340,boxShadow:'0 8px 40px rgba(0,0,0,0.3)'}},
       React.createElement('div',{style:{textAlign:'center',marginBottom:24}},
-        React.createElement('div',{style:{fontFamily:"'Oswald',system-ui",fontSize:28,fontWeight:700,color:'#0A0F1E'}},'⚡ ELECTRO BC'),
+        React.createElement('div',{style:{display:'flex',alignItems:'center',justifyContent:'center',gap:8}},
+          React.createElement('img',{src:"data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgNDggNDgiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgd2lkdGg9IjQ0IiBoZWlnaHQ9IjQ0Ij4KICA8ZWxsaXBzZSBjeD0iMjQiIGN5PSIyNiIgcng9IjIwIiByeT0iOCIgc3Ryb2tlPSIjMEEwRjFFIiBzdHJva2Utd2lkdGg9IjIuMiIgZmlsbD0ibm9uZSIgdHJhbnNmb3JtPSJyb3RhdGUoLTIwIDI0IDI2KSIvPgogIDxwYXRoIGQ9Ik0yOCA1IEwxNiAyNiBIMjMgTDIwIDQzIEwzMiAyMiBIMjUgWiIgZmlsbD0iI0YyNkIxRCIvPgo8L3N2Zz4=",style:{width:32,height:32}}),
+          React.createElement('div',{style:{fontFamily:"'Oswald',system-ui",fontSize:28,fontWeight:700,color:'#0A0F1E'}},'ELECTRO BC')
+        ),
         React.createElement('div',{style:{fontSize:12,color:'#94A3B8',marginTop:4}},'Servicios Integrales')
       ),
       React.createElement('form',{onSubmit:submit},
