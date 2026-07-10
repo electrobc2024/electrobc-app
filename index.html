@@ -5782,7 +5782,13 @@ function App() {
           padding:"14px 16px",textAlign:"left",borderRadius:8,
           borderLeft:a?"3px solid "+ORANGE:"3px solid transparent"}
       }, item.label);
-    })
+    }).concat([
+      React.createElement("div",{key:"msep",style:{height:1,backgroundColor:"rgba(255,255,255,0.15)",margin:"8px 8px"}}),
+      React.createElement("button",{key:"mconsol",
+        onClick:function(){setMenuOpen(false);setShowConsol(true);},
+        style:{background:ORANGE,border:"none",color:"#fff",fontSize:15,fontWeight:700,cursor:"pointer",padding:"14px 16px",textAlign:"left",borderRadius:8,marginTop:2}
+      },"📚 Descargar Consolidado")
+    ])
   ),
   /*#__PURE__*/React.createElement("main", {
     style: {
