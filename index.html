@@ -2158,7 +2158,7 @@ function ClientesView({
   }, /*#__PURE__*/React.createElement("thead", null, /*#__PURE__*/React.createElement("tr", null,
     /*#__PURE__*/React.createElement("th", {style:{padding:"9px 12px",fontSize:10,fontWeight:700,color:"#94A3B8",textTransform:"uppercase",letterSpacing:"0.08em",backgroundColor:"#F8FAFC",borderBottom:"1px solid #E2E8F0",textAlign:"left",whiteSpace:"nowrap"}}, /*#__PURE__*/React.createElement("span",{style:{display:"inline-flex",alignItems:"center"}}, sortHeaderCl("Nombre","az","za"), tipoFunnel())),
     /*#__PURE__*/React.createElement("th", {style:{padding:"9px 12px",fontSize:10,fontWeight:700,color:"#94A3B8",textTransform:"uppercase",letterSpacing:"0.08em",backgroundColor:"#F8FAFC",borderBottom:"1px solid #E2E8F0",textAlign:"left",whiteSpace:"nowrap"}}, "Tel\xE9fono"),
-    /*#__PURE__*/React.createElement("th", {style:{padding:"9px 12px",fontSize:10,fontWeight:700,color:"#94A3B8",textTransform:"uppercase",letterSpacing:"0.08em",backgroundColor:"#F8FAFC",borderBottom:"1px solid #E2E8F0",textAlign:"left",whiteSpace:"nowrap"}}, sortHeaderCl("\xDAlt. presupuesto","oldest","recent")),
+    /*#__PURE__*/React.createElement("th", {style:{padding:"9px 12px",fontSize:10,fontWeight:700,color:"#94A3B8",textTransform:"uppercase",letterSpacing:"0.08em",backgroundColor:"#F8FAFC",borderBottom:"1px solid #E2E8F0",textAlign:"left",whiteSpace:"nowrap"}}, "\xDAlt. presupuesto"),
     /*#__PURE__*/React.createElement("th", {style:{padding:"9px 12px",fontSize:10,fontWeight:700,color:"#94A3B8",textTransform:"uppercase",letterSpacing:"0.08em",backgroundColor:"#F8FAFC",borderBottom:"1px solid #E2E8F0",textAlign:"right",whiteSpace:"nowrap"}}, "Acciones")
   )), /*#__PURE__*/React.createElement("tbody", null, [...clients].filter(cl => {
     if (tipoFilter === "todos") return true;
@@ -2172,13 +2172,22 @@ function ClientesView({
     if (sortCl === "recent") return (lB ? new Date(lB.createdAt) : new Date(0)) - (lA ? new Date(lA.createdAt) : new Date(0));
     if (sortCl === "oldest") return (lA ? new Date(lA.createdAt) : new Date(9999999999999)) - (lB ? new Date(lB.createdAt) : new Date(9999999999999));
     return 0;
-  }).map((cl, i) => {
+  }).map((cl, i, arr) => {
     const clQuotes = [...quotes].filter(q => q.cliente.nombre === cl.nombre).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
     const last = clQuotes[0];
     const isExp = expandCl === cl.id;
     const isInline = inlineId === cl.id;
     const stripe = i % 2 === 0 ? "#fff" : "#FAFAFA";
-    return [/* ── Normal row ── */
+    const letterSep = (function(){
+      if (sortCl !== "az" && sortCl !== "za") return null;
+      var L = ((cl.nombre || "#").trim().charAt(0) || "#").toUpperCase();
+      var prevL = i > 0 ? ((arr[i-1].nombre || "#").trim().charAt(0) || "#").toUpperCase() : null;
+      if (L === prevL) return null;
+      return /*#__PURE__*/React.createElement("tr", {key: cl.id + "sep"},
+        /*#__PURE__*/React.createElement("td", {colSpan: 4, style:{padding:"6px 12px",backgroundColor:"#F1F5F9",fontSize:11,fontWeight:700,color:"#64748B",letterSpacing:"0.06em",borderBottom:"1px solid #E2E8F0"}}, L)
+      );
+    })();
+    return [letterSep, /* ── Normal row ── */
     !isInline && /*#__PURE__*/React.createElement("tr", {
       key: cl.id,
       style: {
