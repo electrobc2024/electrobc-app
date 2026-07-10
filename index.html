@@ -6416,6 +6416,17 @@ function IngresosView({quotes, egresos, onSaveEgresos, clients, catalog, activeT
   },0);
   var ratioBorelloDash = matCotizadoAceptados>0 ? Math.round((pagadoBorelloDash/matCotizadoAceptados)*100) : 0;
 
+  // ── Semáforo de salud (orientativo) ──
+  var _cobTot = totalCobradoDash + cobradoUSDenARS;
+  var _margenPct = _cobTot>0 ? (gananciaDash/_cobTot)*100 : 0;
+  var estMargen = gananciaDash<0 ? {e:'atencion',n:'Pérdida en el período'} : (_margenPct<15 ? {e:'revisar',n:'Margen '+Math.round(_margenPct)+'% — ajustado'} : {e:'bien',n:'Margen '+Math.round(_margenPct)+'% — saludable'});
+  var _facturado = _cobTot + pendienteCobroDash;
+  var _pendPct = _facturado>0 ? (pendienteCobroDash/_facturado)*100 : 0;
+  var estPend = _pendPct>45 ? {e:'atencion',n:Math.round(_pendPct)+'% sin cobrar — mucho'} : (_pendPct>25 ? {e:'revisar',n:Math.round(_pendPct)+'% sin cobrar — vigilar'} : {e:'bien',n:Math.round(_pendPct)+'% sin cobrar — sano'});
+  var estAprob = tasaAprobacionDash>=45 ? {e:'bien',n:'Conversión buena'} : (tasaAprobacionDash>=25 ? {e:'revisar',n:'Conversión mejorable'} : {e:'atencion',n:'Conversión baja'});
+  var estBor = ratioBorelloDash<=65 ? {e:'bien',n:'Buen margen en materiales'} : (ratioBorelloDash<=85 ? {e:'revisar',n:'Margen ajustado'} : {e:'atencion',n:'Casi sin margen'});
+  function _semColor(e){ return e==='bien'?{c:'#065F46',bg:'#DCFCE7',lbl:'🟢 Bien'}:e==='revisar'?{c:'#92400E',bg:'#FEF3C7',lbl:'🟡 Revisar'}:{c:'#991B1B',bg:'#FEE2E2',lbl:'🔴 Atención'}; }
+
   // ── Form ───────────────────────────────────────────────────────────────────
   function handleSaveEgreso() {
     if((!egForm.cat&&egForm.tipo==='egreso')||!egForm.desc.trim()||!egForm.monto||!egForm.fecha||!egForm.medio){alert('Complet\u00e1 todos los campos antes de guardar.');return;}
@@ -6457,6 +6468,8 @@ function IngresosView({quotes, egresos, onSaveEgresos, clients, catalog, activeT
       React.createElement('div',{style:{fontSize:11,fontWeight:700,color:k.color,textTransform:'uppercase',letterSpacing:'0.07em',marginBottom:4,paddingRight:18}},k.icon+' '+k.label),
       React.createElement('div',{style:{fontFamily:"'Oswald',system-ui",fontSize:isMobile?18:22,fontWeight:700,color:k.color,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}},k.val),
       k.sub && React.createElement('div',{style:{fontSize:10,color:'#94A3B8',marginTop:2}},k.sub),
+      k.estado && React.createElement('div',{style:{marginTop:6,display:'inline-flex',alignItems:'center',backgroundColor:_semColor(k.estado).bg,borderRadius:20,padding:'2px 9px'}}, React.createElement('span',{style:{fontSize:10,fontWeight:800,color:_semColor(k.estado).c,whiteSpace:'nowrap'}},_semColor(k.estado).lbl)),
+      k.nota && React.createElement('div',{style:{fontSize:9,color:'#64748B',marginTop:3,lineHeight:1.3}},k.nota),
       open && React.createElement('div',{style:{marginTop:8,padding:'8px 10px',backgroundColor:'#fff',border:'1px dashed '+k.color+'66',borderRadius:8,fontSize:11,color:'#475569',lineHeight:1.45}},k.det)
     );
   }
@@ -6548,19 +6561,20 @@ function IngresosView({quotes, egresos, onSaveEgresos, clients, catalog, activeT
       React.createElement('div',{style:{display:'grid',gridTemplateColumns:isMobile?'repeat(2,1fr)':'repeat(4,1fr)',gap:12,marginBottom:20}},
         [
           {label:'Cobrado',val:fmt(totalCobradoDash + cobradoUSDenARS),color:'#065F46',bg:'#ECFDF5',icon:'\u{1F4B5}',det:'Suma de todos los cobros del período: pagos cargados en presupuestos + ingresos manuales. Los importes en USD se convierten a $ por su tipo de cambio.'},
-          {label:'Pendiente de cobro',val:fmt(pendienteCobroDash),color:'#92400E',bg:'#FFFBEB',icon:'\u23F3',det:'Sobre los presupuestos aceptados: por cada uno, total cotizado (Mano de Obra + Materiales) menos lo ya cobrado, todo sumado.'},
+          {label:'Pendiente de cobro',val:fmt(pendienteCobroDash),color:'#92400E',bg:'#FFFBEB',icon:'\u23F3',estado:estPend.e,nota:estPend.n,det:'Sobre los presupuestos aceptados: por cada uno, total cotizado (Mano de Obra + Materiales) menos lo ya cobrado, todo sumado. Sem\u00E1foro por % pendiente sobre lo facturado (orientativo).'},
           {label:'Egresos'+(dashMesesVer.length>0?' (mes)':dashAnosVer.length>0?' (año)':''),val:fmt(totalEgresosDash),color:'#991B1B',bg:'#FFF1F2',icon:'\u{1F4B8}',det:'Suma de egresos del período (todas las categorías: sueldos, materiales/Borello, combustible, etc.). Los importes en USD se convierten a $ por su tipo de cambio.'},
-          {label:'Ganancia neta',val:fmt(gananciaDash),color:gananciaDash>=0?'#065F46':'#991B1B',bg:gananciaDash>=0?'#ECFDF5':'#FFF1F2',icon:'\u{1F4C8}',det:'Cobrado (incluye USD convertido a $) menos Egresos del período.'},
+          {label:'Ganancia neta',val:fmt(gananciaDash),color:gananciaDash>=0?'#065F46':'#991B1B',bg:gananciaDash>=0?'#ECFDF5':'#FFF1F2',icon:'\u{1F4C8}',estado:estMargen.e,nota:estMargen.n,det:'Cobrado (incluye USD convertido a $) menos Egresos del período. Semáforo por margen neto (orientativo).'},
         ].map(kpiCard)
       ),
       // KPI cards analíticos (aprobación / materiales)
       React.createElement('div',{style:{display:'grid',gridTemplateColumns:isMobile?'repeat(1,1fr)':'repeat(3,1fr)',gap:12,marginBottom:20}},
         [
-          {label:'Aprobación',val:tasaAprobacionDash+'%',sub:aceptadosDash.length+' de '+emitidosDash.length+' presupuestos',color:'#065F46',bg:'#ECFDF5',icon:'✅',det:'Presupuestos aceptados ÷ presupuestos emitidos del período (se excluyen los recotizados para no duplicar). '+aceptadosDash.length+' ÷ '+emitidosDash.length+' = '+tasaAprobacionDash+'%.'},
+          {label:'Aprobación',val:tasaAprobacionDash+'%',sub:aceptadosDash.length+' de '+emitidosDash.length+' presupuestos',color:'#065F46',bg:'#ECFDF5',icon:'✅',estado:estAprob.e,nota:estAprob.n,det:'Presupuestos aceptados ÷ presupuestos emitidos del período (se excluyen los recotizados para no duplicar). '+aceptadosDash.length+' ÷ '+emitidosDash.length+' = '+tasaAprobacionDash+'%. Semáforo: 🟢≥45% · 🟡25–45% · 🔴<25% (orientativo).'},
           {label:'Materiales s/ presupuestado',val:pesoMaterialesDash+'%',sub:'Materiales sobre lo presupuestado (MdO+Mat)',color:'#6D28D9',bg:'#F5F3FF',icon:'\u{1F3D7}️',det:'De todo lo presupuestado en el período (todos los presupuestos, sin recotizados ni viáticos): materiales cotizados ÷ total cotizado (Mano de Obra + Materiales). '+fmt(matCotizadoTodos)+' ÷ '+fmt(totalCotizadoTodos)+' = '+pesoMaterialesDash+'%.'},
-          {label:'Materiales pagado vs cotizado',val:ratioBorelloDash+'%',sub:fmt(pagadoBorelloDash)+' Borello / '+fmt(matCotizadoAceptados)+' cotiz. (aceptados)',color:'#B45309',bg:'#FFFBEB',icon:'\u{1F3EA}',det:'Lo pagado a Borello (egresos categoría Materiales del período) ÷ materiales cotizados de los presupuestos aceptados. '+fmt(pagadoBorelloDash)+' ÷ '+fmt(matCotizadoAceptados)+' = '+ratioBorelloDash+'%. Cuanto más bajo, mejor margen.'},
+          {label:'Materiales pagado vs cotizado',val:ratioBorelloDash+'%',sub:fmt(pagadoBorelloDash)+' Borello / '+fmt(matCotizadoAceptados)+' cotiz. (aceptados)',color:'#B45309',bg:'#FFFBEB',icon:'\u{1F3EA}',estado:estBor.e,nota:estBor.n,det:'Lo pagado a Borello (egresos categoría Materiales del período) ÷ materiales cotizados de los presupuestos aceptados. '+fmt(pagadoBorelloDash)+' ÷ '+fmt(matCotizadoAceptados)+' = '+ratioBorelloDash+'%. Cuanto más bajo, mejor margen. Semáforo: 🟢≤65% · 🟡65–85% · 🔴>85% (orientativo).'},
         ].map(kpiCard)
       ),
+      React.createElement('div',{style:{fontSize:10,color:'#94A3B8',marginBottom:16,lineHeight:1.4}},'🟢 Bien · 🟡 Revisar · 🔴 Atención — El semáforo es una guía orientativa con umbrales de referencia para una empresa de servicios chica; no reemplaza el análisis de un contador con tus números reales.'),
             // Egresos por categoría + Ganancia GJF
       React.createElement('div',{style:{display:'grid',gridTemplateColumns:'1fr',gap:12}},
         // Categorías
