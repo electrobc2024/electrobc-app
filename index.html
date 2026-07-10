@@ -377,7 +377,8 @@ const pdfName = q => {
   const ap = [cl.calle, cl.numero].filter(Boolean);
   const addr = ap.length ? ap.join(" ") : (q.referencia || "");
   const who = cl.administracion || cl.nombre || "";
-  return [q.numero, addr, who].filter(Boolean).join(" - ").replace(/[/\\?%*:|"<>]/g, "_");
+  const fch = (q.fecha || "").slice(0,10);
+  return [q.numero, addr, who, fch].filter(Boolean).join(" - ").replace(/[/\\?%*:|"<>]/g, "_");
 };
 
 // ── Validation ────────────────────────────────────────────────────────────────
@@ -5956,7 +5957,7 @@ function DashboardPdfOverlay({onClose, data}) {
   } = data;
   const metricas = data.metricas || {};
   const fmt = n => Math.abs(Math.round(n)||0).toLocaleString('es-AR');
-  const filename = 'ELECTRO BC - Dashboard Financiero - ' + periodo + ' - ' + fechaHoy;
+  const filename = ('ELECTRO BC - Dashboard Financiero - ' + periodo + ' - ' + fechaHoy).replace(/[/\\:]/g, '-');
   const downloadPdf = async () => {
     setStatus("loading");
     try {
@@ -6102,7 +6103,7 @@ function MovimientosPdfOverlay({onClose, data}){
   const {movs=[], total=0, totalUSD=0, porCat=[], periodo="", fechaHoy=""} = data||{};
   const fmt = n => Math.abs(Math.round(n)||0).toLocaleString('es-AR');
   const fmtD = f => f? new Date((f||'').slice(0,10)+'T12:00:00').toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'2-digit'}):'—';
-  const filename = 'ELECTRO BC - Ingresos y Egresos - '+periodo+' - '+fechaHoy;
+  const filename = ('ELECTRO BC - Ingresos y Egresos - '+periodo+' - '+fechaHoy).replace(/[/\\:]/g, '-');
   const downloadPdf = async () => {
     setStatus("loading");
     try {
