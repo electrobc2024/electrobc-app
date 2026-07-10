@@ -1397,7 +1397,7 @@ function PriceHistory({
         color: "#CBD5E1",
         fontSize: 11
       }
-    }, "\u2014")), /*#__PURE__*/React.createElement("td",{style:{padding:"5px 8px"}}, h.autor?/*#__PURE__*/React.createElement("span",{style:{fontSize:10,fontWeight:700,color:"#475569",backgroundColor:"#F1F5F9",padding:"2px 7px",borderRadius:12,whiteSpace:"nowrap"}},ebcUserLabel(h.autor)):/*#__PURE__*/React.createElement("span",{style:{color:"#CBD5E1",fontSize:11}},"\u2014")));
+    }, "\u2014")), /*#__PURE__*/React.createElement("td",{style:{padding:"5px 8px"}}, /*#__PURE__*/React.createElement("span",{style:{fontSize:10,fontWeight:700,color:"#475569",backgroundColor:"#F1F5F9",padding:"2px 7px",borderRadius:12,whiteSpace:"nowrap"}},ebcUserLabel(h.autor||"guille"))));
   }))));
 }
 function CatalogView({
@@ -2226,7 +2226,7 @@ function ClientesView({
       }
     }, cl.nombre), /*#__PURE__*/React.createElement(TipoBadge, {
       tipo: cl.tipo
-    }), cl.autor && /*#__PURE__*/React.createElement("span",{style:{fontSize:9,fontWeight:700,color:"#94A3B8",whiteSpace:"nowrap"}}, "por ", ebcUserLabel(cl.autor))), cl.empresa && /*#__PURE__*/React.createElement("div", {
+    }), /*#__PURE__*/React.createElement("span",{style:{fontSize:9,fontWeight:700,color:"#94A3B8",whiteSpace:"nowrap"}}, "por ", ebcUserLabel(cl.autor||"guille"))), cl.empresa && /*#__PURE__*/React.createElement("div", {
       style: {
         fontSize: 11,
         color: "#64748B",
@@ -3268,7 +3268,7 @@ function PaymentsPanel({
       fontWeight: 600,
       minWidth: 48
     }
-  }, "Pago ", i + 1, p.autor && /*#__PURE__*/React.createElement("span",{style:{display:"block",fontSize:9,color:"#94A3B8",fontWeight:700}}, ebcUserLabel(p.autor))), /*#__PURE__*/React.createElement("select", {
+  }, "Pago ", i + 1, /*#__PURE__*/React.createElement("span",{style:{display:"block",fontSize:9,color:"#94A3B8",fontWeight:700}}, ebcUserLabel(p.autor||"guille"))), /*#__PURE__*/React.createElement("select", {
     value: p.moneda || "$",
     onChange: e => {
       var val = e.target.value;
