@@ -1853,6 +1853,7 @@ function ClientesView({
   const [tipoFilter, setTipoFilter] = useState("todos");
   const [showForm, setShowForm] = useState(false);
   const [colFilterOpen, setColFilterOpen] = useState(null);
+  const isMobile = useIsMobile();
   // Auto-expand when arriving from Tracker
   useEffect(() => {
     if (initialSearch) {
@@ -2169,12 +2170,14 @@ function ClientesView({
       backgroundColor: "#fff",
       borderRadius: 12,
       border: "1px solid #E2E8F0",
-      overflow: "visible"
+      overflow: isMobile ? "auto" : "visible",
+      WebkitOverflowScrolling: "touch"
     }
   }, /*#__PURE__*/React.createElement("table", {
     style: {
       width: "100%",
-      borderCollapse: "collapse"
+      borderCollapse: "collapse",
+      minWidth: isMobile ? 720 : "auto"
     }
   }, /*#__PURE__*/React.createElement("thead", null, /*#__PURE__*/React.createElement("tr", null,
     /*#__PURE__*/React.createElement("th", {style:{padding:"9px 12px",fontSize:10,fontWeight:700,color:"#94A3B8",textTransform:"uppercase",letterSpacing:"0.08em",backgroundColor:"#F8FAFC",borderBottom:"1px solid #E2E8F0",textAlign:"left",whiteSpace:"nowrap"}}, /*#__PURE__*/React.createElement("span",{style:{display:"inline-flex",alignItems:"center"}}, sortHeaderCl("Nombre","az","za"), tipoFunnel())),
@@ -3460,6 +3463,7 @@ function Tracker({
   highlightId,
   onClearHighlight
 }) {
+  const isMobile = useIsMobile();
   const [clientFilter, setClientFilter] = useState("");
   const [dropId, setDropId] = useState(null);
   const [pagosPendientes, setPagosPendientes] = useState({});
@@ -3702,13 +3706,15 @@ function Tracker({
       backgroundColor: "#fff",
       borderRadius: 12,
       border: "1px solid #E2E8F0",
-      overflow: "visible",
+      overflow: isMobile ? "auto" : "visible",
+      WebkitOverflowScrolling: "touch",
       position: "relative"
     }
   }, /*#__PURE__*/React.createElement("table", {
     style: {
       width: "100%",
-      borderCollapse: "collapse"
+      borderCollapse: "collapse",
+      minWidth: isMobile ? 1050 : "auto"
     }
   }, /*#__PURE__*/React.createElement("thead", null, /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("th", {
     style: {
