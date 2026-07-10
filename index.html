@@ -6286,13 +6286,13 @@ function IngresosView({quotes, egresos, onSaveEgresos, activeTab, setActiveTab})
   // Card KPI reutilizable con botón ⓘ que despliega el detalle del cálculo
   function kpiCard(k){
     var open = openCardInfo===k.label;
-    return React.createElement('div',{key:k.label,style:{...card,backgroundColor:k.bg,border:'1px solid '+k.color+'33',position:'relative'}},
+    return React.createElement('div',{key:k.label,style:{...card,backgroundColor:k.bg,border:'1px solid '+k.color+'33',position:'relative',minWidth:0,overflow:'hidden'}},
       k.det && React.createElement('button',{type:'button',title:'Ver cálculo',
         onClick:function(){setOpenCardInfo(open?null:k.label);},
         style:{position:'absolute',top:8,right:10,background:'none',border:'none',cursor:'pointer',fontSize:15,lineHeight:1,color:k.color,opacity:0.65,padding:2}},
         open?'✕':'ⓘ'),
       React.createElement('div',{style:{fontSize:11,fontWeight:700,color:k.color,textTransform:'uppercase',letterSpacing:'0.07em',marginBottom:4,paddingRight:18}},k.icon+' '+k.label),
-      React.createElement('div',{style:{fontFamily:"'Oswald',system-ui",fontSize:22,fontWeight:700,color:k.color}},k.val),
+      React.createElement('div',{style:{fontFamily:"'Oswald',system-ui",fontSize:isMobile?18:22,fontWeight:700,color:k.color,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}},k.val),
       k.sub && React.createElement('div',{style:{fontSize:10,color:'#94A3B8',marginTop:2}},k.sub),
       open && React.createElement('div',{style:{marginTop:8,padding:'8px 10px',backgroundColor:'#fff',border:'1px dashed '+k.color+'66',borderRadius:8,fontSize:11,color:'#475569',lineHeight:1.45}},k.det)
     );
@@ -6313,7 +6313,7 @@ function IngresosView({quotes, egresos, onSaveEgresos, activeTab, setActiveTab})
 
 
     // ── DASHBOARD TAB ────────────────────────────────────────────────────────
-    tab==='dashboard' && React.createElement('div',{id:'dashboard-pdf-area'},
+    tab==='dashboard' && React.createElement('div',{id:'dashboard-pdf-area',style:{maxWidth:'100%',overflowX:'hidden'}},
       // Filtros AÑO/MES (independientes de Cargar Ingresos/Egresos)
       React.createElement('div',{style:{display:'flex',gap:6,flexWrap:'wrap',alignItems:'center',marginBottom:16}},
         React.createElement('span',{style:{fontSize:11,color:'#94A3B8',fontWeight:700}},'AÑO:'),
