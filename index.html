@@ -2834,9 +2834,11 @@ function PrintDoc({
     rows,
     sub,
     hidden,
-    hideCant
+    hideCant,
+    fs = 11
   }) => {
     if(hidden||!rows||rows.length===0||rows.every(r=>!r.desc||parseFloat(r.pu)===0)) return null;
+    const _pad = fs < 11 ? "3px 9px" : "6px 10px";
     return /*#__PURE__*/React.createElement("div", {
     style: {
       marginBottom: 22
@@ -2857,7 +2859,7 @@ function PrintDoc({
       width: "100%",
       borderCollapse: "collapse",
       tableLayout: "fixed",
-      fontSize: 11
+      fontSize: fs
     }
   }, /*#__PURE__*/React.createElement("thead", null, /*#__PURE__*/React.createElement("tr", {
     style: {
@@ -2886,33 +2888,33 @@ function PrintDoc({
       }
     }, /*#__PURE__*/React.createElement("td", {
       style: {
-        padding: "6px 10px",
+        padding: _pad,
         textAlign: "center",
         color: "#94A3B8",
         border: "1px solid #E2E8F0"
       }
     }, i + 1), /*#__PURE__*/React.createElement("td", {
       style: {
-        padding: "6px 10px",
+        padding: _pad,
         border: "1px solid #E2E8F0"
       }
     }, r.desc || "—"), /*#__PURE__*/React.createElement("td", {
       style: {
-        padding: "6px 10px",
+        padding: _pad,
         textAlign: "right",
         whiteSpace: "nowrap",
         border: "1px solid #E2E8F0"
       }
     }, "$ ", fmt(r.pu)), !hideCant&&/*#__PURE__*/React.createElement("td", {
       style: {
-        padding: "6px 10px",
+        padding: _pad,
         textAlign: "right",
         whiteSpace: "nowrap",
         border: "1px solid #E2E8F0"
       }
     }, r.qty), /*#__PURE__*/React.createElement("td", {
       style: {
-        padding: "6px 10px",
+        padding: _pad,
         textAlign: "right",
         fontWeight: 600,
         whiteSpace: "nowrap",
@@ -2946,6 +2948,12 @@ function PrintDoc({
     }
   }, "$ ", fmt(sub))))));
   };
+  // ── Paginado: intentar 1 hoja; si hay muchos ítems, achicar fuente o cortar limpio (MdO en hoja 1, resto en hoja 2) ──
+  const _mdoRows = (q.mdo||[]).filter(r=>r.desc&&r.desc.trim()&&parseFloat(r.pu)>0);
+  const _matRows = (q.mat||[]).filter(r=>parseFloat(r.pu)>0);
+  const _nItems = _mdoRows.length + _matRows.length;
+  const _forceSplit = _nItems >= 15;                       // demasiado para una hoja: corte limpio
+  const _fs = _forceSplit ? 11 : (_nItems >= 12 ? 9 : (_nItems >= 9 ? 10 : 11)); // achicar fuente en rango medio
   return /*#__PURE__*/React.createElement("div", {
     className: "print-page",
     style: {
@@ -3108,14 +3116,18 @@ function PrintDoc({
     }
   }, addr || "—")))), /*#__PURE__*/React.createElement(PS, {
     title: "Costo de Mano de Obra",
-    rows: (q.mdo||[]).filter(r=>r.desc&&r.desc.trim()&&parseFloat(r.pu)>0),
-    sub: subMdo
-  }), /*#__PURE__*/React.createElement(PS, {
-    title: "Costo de Materiales",
-    rows: (q.mat||[]).filter(r=>parseFloat(r.pu)>0),
-    sub: subMat,
-    hidden: subMat===0
+    rows: _mdoRows,
+    sub: subMdo,
+    fs: _fs
   }), /*#__PURE__*/React.createElement("div", {
+    style: _forceSplit ? { pageBreakBefore: "always", breakBefore: "page" } : {}
+  }, /*#__PURE__*/React.createElement(PS, {
+    title: "Costo de Materiales",
+    rows: _matRows,
+    sub: subMat,
+    hidden: subMat===0,
+    fs: _fs
+  })), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
       justifyContent: "flex-end",
