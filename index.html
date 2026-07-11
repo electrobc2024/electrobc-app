@@ -3279,7 +3279,14 @@ function PrintDoc({
         ? /*#__PURE__*/React.createElement("div", { className: "ebc-rich ebc-info", style: _base, dangerouslySetInnerHTML: { __html: _info } })
         : /*#__PURE__*/React.createElement("div", { className: "ebc-info", style: Object.assign({ whiteSpace: "pre-wrap" }, _base) }, _info)
     );
-  })(), /*#__PURE__*/React.createElement("div", {
+  })(), (q.adjuntos || []).filter(function(a){ return a && a.dataUrl; }).map(function(a, idx){
+    return /*#__PURE__*/React.createElement("div", { key: a.id || idx, style: { pageBreakBefore: "always", breakBefore: "page", paddingTop: 8 } },
+      /*#__PURE__*/React.createElement("div", { style: { fontSize: 11, fontWeight: 700, color: "#64748B", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 12, borderLeft: "3px solid " + ORANGE, paddingLeft: 8 } }, a.titulo || ("Anexo " + (idx + 1))),
+      /*#__PURE__*/React.createElement("div", { style: { textAlign: "center" } },
+        /*#__PURE__*/React.createElement("img", { src: a.dataUrl, style: { display: "inline-block", maxWidth: "100%", maxHeight: 940, height: "auto", borderRadius: 6, border: "1px solid #E2E8F0" } })
+      )
+    );
+  }), /*#__PURE__*/React.createElement("div", {
     style: {
       borderTop: "2px solid #E2E8F0",
       marginTop: 24,
@@ -3324,14 +3331,7 @@ function PrintDoc({
       letterSpacing: "0.2em",
       textTransform: "uppercase"
     }
-  }, "SERVICIOS INTEGRALES"))), (q.adjuntos || []).filter(function(a){ return a && a.dataUrl; }).map(function(a, idx){
-    return /*#__PURE__*/React.createElement("div", { key: a.id || idx, style: { pageBreakBefore: "always", breakBefore: "page", paddingTop: 8 } },
-      /*#__PURE__*/React.createElement("div", { style: { fontSize: 11, fontWeight: 700, color: "#64748B", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 12, borderLeft: "3px solid " + ORANGE, paddingLeft: 8 } }, a.titulo || ("Anexo " + (idx + 1))),
-      /*#__PURE__*/React.createElement("div", { style: { textAlign: "center" } },
-        /*#__PURE__*/React.createElement("img", { src: a.dataUrl, style: { display: "inline-block", maxWidth: "100%", maxHeight: 940, height: "auto", borderRadius: 6, border: "1px solid #E2E8F0" } })
-      )
-    );
-  }));
+  }, "SERVICIOS INTEGRALES"))));
 }
 
 // ── PDF Overlay ───────────────────────────────────────────────────────────────
