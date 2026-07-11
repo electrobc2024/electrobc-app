@@ -44,6 +44,8 @@ if (typeof document !== "undefined") {
     button{cursor:pointer}
     ::-webkit-scrollbar{width:5px;height:5px}
     ::-webkit-scrollbar-thumb{background:#CBD5E1;border-radius:4px}
+    .ebc-rich ul{margin:4px 0;padding-left:20px}.ebc-rich ol{margin:4px 0;padding-left:22px}.ebc-rich li{margin:2px 0}
+    [contenteditable]{white-space:pre-wrap}
     @media print{
       .no-print{display:none!important}
       body,#root{overflow:visible!important;height:auto!important}
@@ -259,6 +261,35 @@ function compressImageToDataUrl(file, maxDim, quality){
       reader.readAsDataURL(file);
     }catch(err){ reject(err); }
   });
+}
+// ── Texto con formato (negrita/cursiva/subrayado) ──
+function _escHtml(s){ return (s==null?"":String(s)).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+function _looksHtml(s){ return /<[a-z!\/][\s\S]*>/i.test(s||""); }
+function _plainToHtml(s){ return _escHtml(s).replace(/\n/g,"<br>"); }
+function RichText({ value, onChange, minHeight }){
+  const ref = React.useRef(null);
+  const last = React.useRef(null);
+  React.useEffect(function(){
+    if(!ref.current) return;
+    var v = value || "";
+    if(v !== last.current && document.activeElement !== ref.current){
+      ref.current.innerHTML = _looksHtml(v) ? v : _plainToHtml(v);
+      last.current = v;
+    }
+  }, [value]);
+  const sync = function(){ if(ref.current){ var h = ref.current.innerHTML; last.current = h; onChange(h); } };
+  const run = function(c){ return function(e){ e.preventDefault(); if(ref.current){ ref.current.focus(); try{ document.execCommand(c,false,null); }catch(err){} sync(); } }; };
+  const tb = function(label, cmd, st){ return React.createElement("button",{ key:cmd, type:"button", onMouseDown:run(cmd), title:label, style:Object.assign({ minWidth:32, height:30, border:"1px solid #E2E8F0", background:"#fff", borderRadius:6, cursor:"pointer", fontSize:14, color:"#334155" }, st||{}) }, label); };
+  return React.createElement("div", null,
+    React.createElement("div",{ style:{ display:"flex", gap:4, marginBottom:6, flexWrap:"wrap" } },
+      tb("B","bold",{fontWeight:800}),
+      tb("I","italic",{fontStyle:"italic",fontFamily:"Georgia,serif"}),
+      tb("U","underline",{textDecoration:"underline"}),
+      tb("•","insertUnorderedList",{}),
+      React.createElement("button",{ type:"button", title:"Quitar formato", onMouseDown:run("removeFormat"), style:{ height:30, padding:"0 10px", border:"1px solid #E2E8F0", background:"#fff", borderRadius:6, cursor:"pointer", fontSize:11, color:"#94A3B8" } }, "Quitar formato")
+    ),
+    React.createElement("div",{ ref:ref, contentEditable:true, suppressContentEditableWarning:true, onInput:sync, onBlur:sync, style:{ width:"100%", border:"1px solid #E2E8F0", borderRadius:7, padding:"10px 12px", fontSize:13, color:"#1E293B", minHeight:minHeight||90, lineHeight:1.7, backgroundColor:"#fff", outline:"none", boxSizing:"border-box" } })
+  );
 }
 function useIsMobile(){
   const [m,setM]=React.useState(typeof window!=='undefined' && window.innerWidth<=768);
@@ -3230,14 +3261,13 @@ function PrintDoc({
       letterSpacing: "0.1em",
       marginBottom: 6
     }
-  }, "Condiciones"), /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: 12,
-      color: "#92400E",
-      whiteSpace: "pre-wrap",
-      lineHeight: 1.7
-    }
-  }, q.aclaraciones || DEFAULT_ACLARACIONES)), /*#__PURE__*/React.createElement("div", {
+  }, "Condiciones"), (function(){
+    var _txt = q.aclaraciones || DEFAULT_ACLARACIONES;
+    var _base = { fontSize: 12, color: "#92400E", lineHeight: 1.7 };
+    return _looksHtml(_txt)
+      ? /*#__PURE__*/React.createElement("div", { className: "ebc-rich", style: _base, dangerouslySetInnerHTML: { __html: _txt } })
+      : /*#__PURE__*/React.createElement("div", { style: Object.assign({ whiteSpace: "pre-wrap" }, _base) }, _txt);
+  })()), /*#__PURE__*/React.createElement("div", {
     style: {
       borderTop: "2px solid #E2E8F0",
       marginTop: 24,
@@ -5353,32 +5383,21 @@ const updCli = (f, v) => {
     }
   }, "$ ", fmt(total))))))), /*#__PURE__*/React.createElement(CardBox, {
     title: "Aclaraciones"
-  }, /*#__PURE__*/React.createElement("textarea", {
+  }, /*#__PURE__*/React.createElement(RichText, {
     value: quote.aclaraciones,
-    onChange: e => upd("aclaraciones", e.target.value),
-    style: {
-      width: "100%",
-      border: "1px solid #E2E8F0",
-      borderRadius: 7,
-      padding: "10px 12px",
-      fontSize: 13,
-      color: "#1E293B",
-      minHeight: 80,
-      resize: "vertical",
-      lineHeight: 1.7,
-      backgroundColor: "#fff",
-      marginBottom: 8
-    }
+    onChange: h => upd("aclaraciones", h),
+    minHeight: 100
   }), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
       gap: 6,
-      flexWrap: "wrap"
+      flexWrap: "wrap",
+      marginTop: 8
     }
   }, [AVISO_48HS].map(txt => /*#__PURE__*/React.createElement("button", {
     key: txt,
-    onMouseDown: e => e.preventDefault(),
-    onClick: () => upd("aclaraciones", (quote.aclaraciones ? quote.aclaraciones + "\n" : "") + txt),
+    type: "button",
+    onClick: () => { var cur = quote.aclaraciones || ""; var curH = _looksHtml(cur) ? cur : _plainToHtml(cur); upd("aclaraciones", (curH ? curH : "") + "<div>" + _escHtml(txt) + "</div>"); },
     style: {
       fontSize: 11,
       background: "none",
