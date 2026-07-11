@@ -234,6 +234,32 @@ function fmtFecha(v){
 }
 // Para nombres de archivo (sin "/"): DD-MM-AAAA
 function fmtFechaFile(v){ return fmtFecha(v||new Date()).replace(/\//g,'-'); }
+// Comprime/redimensiona una imagen a JPEG (dataURL) para no inflar el presupuesto
+function compressImageToDataUrl(file, maxDim, quality){
+  return new Promise(function(resolve, reject){
+    try{
+      var reader=new FileReader();
+      reader.onload=function(e){
+        var img=new Image();
+        img.onload=function(){
+          var w=img.width||1, h=img.height||1;
+          var scale=Math.min(1, (maxDim||1600)/Math.max(w,h));
+          var cw=Math.max(1,Math.round(w*scale)), ch=Math.max(1,Math.round(h*scale));
+          var cv=document.createElement('canvas'); cv.width=cw; cv.height=ch;
+          var ctx=cv.getContext('2d');
+          ctx.fillStyle='#fff'; ctx.fillRect(0,0,cw,ch);
+          ctx.drawImage(img,0,0,cw,ch);
+          try{ resolve(cv.toDataURL('image/jpeg', quality||0.8)); }
+          catch(err){ resolve(e.target.result); }
+        };
+        img.onerror=function(){ reject(new Error('img')); };
+        img.src=e.target.result;
+      };
+      reader.onerror=function(){ reject(new Error('read')); };
+      reader.readAsDataURL(file);
+    }catch(err){ reject(err); }
+  });
+}
 function useIsMobile(){
   const [m,setM]=React.useState(typeof window!=='undefined' && window.innerWidth<=768);
   React.useEffect(function(){
@@ -426,6 +452,7 @@ const mkQuote = n => ({
   tipoTrabajo: ["electricidad"],
   status: "generado",
   pagos: [],
+  adjuntos: [],
   createdAt: new Date().toISOString(),
   autor: ebcUser()
 });
@@ -3255,7 +3282,14 @@ function PrintDoc({
       letterSpacing: "0.2em",
       textTransform: "uppercase"
     }
-  }, "SERVICIOS INTEGRALES"))));
+  }, "SERVICIOS INTEGRALES"))), (q.adjuntos || []).filter(function(a){ return a && a.dataUrl; }).map(function(a, idx){
+    return /*#__PURE__*/React.createElement("div", { key: a.id || idx, style: { pageBreakBefore: "always", breakBefore: "page", paddingTop: 8 } },
+      /*#__PURE__*/React.createElement("div", { style: { fontSize: 11, fontWeight: 700, color: "#64748B", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 12, borderLeft: "3px solid " + ORANGE, paddingLeft: 8 } }, a.titulo || ("Anexo " + (idx + 1))),
+      /*#__PURE__*/React.createElement("div", { style: { textAlign: "center" } },
+        /*#__PURE__*/React.createElement("img", { src: a.dataUrl, style: { display: "inline-block", maxWidth: "100%", maxHeight: 940, height: "auto", borderRadius: 6, border: "1px solid #E2E8F0" } })
+      )
+    );
+  }));
 }
 
 // ── PDF Overlay ───────────────────────────────────────────────────────────────
@@ -5353,7 +5387,29 @@ const updCli = (f, v) => {
       padding: "4px 10px",
       color: "#64748B"
     }
-  }, "+ ", txt)))), /*#__PURE__*/React.createElement("div", {
+  }, "+ ", txt)))), /*#__PURE__*/React.createElement(CardBox, {
+    title: "Imágenes / Adjuntos"
+  },
+    /*#__PURE__*/React.createElement("div", { style: { fontSize: 12, color: "#64748B", marginBottom: 10, lineHeight: 1.5 } }, "Se agregan como páginas al final del PDF (ej. diagrama de referencia, captura de la cotización del proveedor). Máximo 3."),
+    /*#__PURE__*/React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 10, marginBottom: 12 } },
+      (quote.adjuntos || []).map(function(a, idx){
+        return /*#__PURE__*/React.createElement("div", { key: a.id, style: { display: "flex", gap: 10, alignItems: "flex-start", border: "1px solid #E2E8F0", borderRadius: 8, padding: 10 } },
+          /*#__PURE__*/React.createElement("img", { src: a.dataUrl, style: { width: 64, height: 64, objectFit: "cover", borderRadius: 6, border: "1px solid #E2E8F0", flexShrink: 0 } }),
+          /*#__PURE__*/React.createElement("div", { style: { flex: 1, minWidth: 0 } },
+            /*#__PURE__*/React.createElement("input", { type: "text", value: a.titulo || "", placeholder: "Título / epígrafe (ej. Zona de Intervención)", onChange: function(e){ var v = e.target.value; upd("adjuntos", (quote.adjuntos || []).map(function(x){ return x.id === a.id ? Object.assign({}, x, { titulo: v }) : x; })); }, style: { width: "100%", border: "1px solid #E2E8F0", borderRadius: 6, padding: "8px 10px", fontSize: 13, color: "#1E293B", boxSizing: "border-box" } }),
+            /*#__PURE__*/React.createElement("div", { style: { fontSize: 11, color: "#94A3B8", marginTop: 4 } }, "Página de adjunto " + (idx + 1))
+          ),
+          /*#__PURE__*/React.createElement("button", { type: "button", title: "Quitar", onClick: function(){ upd("adjuntos", (quote.adjuntos || []).filter(function(x){ return x.id !== a.id; })); }, style: { background: "none", border: "none", color: "#EF4444", cursor: "pointer", fontSize: 18, flexShrink: 0, lineHeight: 1 } }, "🗑")
+        );
+      })
+    ),
+    (quote.adjuntos || []).length < 3
+      ? /*#__PURE__*/React.createElement("label", { style: { display: "inline-flex", alignItems: "center", gap: 6, cursor: "pointer", border: "1px dashed " + ORANGE, borderRadius: 8, padding: "9px 14px", fontSize: 13, fontWeight: 600, color: ORANGE } },
+          "➕ Agregar imagen",
+          /*#__PURE__*/React.createElement("input", { type: "file", accept: "image/*", style: { display: "none" }, onChange: function(e){ var file = e.target.files && e.target.files[0]; e.target.value = ""; if(!file) return; if((quote.adjuntos || []).length >= 3){ alert("Máximo 3 imágenes."); return; } compressImageToDataUrl(file, 1600, 0.8).then(function(durl){ upd("adjuntos", (quote.adjuntos || []).concat([{ id: uid(), titulo: "", dataUrl: durl }])); }).catch(function(){ alert("No se pudo procesar la imagen."); }); } })
+        )
+      : /*#__PURE__*/React.createElement("div", { style: { fontSize: 12, color: "#94A3B8" } }, "Llegaste al máximo de 3 imágenes.")
+  ), /*#__PURE__*/React.createElement("div", {
     style: {
       position: "sticky",
       bottom: 0,
