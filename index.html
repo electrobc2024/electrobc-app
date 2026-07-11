@@ -45,6 +45,7 @@ if (typeof document !== "undefined") {
     ::-webkit-scrollbar{width:5px;height:5px}
     ::-webkit-scrollbar-thumb{background:#CBD5E1;border-radius:4px}
     .ebc-rich ul{margin:4px 0;padding-left:20px}.ebc-rich ol{margin:4px 0;padding-left:22px}.ebc-rich li{margin:2px 0}
+    .ebc-info>*{page-break-inside:avoid;break-inside:avoid}.ebc-info li{page-break-inside:avoid;break-inside:avoid}
     [contenteditable]{white-space:pre-wrap}
     @media print{
       .no-print{display:none!important}
@@ -480,6 +481,7 @@ const mkQuote = n => ({
   mat: [mkRow()],
   referencia: "",
   aclaraciones: DEFAULT_ACLARACIONES,
+  infoAdicional: "",
   tipoTrabajo: ["electricidad"],
   status: "generado",
   pagos: [],
@@ -3265,9 +3267,19 @@ function PrintDoc({
     var _txt = q.aclaraciones || DEFAULT_ACLARACIONES;
     var _base = { fontSize: 12, color: "#92400E", lineHeight: 1.7 };
     return _looksHtml(_txt)
-      ? /*#__PURE__*/React.createElement("div", { className: "ebc-rich", style: _base, dangerouslySetInnerHTML: { __html: _txt } })
+      ? /*#__PURE__*/React.createElement("div", { className: "ebc-rich ebc-info", style: _base, dangerouslySetInnerHTML: { __html: _txt } })
       : /*#__PURE__*/React.createElement("div", { style: Object.assign({ whiteSpace: "pre-wrap" }, _base) }, _txt);
-  })()), /*#__PURE__*/React.createElement("div", {
+  })()), (function(){
+    var _info = q.infoAdicional || "";
+    if(!_info || !_info.replace(/<[^>]*>/g, "").replace(/&nbsp;/g, "").trim()) return null;
+    var _base = { fontSize: 12, color: "#334155", lineHeight: 1.7 };
+    return /*#__PURE__*/React.createElement("div", { style: { marginBottom: 20 } },
+      /*#__PURE__*/React.createElement("div", { style: { fontSize: 10, fontWeight: 700, color: ORANGE, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 8, borderLeft: "3px solid " + ORANGE, paddingLeft: 8 } }, "Información adicional"),
+      _looksHtml(_info)
+        ? /*#__PURE__*/React.createElement("div", { className: "ebc-rich ebc-info", style: _base, dangerouslySetInnerHTML: { __html: _info } })
+        : /*#__PURE__*/React.createElement("div", { className: "ebc-info", style: Object.assign({ whiteSpace: "pre-wrap" }, _base) }, _info)
+    );
+  })(), /*#__PURE__*/React.createElement("div", {
     style: {
       borderTop: "2px solid #E2E8F0",
       marginTop: 24,
@@ -3354,7 +3366,7 @@ function PdfOverlay({
             format: "a4",
             orientation: "portrait"
           },
-          pagebreak: { mode: ["css","legacy"], avoid: ["tr",".pdf-avoid"] }
+          pagebreak: { mode: ["css","legacy"], avoid: ["tr",".pdf-avoid",".ebc-info > *",".ebc-info li"] }
         }).from(el).save();
       } else {
         // fallback: print
@@ -5407,6 +5419,11 @@ const updCli = (f, v) => {
       color: "#64748B"
     }
   }, "+ ", txt)))), /*#__PURE__*/React.createElement(CardBox, {
+    title: "Información adicional (opcional)"
+  },
+    /*#__PURE__*/React.createElement("div", { style: { fontSize: 12, color: "#64748B", marginBottom: 8, lineHeight: 1.5 } }, "Texto largo con detalle del trabajo, ítems, métodos de pago, garantía, etc. Sale como una sección aparte en el PDF (después de las Condiciones) y pagina bien, sin cortar renglones."),
+    /*#__PURE__*/React.createElement(RichText, { value: quote.infoAdicional || "", onChange: h => upd("infoAdicional", h), minHeight: 120 })
+  ), /*#__PURE__*/React.createElement(CardBox, {
     title: "Imágenes / Adjuntos"
   },
     /*#__PURE__*/React.createElement("div", { style: { fontSize: 12, color: "#64748B", marginBottom: 10, lineHeight: 1.5 } }, "Se agregan como páginas al final del PDF (ej. diagrama de referencia, captura de la cotización del proveedor). Máximo 3."),
