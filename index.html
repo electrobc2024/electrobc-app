@@ -2936,7 +2936,7 @@ function PrintDoc({
       border: "1px solid #E2E8F0",
       textAlign: i >= 2 ? "right" : i === 0 ? "center" : "left",
       whiteSpace: h === "Descripción" ? "normal" : "nowrap",
-      ...({ "Ítem": { width: 32 }, "Cant.": { width: 46 }, "P.Unit.": { width: 100 }, "Total": { width: 106 } }[h] || {})
+      ...({ "Ítem": { width: 30 }, "Cant.": { width: 42 }, "P.Unit.": { width: 128 }, "Total": { width: 132 } }[h] || {})
     }
   }, h)))), /*#__PURE__*/React.createElement("tbody", null, rows.map((r, i) => {
     const t = parseFloat(r.pu || 0) * parseFloat(r.qty || 0);
@@ -3013,6 +3013,15 @@ function PrintDoc({
   const _nItems = _mdoRows.length + _matRows.length;
   const _forceSplit = _nItems >= 15;                       // demasiado para una hoja: corte limpio
   const _fs = _forceSplit ? 11 : (_nItems >= 12 ? 9 : (_nItems >= 9 ? 10 : 11)); // achicar fuente en rango medio
+  // ── Información adicional: si no entra completa en la hoja 1, arranca en hoja nueva (nada cortado) ──
+  const _rowH = _fs < 11 ? 22 : 30;
+  const _infoTxtLen = (q.infoAdicional || "").replace(/<[^>]*>/g, " ").replace(/&nbsp;/g, " ").replace(/\s+/g, " ").trim().length;
+  const _infoBullets = ((q.infoAdicional || "").match(/<li/gi) || []).length;
+  const _hasInfo = _infoTxtLen > 0;
+  const _PAGE_H = 1040;                                     // alto útil aprox. de una hoja A4 (px del layout)
+  const _estMain = 300 /*encabezado+info*/ + (_forceSplit ? 0 : 90 /*2 títulos+thead*/ + (_mdoRows.length + _matRows.length) * _rowH + 70 /*2 subtotales*/) + 150 /*totales*/ + 90 /*condiciones cortas*/;
+  const _estInfo = 44 /*título*/ + Math.ceil(_infoTxtLen / 80) * (_fs < 11 ? 15 : 20) + _infoBullets * 6;
+  const _infoNewPage = _hasInfo && !_forceSplit && (_estMain + _estInfo > _PAGE_H) && (_estMain > 560);
   return /*#__PURE__*/React.createElement("div", {
     className: "print-page",
     style: {
@@ -3272,7 +3281,7 @@ function PrintDoc({
     var _info = q.infoAdicional || "";
     if(!_info || !_info.replace(/<[^>]*>/g, "").replace(/&nbsp;/g, "").trim()) return null;
     var _base = { fontSize: 12, color: "#334155", lineHeight: 1.7 };
-    return /*#__PURE__*/React.createElement("div", { style: { marginBottom: 20 } },
+    return /*#__PURE__*/React.createElement("div", { style: { marginBottom: 20, paddingTop: _infoNewPage ? 8 : 0, pageBreakBefore: _infoNewPage ? "always" : "auto", breakBefore: _infoNewPage ? "page" : "auto" } },
       /*#__PURE__*/React.createElement("div", { style: { fontSize: 10, fontWeight: 700, color: ORANGE, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 8, borderLeft: "3px solid " + ORANGE, paddingLeft: 8 } }, "Información adicional"),
       _looksHtml(_info)
         ? /*#__PURE__*/React.createElement("div", { className: "ebc-rich ebc-info", style: _base, dangerouslySetInnerHTML: { __html: _info } })
