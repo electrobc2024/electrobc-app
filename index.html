@@ -45,7 +45,6 @@ if (typeof document !== "undefined") {
     ::-webkit-scrollbar{width:5px;height:5px}
     ::-webkit-scrollbar-thumb{background:#CBD5E1;border-radius:4px}
     .ebc-rich ul{margin:4px 0;padding-left:20px}.ebc-rich ol{margin:4px 0;padding-left:22px}.ebc-rich li{margin:2px 0}
-    .ebc-info>*{page-break-inside:avoid;break-inside:avoid}.ebc-info li{page-break-inside:avoid;break-inside:avoid}
     [contenteditable]{white-space:pre-wrap}
     @media print{
       .no-print{display:none!important}
@@ -3366,7 +3365,7 @@ function PdfOverlay({
             format: "a4",
             orientation: "portrait"
           },
-          pagebreak: { mode: ["css","legacy"], avoid: ["tr",".pdf-avoid",".ebc-info > *",".ebc-info li"] }
+          pagebreak: { mode: ["css","legacy"], avoid: ["tr",".pdf-avoid"] }
         }).from(el).save();
       } else {
         // fallback: print
