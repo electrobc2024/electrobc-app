@@ -45,6 +45,7 @@ if (typeof document !== "undefined") {
     ::-webkit-scrollbar{width:5px;height:5px}
     ::-webkit-scrollbar-thumb{background:#CBD5E1;border-radius:4px}
     .ebc-rich ul{margin:4px 0;padding-left:20px}.ebc-rich ol{margin:4px 0;padding-left:22px}.ebc-rich li{margin:2px 0}
+    .dash-avoid{page-break-inside:avoid;break-inside:avoid}
     [contenteditable]{white-space:pre-wrap}
     @media print{
       .no-print{display:none!important}
@@ -6285,7 +6286,8 @@ function DashboardPdfOverlay({onClose, data}) {
           filename: filename + ".pdf",
           image: {type:"jpeg", quality:0.95},
           html2canvas: {scale:2, useCORS:true, logging:false},
-          jsPDF: {unit:"mm", format:"a4", orientation:"portrait"}
+          jsPDF: {unit:"mm", format:"a4", orientation:"portrait"},
+          pagebreak: { mode:["css","legacy"], avoid:[".dash-avoid"] }
         }).from(el).save();
       }
     } catch(e) { console.error(e); }
@@ -6303,7 +6305,7 @@ function DashboardPdfOverlay({onClose, data}) {
       React.createElement("div",{style:{fontFamily:"'Oswald',system-ui",fontSize:19,fontWeight:700,color:accent}},k.val),
       k.sub && React.createElement("div",{style:{fontSize:9,color:"#94A3B8",marginTop:3}},k.sub),
       sem && React.createElement("div",{style:{marginTop:5,display:"inline-block",backgroundColor:"#fff",borderRadius:20,padding:"1px 9px"}}, React.createElement("span",{style:{fontSize:9,fontWeight:800,color:sem.c}},sem.lbl)),
-      k.det && React.createElement("div",{style:{fontSize:8,color:"#64748B",marginTop:6,lineHeight:1.4}},k.det)
+      k.det && React.createElement("div",{style:{fontSize:9,color:"#64748B",marginTop:6,lineHeight:1.45}},k.det)
     );
   };
   return React.createElement("div",{style:{position:"fixed",inset:0,zIndex:9999,backgroundColor:"rgba(0,0,0,0.7)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"flex-start",overflowY:"auto",padding:"20px 0"}},
@@ -6342,7 +6344,7 @@ function DashboardPdfOverlay({onClose, data}) {
               React.createElement("div",{style:{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10}}, data.cards.slice(4).map(_pdfCard))
             )
           : null,
-        semaforo.length>0 && React.createElement("div",{style:cardS},
+        semaforo.length>0 && React.createElement("div",{className:"dash-avoid",style:cardS},
           React.createElement("div",{style:{fontSize:12,fontWeight:700,color:NAVY,marginBottom:10}},"🚦 Lectura del período (orientativo)"),
           semaforo.map(function(s){ var sc=_semC(s.estado); return React.createElement("div",{key:s.label,style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}},
             React.createElement("div",null, React.createElement("span",{style:{fontSize:12,color:"#475569",fontWeight:600}},s.label), React.createElement("span",{style:{fontSize:10,color:"#94A3B8",marginLeft:8}},s.nota)),
@@ -6351,7 +6353,7 @@ function DashboardPdfOverlay({onClose, data}) {
           React.createElement("div",{style:{fontSize:9,color:"#CBD5E1",marginTop:8}},"Guía orientativa, no reemplaza el análisis de un contador con tus números reales.")
         ),
         // Origen de ingresos
-        React.createElement("div",{style:cardS},
+        React.createElement("div",{className:"dash-avoid",style:cardS},
           React.createElement("div",{style:{fontSize:12,fontWeight:700,color:NAVY,marginBottom:10}},"📈 Origen de los Ingresos (ARS)"),
           (function(){
             var maxIng = Math.max(presupuestados||0, noPresupuestados||0, 1);
@@ -6371,8 +6373,8 @@ function DashboardPdfOverlay({onClose, data}) {
                     mkRow("⚡ Directos / No Presupuestados", noPresupuestados, "#059669")];
           })()
         ),
-        // Egresos por categoría
-        React.createElement("div",{style:cardS},
+        // Egresos por categoría (arranca en hoja 2)
+        React.createElement("div",{className:"dash-avoid",style:{...cardS, pageBreakBefore:"always", breakBefore:"page"}},
           React.createElement("div",{style:{fontSize:12,fontWeight:700,color:NAVY,marginBottom:10}},"💸 Egresos por categoría"),
           (function(){
             var maxCat = Math.max.apply(null, porCat.map(function(c){return c.total||0;}).concat([1]));
@@ -6391,11 +6393,13 @@ function DashboardPdfOverlay({onClose, data}) {
           })()
         ),
         // Chart
-        data.quotes && React.createElement(DashboardEvolutionChart,{
-          quotes:data.quotes,
-          egresos:data.egresosArr,
-          dashAnosVer:data.dashAnosVer
-        }),
+        data.quotes && React.createElement("div",{className:"dash-avoid"},
+          React.createElement(DashboardEvolutionChart,{
+            quotes:data.quotes,
+            egresos:data.egresosArr,
+            dashAnosVer:data.dashAnosVer
+          })
+        ),
         // Footer
         React.createElement("div",{style:{textAlign:"center",fontSize:9,color:"#CBD5E1",marginTop:16,paddingTop:12,borderTop:"1px solid #E2E8F0"}},
           "ELECTRO BC — Servicios Integrales — Generado el "+fechaHoy
