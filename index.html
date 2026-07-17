@@ -5621,7 +5621,7 @@ function PersonasView({ personas, onSave }){
   const chip = function(key, label, active, onClick){ return React.createElement('button',{key:key,type:'button',onClick:onClick,style:{padding:'5px 11px',borderRadius:20,border:'1px solid '+(active?ORANGE:'#E2E8F0'),background:active?ORANGE:'#fff',color:active?'#fff':'#475569',fontSize:12,fontWeight:active?700:500,cursor:'pointer',whiteSpace:'nowrap'}},label); };
   const lbl = function(t){ return React.createElement('div',{style:{fontSize:11,fontWeight:600,color:'#64748B',marginBottom:3}},t); };
 
-  return React.createElement(Pane, null,
+  return React.createElement(IngresosPane, null,
     React.createElement('div',{style:{marginBottom:16}},
       React.createElement('div',{style:{fontFamily:"'Oswald',system-ui",fontSize:22,fontWeight:700,color:NAVY,letterSpacing:'-0.01em',lineHeight:1.25}},'🧑‍🔧 Personal / Sueldos'),
       React.createElement('div',{style:{fontSize:13,color:'#64748B',marginTop:6,lineHeight:1.45}},'Personas, su valor por hora (con historial), horas trabajadas y sueldo calculado del período. El pago se registra en Cargar Ingresos / Egresos.')
