@@ -62,7 +62,8 @@ const NAVY = "#0A0F1E",
 const SKEY = "ebc-quotes-v6",
   CKEY = "ebc-catalog-v2",
   CLKEY = "ebc-clients-v2",
-  EKEY = "ebc-egresos-v2";
+  EKEY = "ebc-egresos-v2",
+  PKEY = "ebc-personas-v1";
 
 // Configurar con el enlace de invitación al grupo de WhatsApp de presupuestos
 const WA_GRUPO = "https://chat.whatsapp.com/IphhQd8vcU7HA4bgOALkyY?mode=gi_t";
@@ -691,6 +692,40 @@ const saveCl = async d => {
     await db.set(CLKEY, JSON.stringify(d));
   } catch {}
 };
+const loadPersonas = async () => {
+  try {
+    const r = await db.get(PKEY);
+    return r ? JSON.parse(r.value) : [];
+  } catch {
+    return [];
+  }
+};
+const savePersonas = async d => {
+  try {
+    await db.set(PKEY, JSON.stringify(d));
+  } catch {}
+};
+// Suma de horas de una persona en un período (arrays de años/meses; vacío = todo)
+function horasEnPeriodo(persona, anos, meses){
+  return ((persona && persona.horas) || []).reduce(function(s, h){
+    if(!h || !h.fecha) return s;
+    var y = String(h.fecha).slice(0,4), m = String(h.fecha).slice(5,7);
+    if(anos && anos.length > 0 && anos.indexOf(y) < 0) return s;
+    if(meses && meses.length > 0 && meses.indexOf(m) < 0) return s;
+    return s + (parseFloat(h.horas) || 0);
+  }, 0);
+}
+const mkPersona = () => ({
+  id: Math.random().toString(36).slice(2,9),
+  nombre: "",
+  puesto: "",
+  descripcionPuesto: "",
+  precioHora: "",
+  historial: [],
+  horas: [],
+  activo: true,
+  autor: (typeof ebcUser === "function" ? ebcUser() : "")
+});
 
 // ── Shared UI ─────────────────────────────────────────────────────────────────
 const Badge = ({
@@ -5529,6 +5564,186 @@ function setupGlobalNav() {
 }
 
 // ── App ───────────────────────────────────────────────────────────────────────
+function PersonasView({ personas, onSave }){
+  const NAVY = "#0A0F1E", ORANGE = "#F26B1D";
+  const isMobile = useIsMobile();
+  const list = personas || [];
+  const [form, setForm] = React.useState(mkPersona());
+  const [editId, setEditId] = React.useState(null);
+  const [showForm, setShowForm] = React.useState(false);
+  const [anos, setAnos] = React.useState([String(new Date().getFullYear())]);
+  const [meses, setMeses] = React.useState([String(new Date().getMonth()+1).padStart(2,'0')]);
+  const [verInactivos, setVerInactivos] = React.useState(false);
+  const [hoursFor, setHoursFor] = React.useState(null);
+  const [hForm, setHForm] = React.useState({ fecha: new Date().toISOString().slice(0,10), horas: "" });
+  const [histFor, setHistFor] = React.useState(null);
+
+  const fmt = n => (parseFloat(n)||0).toLocaleString('es-AR',{style:'currency',currency:'ARS',maximumFractionDigits:0});
+  const mesLbl = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  const inp = {border:'1px solid #E2E8F0',borderRadius:6,padding:'8px 10px',fontSize:13,width:'100%',backgroundColor:'#fff',boxSizing:'border-box'};
+
+  var yearsSet = {}; list.forEach(function(p){ (p.horas||[]).forEach(function(h){ if(h.fecha) yearsSet[String(h.fecha).slice(0,4)]=1; }); }); yearsSet[String(new Date().getFullYear())]=1;
+  const anosDisp = Object.keys(yearsSet).sort();
+  const mesesDisp = ['01','02','03','04','05','06','07','08','09','10','11','12'];
+
+  function editar(p){ setEditId(p.id); setForm(Object.assign({}, mkPersona(), p)); setShowForm(true); if(typeof window!=='undefined') window.scrollTo({top:0,behavior:'smooth'}); }
+  function guardar(){
+    if(!form.nombre || !form.nombre.trim()){ alert('Poné el nombre de la persona.'); return; }
+    var precio = parseFloat(form.precioHora)||0;
+    if(editId){
+      onSave(list.map(function(p){
+        if(p.id!==editId) return p;
+        var hist = (p.historial||[]).slice();
+        var cur = parseFloat(p.precioHora)||0;
+        if(precio>0 && precio!==cur) hist.push({fecha:new Date().toISOString(), precio:precio, autor:ebcUser()});
+        return Object.assign({}, p, {nombre:form.nombre.trim(), puesto:(form.puesto||'').trim(), descripcionPuesto:(form.descripcionPuesto||'').trim(), precioHora:precio, horasSemana:form.horasSemana||'', historial:hist});
+      }));
+    } else {
+      var nueva = Object.assign({}, mkPersona(), {nombre:form.nombre.trim(), puesto:(form.puesto||'').trim(), descripcionPuesto:(form.descripcionPuesto||'').trim(), precioHora:precio, horasSemana:form.horasSemana||'', historial: precio>0?[{fecha:new Date().toISOString(),precio:precio,autor:ebcUser()}]:[], activo:true});
+      onSave(list.concat([nueva]));
+    }
+    setForm(mkPersona()); setEditId(null); setShowForm(false);
+  }
+  function toggleActivo(p){ onSave(list.map(function(x){return x.id===p.id?Object.assign({},x,{activo:!(x.activo!==false)}):x;})); }
+  function eliminar(p){ if(confirm('¿Eliminar a '+(p.nombre||'esta persona')+' definitivamente?\n\nSe pierde su historial de horas y precios. Esta acción no se puede deshacer.')) onSave(list.filter(function(x){return x.id!==p.id;})); }
+  function agregarHoras(pid){
+    var hs = parseFloat(hForm.horas)||0;
+    if(!hForm.fecha || hs<=0){ alert('Poné la fecha (de la semana) y las horas.'); return; }
+    onSave(list.map(function(p){ if(p.id!==pid) return p; var arr=(p.horas||[]).concat([{id:Math.random().toString(36).slice(2,9), fecha:hForm.fecha, horas:hs, autor:ebcUser()}]); return Object.assign({},p,{horas:arr}); }));
+    setHForm({ fecha:new Date().toISOString().slice(0,10), horas:'' });
+  }
+  function borrarHora(pid, hid){ onSave(list.map(function(p){ if(p.id!==pid) return p; return Object.assign({},p,{horas:(p.horas||[]).filter(function(h){return h.id!==hid;})}); })); }
+
+  const visibles = list.filter(function(p){ return verInactivos || p.activo!==false; }).sort(function(a,b){ return (a.nombre||'').localeCompare(b.nombre||''); });
+  const activos = list.filter(function(p){return p.activo!==false;});
+  const totalSueldos = activos.reduce(function(s,p){ return s + horasEnPeriodo(p, anos, meses)*(parseFloat(p.precioHora)||0); }, 0);
+
+  const chip = function(key, label, active, onClick){ return React.createElement('button',{key:key,type:'button',onClick:onClick,style:{padding:'5px 11px',borderRadius:20,border:'1px solid '+(active?ORANGE:'#E2E8F0'),background:active?ORANGE:'#fff',color:active?'#fff':'#475569',fontSize:12,fontWeight:active?700:500,cursor:'pointer',whiteSpace:'nowrap'}},label); };
+  const lbl = function(t){ return React.createElement('div',{style:{fontSize:11,fontWeight:600,color:'#64748B',marginBottom:3}},t); };
+
+  return React.createElement(Pane, null,
+    React.createElement(H1, null, "🧑‍🔧 Personal / Sueldos"),
+    React.createElement('div',{style:{fontSize:13,color:'#64748B',marginTop:-10,marginBottom:16}},'Personas, su valor por hora (con historial), horas trabajadas y sueldo calculado del período. El pago se registra en Cargar Ingresos / Egresos.'),
+
+    // Filtro año/mes
+    React.createElement('div',{style:{display:'flex',flexWrap:'wrap',alignItems:'center',gap:6,marginBottom:14}},
+      React.createElement('span',{style:{fontSize:11,fontWeight:700,color:'#94A3B8',textTransform:'uppercase',marginRight:2}},'Año:'),
+      anosDisp.map(function(a){ var act=anos.indexOf(a)>=0; return chip('y'+a, a, act, function(){ setAnos(act?anos.filter(function(x){return x!==a;}):anos.concat([a])); }); }),
+      React.createElement('span',{style:{fontSize:11,fontWeight:700,color:'#94A3B8',margin:'0 2px 0 10px',textTransform:'uppercase'}},'Mes:'),
+      mesesDisp.map(function(m,i){ var act=meses.indexOf(m)>=0; return chip('m'+m, mesLbl[i], act, function(){ setMeses(act?meses.filter(function(x){return x!==m;}):meses.concat([m])); }); }),
+      (anos.length||meses.length)? React.createElement('button',{key:'clr',type:'button',onClick:function(){setAnos([]);setMeses([]);},style:{background:'none',border:'none',color:'#94A3B8',fontSize:12,cursor:'pointer',marginLeft:4}},'✕ Limpiar'):null
+    ),
+
+    // Resumen del período
+    React.createElement('div',{style:{display:'grid',gridTemplateColumns:isMobile?'repeat(2,1fr)':'repeat(3,1fr)',gap:10,marginBottom:16}},
+      React.createElement('div',{style:{backgroundColor:'#EEF2FF',border:'1px solid #C7D2FE',borderRadius:10,padding:'12px 14px'}},
+        React.createElement('div',{style:{fontSize:10,fontWeight:700,color:'#4338CA',textTransform:'uppercase',marginBottom:3}},'👥 Personas activas'),
+        React.createElement('div',{style:{fontFamily:"'Oswald',system-ui",fontSize:20,fontWeight:700,color:NAVY}}, String(activos.length))
+      ),
+      React.createElement('div',{style:{backgroundColor:'#FFF7ED',border:'1px solid #FED7AA',borderRadius:10,padding:'12px 14px'}},
+        React.createElement('div',{style:{fontSize:10,fontWeight:700,color:'#B45309',textTransform:'uppercase',marginBottom:3}},'💰 Sueldos del período'),
+        React.createElement('div',{style:{fontFamily:"'Oswald',system-ui",fontSize:20,fontWeight:700,color:NAVY}}, fmt(totalSueldos)),
+        React.createElement('div',{style:{fontSize:9,color:'#94A3B8',marginTop:2}}, 'Sugerido = horas × valor hora')
+      ),
+      React.createElement('button',{type:'button',onClick:function(){ if(editId){setEditId(null);} setForm(mkPersona()); setShowForm(function(s){return !s;}); },style:{backgroundColor:showForm?'#fff':ORANGE,color:showForm?ORANGE:'#fff',border:'1px solid '+ORANGE,borderRadius:10,padding:'12px 14px',fontSize:14,fontWeight:700,cursor:'pointer'}}, showForm?'✕ Cerrar':'➕ Agregar persona')
+    ),
+
+    // Formulario alta/edición
+    showForm && React.createElement('div',{style:{backgroundColor:'#fff',border:'1px solid #E2E8F0',borderRadius:12,padding:16,marginBottom:18}},
+      React.createElement('div',{style:{fontSize:13,fontWeight:700,color:NAVY,marginBottom:12}}, editId?'✏️ Editar persona':'➕ Nueva persona'),
+      React.createElement('div',{style:{display:'grid',gridTemplateColumns:isMobile?'1fr':'1fr 1fr',gap:12,marginBottom:12}},
+        React.createElement('div',null, lbl('Nombre y Apellido'), React.createElement('input',{style:inp,value:form.nombre||'',onChange:function(e){setForm(Object.assign({},form,{nombre:e.target.value}));},placeholder:'Ej: Juan Pérez'})),
+        React.createElement('div',null, lbl('Puesto'), React.createElement('input',{style:inp,value:form.puesto||'',onChange:function(e){setForm(Object.assign({},form,{puesto:e.target.value}));},placeholder:'Ej: Oficial electricista'})),
+        React.createElement('div',null, lbl('Valor por hora ($)'), React.createElement('input',{style:inp,type:'number',value:form.precioHora||'',onChange:function(e){setForm(Object.assign({},form,{precioHora:e.target.value}));},placeholder:'Ej: 4500'})),
+        React.createElement('div',null, lbl('Horas por semana (referencia)'), React.createElement('input',{style:inp,type:'number',value:form.horasSemana||'',onChange:function(e){setForm(Object.assign({},form,{horasSemana:e.target.value}));},placeholder:'Ej: 40'})),
+        React.createElement('div',{style:{gridColumn:isMobile?'auto':'1/-1'}}, lbl('Descripción del puesto'), React.createElement('textarea',{style:Object.assign({},inp,{minHeight:60,resize:'vertical',lineHeight:1.5}),value:form.descripcionPuesto||'',onChange:function(e){setForm(Object.assign({},form,{descripcionPuesto:e.target.value}));},placeholder:'Tareas, responsabilidades, etc.'}))
+      ),
+      editId? React.createElement('div',{style:{fontSize:11,color:'#94A3B8',marginBottom:10}},'Si cambiás el valor por hora, queda registrado en el historial de esta persona.'):null,
+      React.createElement('div',{style:{display:'flex',gap:8,justifyContent:'flex-end'}},
+        React.createElement('button',{type:'button',onClick:function(){setForm(mkPersona());setEditId(null);setShowForm(false);},style:{background:'none',border:'1px solid #E2E8F0',borderRadius:8,padding:'8px 16px',fontSize:13,color:'#64748B',cursor:'pointer'}},'Cancelar'),
+        React.createElement('button',{type:'button',onClick:guardar,style:{backgroundColor:ORANGE,color:'#fff',border:'none',borderRadius:8,padding:'8px 20px',fontSize:13,fontWeight:700,cursor:'pointer'}}, editId?'✓ Guardar cambios':'✓ Agregar persona')
+      )
+    ),
+
+    // Toggle ver inactivos
+    React.createElement('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:10}},
+      React.createElement('div',{style:{fontSize:12,color:'#94A3B8'}}, list.length+' persona(s) · '+activos.length+' activa(s)'),
+      React.createElement('label',{style:{fontSize:12,color:'#475569',display:'inline-flex',alignItems:'center',gap:6,cursor:'pointer'}}, React.createElement('input',{type:'checkbox',checked:verInactivos,onChange:function(e){setVerInactivos(e.target.checked);}}), 'Ver inactivos (dados de baja)')
+    ),
+
+    // Lista de personas
+    visibles.length===0
+      ? React.createElement('div',{style:{backgroundColor:'#fff',border:'1px solid #E2E8F0',borderRadius:12,padding:'40px',textAlign:'center',color:'#94A3B8',fontSize:14}}, list.length===0?'Todavía no cargaste personas. Tocá "Agregar persona" para empezar.':'No hay personas para mostrar con este filtro.')
+      : React.createElement('div',{style:{display:'flex',flexDirection:'column',gap:12}},
+          visibles.map(function(p){
+            var precio = parseFloat(p.precioHora)||0;
+            var horasPer = horasEnPeriodo(p, anos, meses);
+            var sueldoPer = horasPer*precio;
+            var inactivo = p.activo===false;
+            var horasFiltradas = (p.horas||[]).filter(function(h){ if(!h.fecha) return false; var y=String(h.fecha).slice(0,4), m=String(h.fecha).slice(5,7); if(anos.length&&anos.indexOf(y)<0) return false; if(meses.length&&meses.indexOf(m)<0) return false; return true; }).sort(function(a,b){return (b.fecha||'').localeCompare(a.fecha||'');});
+            return React.createElement('div',{key:p.id,style:{backgroundColor:'#fff',border:'1px solid '+(inactivo?'#E2E8F0':'#E2E8F0'),borderRadius:12,padding:16,opacity:inactivo?0.6:1}},
+              React.createElement('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'flex-start',gap:10,flexWrap:'wrap'}},
+                React.createElement('div',{style:{minWidth:0}},
+                  React.createElement('div',{style:{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}},
+                    React.createElement('span',{style:{fontSize:16,fontWeight:700,color:NAVY}}, p.nombre||'(sin nombre)'),
+                    p.puesto? React.createElement('span',{style:{fontSize:11,fontWeight:600,color:'#4338CA',background:'#EEF2FF',borderRadius:20,padding:'2px 9px'}}, p.puesto):null,
+                    inactivo? React.createElement('span',{style:{fontSize:11,fontWeight:700,color:'#991B1B',background:'#FEE2E2',borderRadius:20,padding:'2px 9px'}}, 'Baja'):React.createElement('span',{style:{fontSize:11,fontWeight:700,color:'#166534',background:'#DCFCE7',borderRadius:20,padding:'2px 9px'}}, 'Activa')
+                  ),
+                  p.descripcionPuesto? React.createElement('div',{style:{fontSize:12,color:'#64748B',marginTop:5,whiteSpace:'pre-wrap',lineHeight:1.5}}, p.descripcionPuesto):null
+                ),
+                React.createElement('div',{style:{textAlign:'right',whiteSpace:'nowrap'}},
+                  React.createElement('div',{style:{fontSize:11,color:'#94A3B8'}},'Valor hora'),
+                  React.createElement('div',{style:{fontSize:16,fontWeight:700,color:ORANGE}}, fmt(precio))
+                )
+              ),
+              // métricas del período
+              React.createElement('div',{style:{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:10,marginTop:12,paddingTop:12,borderTop:'1px solid #F1F5F9'}},
+                React.createElement('div',null, React.createElement('div',{style:{fontSize:10,color:'#94A3B8',textTransform:'uppercase',fontWeight:700}},'Horas (período)'), React.createElement('div',{style:{fontSize:17,fontWeight:700,color:NAVY,fontFamily:"'Oswald',system-ui"}}, (Math.round(horasPer*100)/100)+' h')),
+                React.createElement('div',null, React.createElement('div',{style:{fontSize:10,color:'#94A3B8',textTransform:'uppercase',fontWeight:700}},'Sueldo (período)'), React.createElement('div',{style:{fontSize:17,fontWeight:700,color:'#166534',fontFamily:"'Oswald',system-ui"}}, fmt(sueldoPer))),
+                React.createElement('div',null, React.createElement('div',{style:{fontSize:10,color:'#94A3B8',textTransform:'uppercase',fontWeight:700}},'H/semana'), React.createElement('div',{style:{fontSize:17,fontWeight:700,color:'#475569',fontFamily:"'Oswald',system-ui"}}, (p.horasSemana||'—')))
+              ),
+              // acciones
+              React.createElement('div',{style:{display:'flex',gap:6,flexWrap:'wrap',marginTop:12}},
+                React.createElement('button',{type:'button',onClick:function(){editar(p);},style:{background:'none',border:'1px solid #E2E8F0',borderRadius:6,padding:'5px 11px',fontSize:12,color:'#475569',cursor:'pointer'}},'✏️ Editar'),
+                React.createElement('button',{type:'button',onClick:function(){setHoursFor(hoursFor===p.id?null:p.id);setHistFor(null);},style:{background:'none',border:'1px solid '+(hoursFor===p.id?ORANGE:'#E2E8F0'),borderRadius:6,padding:'5px 11px',fontSize:12,color:hoursFor===p.id?ORANGE:'#475569',cursor:'pointer'}},'🕐 Cargar / ver horas'),
+                React.createElement('button',{type:'button',onClick:function(){setHistFor(histFor===p.id?null:p.id);setHoursFor(null);},style:{background:'none',border:'1px solid '+(histFor===p.id?ORANGE:'#E2E8F0'),borderRadius:6,padding:'5px 11px',fontSize:12,color:histFor===p.id?ORANGE:'#475569',cursor:'pointer'}},'📈 Historial de precio'),
+                React.createElement('button',{type:'button',onClick:function(){toggleActivo(p);},style:{background:'none',border:'1px solid '+(inactivo?'#86EFAC':'#FDE68A'),borderRadius:6,padding:'5px 11px',fontSize:12,color:inactivo?'#16A34A':'#B45309',cursor:'pointer'}}, inactivo?'✓ Dar de alta':'⏸ Dar de baja'),
+                React.createElement('button',{type:'button',onClick:function(){eliminar(p);},style:{background:'none',border:'1px solid #FECACA',borderRadius:6,padding:'5px 11px',fontSize:12,color:'#DC2626',cursor:'pointer'}},'🗑 Eliminar')
+              ),
+              // panel cargar/ver horas
+              hoursFor===p.id && React.createElement('div',{style:{marginTop:12,padding:12,background:'#F8FAFC',borderRadius:8,border:'1px solid #E2E8F0'}},
+                React.createElement('div',{style:{display:'flex',gap:8,alignItems:'flex-end',flexWrap:'wrap',marginBottom:10}},
+                  React.createElement('div',null, lbl('Semana (fecha)'), React.createElement('input',{type:'date',style:Object.assign({},inp,{width:isMobile?'100%':160}),value:hForm.fecha,onChange:function(e){setHForm(Object.assign({},hForm,{fecha:e.target.value}));}})),
+                  React.createElement('div',null, lbl('Horas'), React.createElement('input',{type:'number',style:Object.assign({},inp,{width:isMobile?'100%':100}),value:hForm.horas,onChange:function(e){setHForm(Object.assign({},hForm,{horas:e.target.value}));},placeholder:'Ej: 40'})),
+                  React.createElement('button',{type:'button',onClick:function(){agregarHoras(p.id);},style:{backgroundColor:ORANGE,color:'#fff',border:'none',borderRadius:6,padding:'8px 14px',fontSize:12,fontWeight:700,cursor:'pointer'}},'+ Agregar horas')
+                ),
+                horasFiltradas.length===0
+                  ? React.createElement('div',{style:{fontSize:12,color:'#94A3B8'}},'Sin horas cargadas en el período seleccionado.')
+                  : React.createElement('div',{style:{display:'flex',flexDirection:'column',gap:4}},
+                      horasFiltradas.map(function(h){ return React.createElement('div',{key:h.id,style:{display:'flex',justifyContent:'space-between',alignItems:'center',fontSize:12,color:'#475569',padding:'4px 0',borderBottom:'1px solid #F1F5F9'}},
+                        React.createElement('span',null, 'Semana del '+fmtFecha(h.fecha)+' — '+ (parseFloat(h.horas)||0) +' h'),
+                        React.createElement('button',{type:'button',onClick:function(){borrarHora(p.id,h.id);},style:{background:'none',border:'none',color:'#DC2626',cursor:'pointer',fontSize:13}},'✕')
+                      ); })
+                    )
+              ),
+              // panel historial de precio
+              histFor===p.id && React.createElement('div',{style:{marginTop:12,padding:12,background:'#F8FAFC',borderRadius:8,border:'1px solid #E2E8F0'}},
+                React.createElement('div',{style:{fontSize:12,fontWeight:700,color:NAVY,marginBottom:8}},'Historial de valor por hora'),
+                (p.historial||[]).length===0
+                  ? React.createElement('div',{style:{fontSize:12,color:'#94A3B8'}},'Sin cambios registrados todavía.')
+                  : React.createElement('div',{style:{display:'flex',flexDirection:'column',gap:4}},
+                      (p.historial||[]).slice().reverse().map(function(hh,i){ return React.createElement('div',{key:i,style:{display:'flex',justifyContent:'space-between',fontSize:12,color:'#475569',padding:'4px 0',borderBottom:'1px solid #F1F5F9'}},
+                        React.createElement('span',null, fmtFecha(hh.fecha)+ (hh.autor? ' · '+ebcUserLabel(hh.autor):'')),
+                        React.createElement('span',{style:{fontWeight:700,color:ORANGE}}, fmt(hh.precio))
+                      ); })
+                    )
+              )
+            );
+          })
+        )
+  );
+}
+
 function App() {
   const [menuOpen, setMenuOpen] = React.useState(false);
   const [view, setView] = useState(() => { try { var v = localStorage.getItem("ebc-last-view"); return v || "form"; } catch(e){ return "form"; } });
@@ -5567,6 +5782,14 @@ function App() {
     setEgresos(list);
     localStorage.setItem(EKEY, JSON.stringify(list));
     sbSet(EKEY, list).catch(()=>{});
+  };
+  const [personas, setPersonas] = useState([]);
+  React.useEffect(function(){
+    loadPersonas().then(function(val){ if (Array.isArray(val)) setPersonas(val); }).catch(function(){});
+  }, []);
+  const handlePersonas = async (list) => {
+    setPersonas(list);
+    savePersonas(list).catch(()=>{});
   };
   React.useEffect(function(){window.__ebc_quotes=quotes;window.__ebc_highlight=function(id){setTrackerHighlight(id);setView("tracker");};},[quotes]);
   const deepLinkDone = useRef(false);
@@ -5780,6 +6003,7 @@ function App() {
     {id:"tracker", label:"📈 Seguimiento de Presupuestos"},
   ];
   const navFin = [
+    {id:"personal",    label:"🧑‍🔧 Personal / Sueldos"},
     {id:"movimientos", label:"💱 Cargar Ingresos / Egresos"},
     {id:"dashboard",   label:"📊 Dashboard Financiero"},
   ];
@@ -5969,12 +6193,16 @@ function App() {
     },
     highlightId: trackerHighlight,
     onClearHighlight: () => setTrackerHighlight(null)
-  })), (view==="dashboard"||view==="movimientos") && /*#__PURE__*/React.createElement(IngresosView, {
+  })), view === "personal" && /*#__PURE__*/React.createElement(PersonasView, {
+    personas: personas,
+    onSave: handlePersonas
+  }), (view==="dashboard"||view==="movimientos") && /*#__PURE__*/React.createElement(IngresosView, {
     quotes: quotes,
     egresos: egresos,
     onSaveEgresos: saveEgresos,
     clients: clients,
     catalog: catalog,
+    personas: personas,
     activeTab: view,
     setActiveTab: setView
   }), pdfQuote && /*#__PURE__*/React.createElement(PdfOverlay, {
@@ -6501,7 +6729,7 @@ function MovimientosPdfOverlay({onClose, data}){
     )
   );
 }
-function IngresosView({quotes, egresos, onSaveEgresos, clients, catalog, activeTab, setActiveTab}) {
+function IngresosView({quotes, egresos, onSaveEgresos, clients, catalog, personas, activeTab, setActiveTab}) {
   const isMobile = useIsMobile();
   var [blueHoy, setBlueHoy] = React.useState({buy:null,sell:null});
   var [showDashPdf, setShowDashPdf] = React.useState(false);
@@ -6970,6 +7198,27 @@ function IngresosView({quotes, egresos, onSaveEgresos, clients, catalog, activeT
               EGRESO_CATS.map(function(c){return React.createElement('option',{key:c.id,value:c.id},c.label);})
             )
           ):React.createElement('div',null),
+          (egForm.tipo==='egreso' && egForm.cat==='sueldos') ? React.createElement('div',null,
+            React.createElement('div',{style:{fontSize:10,color:'#94A3B8',fontWeight:700,marginBottom:4}},'PERSONA (solo activas)'),
+            React.createElement('select',{value:egForm.personaId||'',onChange:function(e){
+              var pid=e.target.value;
+              var p=(personas||[]).find(function(x){return x.id===pid;});
+              setEgForm(function(f){
+                if(!p) return Object.assign({},f,{personaId:''});
+                var fch=f.fecha||new Date().toISOString().slice(0,10);
+                var y=String(fch).slice(0,4), mm=String(fch).slice(5,7);
+                var horas=horasEnPeriodo(p,[y],[mm]);
+                var sug=Math.round(horas*(parseFloat(p.precioHora)||0));
+                return Object.assign({},f,{personaId:pid, desc:(p.nombre||'')+(p.puesto?(' — '+p.puesto):'')+' · sueldo '+mm+'/'+y, monto: sug>0?String(sug):f.monto});
+              });
+            },style:inp},
+              React.createElement('option',{value:''},'— Elegí una persona —'),
+              (personas||[]).filter(function(p){return p.activo!==false;}).map(function(p){return React.createElement('option',{key:p.id,value:p.id}, (p.nombre||'(sin nombre)')+(p.puesto?(' · '+p.puesto):'')+' — '+((parseFloat(p.precioHora)||0).toLocaleString('es-AR'))+'/h');})
+            ),
+            ((personas||[]).filter(function(p){return p.activo!==false;}).length===0)
+              ? React.createElement('div',{style:{fontSize:10,color:'#B45309',marginTop:3}},'No hay personas activas. Cargalas en "Personal / Sueldos".')
+              : React.createElement('div',{style:{fontSize:10,color:'#94A3B8',marginTop:3}},'Monto sugerido = horas del mes × valor hora. Podés ajustarlo.')
+          ):null,
           React.createElement('div',null,
             React.createElement('div',{style:{fontSize:10,color:'#94A3B8',fontWeight:700,marginBottom:4}},'DESCRIPCIÓN'),
             React.createElement('input',{type:'text',
