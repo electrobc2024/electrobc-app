@@ -5588,28 +5588,47 @@ function PersonasView({ personas, onSave }){
 
   function editar(p){ setEditId(p.id); setForm(Object.assign({}, mkPersona(), p)); setShowForm(true); if(typeof window!=='undefined') window.scrollTo({top:0,behavior:'smooth'}); }
   function guardar(){
-    if(!form.nombre || !form.nombre.trim()){ alert('Poné el nombre de la persona.'); return; }
-    var precio = parseFloat(form.precioHora)||0;
+    var faltan = [];
+    if(!form.nombre || !form.nombre.trim()) faltan.push('Nombre y Apellido');
+    var precio = parseFloat(form.precioHora);
+    if(isNaN(precio) || precio<=0) faltan.push('Valor por hora');
+    var hsem = parseFloat(form.horasSemana);
+    if(isNaN(hsem) || hsem<=0) faltan.push('Horas por semana');
+    if(faltan.length){ alert('Completá los campos obligatorios (marcados con *): '+faltan.join(', ')+'.'); return; }
     if(editId){
       onSave(list.map(function(p){
         if(p.id!==editId) return p;
         var hist = (p.historial||[]).slice();
         var cur = parseFloat(p.precioHora)||0;
         if(precio>0 && precio!==cur) hist.push({fecha:new Date().toISOString(), precio:precio, autor:ebcUser()});
-        return Object.assign({}, p, {nombre:form.nombre.trim(), puesto:(form.puesto||'').trim(), descripcionPuesto:(form.descripcionPuesto||'').trim(), precioHora:precio, horasSemana:form.horasSemana||'', historial:hist});
+        return Object.assign({}, p, {nombre:form.nombre.trim(), puesto:(form.puesto||'').trim(), descripcionPuesto:(form.descripcionPuesto||'').trim(), precioHora:precio, horasSemana:hsem, historial:hist});
       }));
     } else {
-      var nueva = Object.assign({}, mkPersona(), {nombre:form.nombre.trim(), puesto:(form.puesto||'').trim(), descripcionPuesto:(form.descripcionPuesto||'').trim(), precioHora:precio, horasSemana:form.horasSemana||'', historial: precio>0?[{fecha:new Date().toISOString(),precio:precio,autor:ebcUser()}]:[], activo:true});
+      var nueva = Object.assign({}, mkPersona(), {nombre:form.nombre.trim(), puesto:(form.puesto||'').trim(), descripcionPuesto:(form.descripcionPuesto||'').trim(), precioHora:precio, horasSemana:hsem, historial: [{fecha:new Date().toISOString(),precio:precio,autor:ebcUser()}], activo:true});
       onSave(list.concat([nueva]));
     }
     setForm(mkPersona()); setEditId(null); setShowForm(false);
   }
-  function toggleActivo(p){ onSave(list.map(function(x){return x.id===p.id?Object.assign({},x,{activo:!(x.activo!==false)}):x;})); }
-  function eliminar(p){ if(confirm('¿Eliminar a '+(p.nombre||'esta persona')+' definitivamente?\n\nSe pierde su historial de horas y precios. Esta acción no se puede deshacer.')) onSave(list.filter(function(x){return x.id!==p.id;})); }
+  function toggleActivo(p){
+    var active = p.activo!==false;
+    if(active){ if(!confirm('¿Dar de baja a '+(p.nombre||'esta persona')+'?\n\nNo se elimina: queda inactiva (no aparece para cargar sueldos) y la podés reactivar cuando quieras.')) return; }
+    onSave(list.map(function(x){return x.id===p.id?Object.assign({},x,{activo:!active}):x;}));
+  }
+  function eliminar(p){ if(confirm('¿ELIMINAR a '+(p.nombre||'esta persona')+' definitivamente?\n\nSe borra la persona y TODO su historial de horas y precios. Esto NO se puede deshacer.\n\n(Si solo dejó de trabajar, mejor usá "Dar de baja".)')) onSave(list.filter(function(x){return x.id!==p.id;})); }
+  function weekStart(dstr){ try{ var d=new Date(String(dstr).slice(0,10)+'T12:00:00'); if(isNaN(d)) return String(dstr).slice(0,10); var day=(d.getDay()+6)%7; d.setDate(d.getDate()-day); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }catch(e){ return String(dstr).slice(0,10); } }
   function agregarHoras(pid){
-    var hs = parseFloat(hForm.horas)||0;
-    if(!hForm.fecha || hs<=0){ alert('Poné la fecha (de la semana) y las horas.'); return; }
-    onSave(list.map(function(p){ if(p.id!==pid) return p; var arr=(p.horas||[]).concat([{id:Math.random().toString(36).slice(2,9), fecha:hForm.fecha, horas:hs, autor:ebcUser()}]); return Object.assign({},p,{horas:arr}); }));
+    var hs = parseFloat(hForm.horas);
+    if(!hForm.fecha || isNaN(hs) || hs<=0){ alert('Elegí la semana y poné las horas (un número mayor a 0).'); return; }
+    if(hs>168){ alert('Una semana tiene 168 horas como máximo. Revisá el número.'); return; }
+    var wk = weekStart(hForm.fecha);
+    onSave(list.map(function(p){
+      if(p.id!==pid) return p;
+      var arr=(p.horas||[]).slice();
+      var idx=arr.findIndex(function(h){return weekStart(h.fecha)===wk;});
+      if(idx>=0){ arr[idx]=Object.assign({},arr[idx],{fecha:wk,horas:hs,autor:ebcUser()}); }
+      else { arr.push({id:Math.random().toString(36).slice(2,9), fecha:wk, horas:hs, autor:ebcUser()}); }
+      return Object.assign({},p,{horas:arr});
+    }));
     setHForm({ fecha:new Date().toISOString().slice(0,10), horas:'' });
   }
   function borrarHora(pid, hid){ onSave(list.map(function(p){ if(p.id!==pid) return p; return Object.assign({},p,{horas:(p.horas||[]).filter(function(h){return h.id!==hid;})}); })); }
@@ -5619,12 +5638,15 @@ function PersonasView({ personas, onSave }){
   const totalSueldos = activos.reduce(function(s,p){ return s + horasEnPeriodo(p, anos, meses)*(parseFloat(p.precioHora)||0); }, 0);
 
   const chip = function(key, label, active, onClick){ return React.createElement('button',{key:key,type:'button',onClick:onClick,style:{padding:'5px 11px',borderRadius:20,border:'1px solid '+(active?ORANGE:'#E2E8F0'),background:active?ORANGE:'#fff',color:active?'#fff':'#475569',fontSize:12,fontWeight:active?700:500,cursor:'pointer',whiteSpace:'nowrap'}},label); };
-  const lbl = function(t){ return React.createElement('div',{style:{fontSize:11,fontWeight:600,color:'#64748B',marginBottom:3}},t); };
+  const lbl = function(t, req){ return React.createElement('div',{style:{fontSize:11,fontWeight:600,color:'#64748B',marginBottom:3}}, t, req?React.createElement('span',{style:{color:'#DC2626',fontWeight:700}},' *'):null); };
 
   return React.createElement(IngresosPane, null,
-    React.createElement('div',{style:{marginBottom:16}},
-      React.createElement('div',{style:{fontFamily:"'Oswald',system-ui",fontSize:22,fontWeight:700,color:NAVY,letterSpacing:'-0.01em',lineHeight:1.25}},'🧑‍🔧 Personal / Sueldos'),
-      React.createElement('div',{style:{fontSize:13,color:'#64748B',marginTop:6,lineHeight:1.45}},'Personas, su valor por hora (con historial), horas trabajadas y sueldo calculado del período. El pago se registra en Cargar Ingresos / Egresos.')
+    React.createElement('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'flex-start',gap:12,flexWrap:'wrap',marginBottom:16}},
+      React.createElement('div',null,
+        React.createElement('div',{style:{fontFamily:"'Oswald',system-ui",fontSize:22,fontWeight:700,color:NAVY,letterSpacing:'-0.01em',lineHeight:1.25}},'🧑‍🔧 Personal / Sueldos'),
+        React.createElement('div',{style:{fontSize:13,color:'#64748B',marginTop:6,lineHeight:1.45,maxWidth:560}},'Personas, su valor por hora (con historial), horas trabajadas y sueldo calculado del período. El pago se registra en Cargar Ingresos / Egresos.')
+      ),
+      React.createElement('button',{type:'button',onClick:function(){ if(editId){setEditId(null);} setForm(mkPersona()); setShowForm(function(s){return !s;}); },style:{backgroundColor:showForm?'#fff':ORANGE,color:showForm?ORANGE:'#fff',border:'1px solid '+ORANGE,borderRadius:8,padding:'9px 16px',fontSize:13,fontWeight:700,cursor:'pointer',whiteSpace:'nowrap',flexShrink:0}}, showForm?'✕ Cerrar':'➕ Agregar persona')
     ),
 
     // Filtro año/mes
@@ -5637,7 +5659,7 @@ function PersonasView({ personas, onSave }){
     ),
 
     // Resumen del período
-    React.createElement('div',{style:{display:'grid',gridTemplateColumns:isMobile?'repeat(2,1fr)':'repeat(3,1fr)',gap:10,marginBottom:16}},
+    React.createElement('div',{style:{display:'grid',gridTemplateColumns:isMobile?'1fr 1fr':'240px 260px',gap:10,marginBottom:16}},
       React.createElement('div',{style:{backgroundColor:'#EEF2FF',border:'1px solid #C7D2FE',borderRadius:10,padding:'12px 14px'}},
         React.createElement('div',{style:{fontSize:10,fontWeight:700,color:'#4338CA',textTransform:'uppercase',marginBottom:3}},'👥 Personas activas'),
         React.createElement('div',{style:{fontFamily:"'Oswald',system-ui",fontSize:20,fontWeight:700,color:NAVY}}, String(activos.length))
@@ -5646,18 +5668,17 @@ function PersonasView({ personas, onSave }){
         React.createElement('div',{style:{fontSize:10,fontWeight:700,color:'#B45309',textTransform:'uppercase',marginBottom:3}},'💰 Sueldos del período'),
         React.createElement('div',{style:{fontFamily:"'Oswald',system-ui",fontSize:20,fontWeight:700,color:NAVY}}, fmt(totalSueldos)),
         React.createElement('div',{style:{fontSize:9,color:'#94A3B8',marginTop:2}}, 'Sugerido = horas × valor hora')
-      ),
-      React.createElement('button',{type:'button',onClick:function(){ if(editId){setEditId(null);} setForm(mkPersona()); setShowForm(function(s){return !s;}); },style:{backgroundColor:showForm?'#fff':ORANGE,color:showForm?ORANGE:'#fff',border:'1px solid '+ORANGE,borderRadius:10,padding:'12px 14px',fontSize:14,fontWeight:700,cursor:'pointer'}}, showForm?'✕ Cerrar':'➕ Agregar persona')
+      )
     ),
 
     // Formulario alta/edición
     showForm && React.createElement('div',{style:{backgroundColor:'#fff',border:'1px solid #E2E8F0',borderRadius:12,padding:16,marginBottom:18}},
       React.createElement('div',{style:{fontSize:13,fontWeight:700,color:NAVY,marginBottom:12}}, editId?'✏️ Editar persona':'➕ Nueva persona'),
       React.createElement('div',{style:{display:'grid',gridTemplateColumns:isMobile?'1fr':'1fr 1fr',gap:12,marginBottom:12}},
-        React.createElement('div',null, lbl('Nombre y Apellido'), React.createElement('input',{style:inp,value:form.nombre||'',onChange:function(e){setForm(Object.assign({},form,{nombre:e.target.value}));},placeholder:'Ej: Juan Pérez'})),
+        React.createElement('div',null, lbl('Nombre y Apellido', true), React.createElement('input',{style:inp,value:form.nombre||'',onChange:function(e){setForm(Object.assign({},form,{nombre:e.target.value}));},placeholder:'Ej: Juan Pérez'})),
         React.createElement('div',null, lbl('Puesto'), React.createElement('input',{style:inp,value:form.puesto||'',onChange:function(e){setForm(Object.assign({},form,{puesto:e.target.value}));},placeholder:'Ej: Oficial electricista'})),
-        React.createElement('div',null, lbl('Valor por hora ($)'), React.createElement('input',{style:inp,type:'number',value:form.precioHora||'',onChange:function(e){setForm(Object.assign({},form,{precioHora:e.target.value}));},placeholder:'Ej: 4500'})),
-        React.createElement('div',null, lbl('Horas por semana (referencia)'), React.createElement('input',{style:inp,type:'number',value:form.horasSemana||'',onChange:function(e){setForm(Object.assign({},form,{horasSemana:e.target.value}));},placeholder:'Ej: 40'})),
+        React.createElement('div',null, lbl('Valor por hora ($)', true), React.createElement('input',{style:inp,type:'number',min:'0',step:'any',value:form.precioHora||'',onChange:function(e){setForm(Object.assign({},form,{precioHora:e.target.value}));},placeholder:'Ej: 4500'})),
+        React.createElement('div',null, lbl('Horas por semana', true), React.createElement('input',{style:inp,type:'number',min:'0',step:'any',value:form.horasSemana||'',onChange:function(e){setForm(Object.assign({},form,{horasSemana:e.target.value}));},placeholder:'Ej: 40'})),
         React.createElement('div',{style:{gridColumn:isMobile?'auto':'1/-1'}}, lbl('Descripción del puesto'), React.createElement('textarea',{style:Object.assign({},inp,{minHeight:60,resize:'vertical',lineHeight:1.5}),value:form.descripcionPuesto||'',onChange:function(e){setForm(Object.assign({},form,{descripcionPuesto:e.target.value}));},placeholder:'Tareas, responsabilidades, etc.'}))
       ),
       editId? React.createElement('div',{style:{fontSize:11,color:'#94A3B8',marginBottom:10}},'Si cambiás el valor por hora, queda registrado en el historial de esta persona.'):null,
@@ -5714,10 +5735,11 @@ function PersonasView({ personas, onSave }){
               ),
               // panel cargar/ver horas
               hoursFor===p.id && React.createElement('div',{style:{marginTop:12,padding:12,background:'#F8FAFC',borderRadius:8,border:'1px solid #E2E8F0'}},
+                React.createElement('div',{style:{fontSize:11,color:'#64748B',marginBottom:8}},'Cargá el total de horas de la semana (un valor por semana). Si volvés a cargar una semana ya registrada, se reemplaza.'),
                 React.createElement('div',{style:{display:'flex',gap:8,alignItems:'flex-end',flexWrap:'wrap',marginBottom:10}},
-                  React.createElement('div',null, lbl('Semana (fecha)'), React.createElement('input',{type:'date',style:Object.assign({},inp,{width:isMobile?'100%':160}),value:hForm.fecha,onChange:function(e){setHForm(Object.assign({},hForm,{fecha:e.target.value}));}})),
-                  React.createElement('div',null, lbl('Horas'), React.createElement('input',{type:'number',style:Object.assign({},inp,{width:isMobile?'100%':100}),value:hForm.horas,onChange:function(e){setHForm(Object.assign({},hForm,{horas:e.target.value}));},placeholder:'Ej: 40'})),
-                  React.createElement('button',{type:'button',onClick:function(){agregarHoras(p.id);},style:{backgroundColor:ORANGE,color:'#fff',border:'none',borderRadius:6,padding:'8px 14px',fontSize:12,fontWeight:700,cursor:'pointer'}},'+ Agregar horas')
+                  React.createElement('div',null, lbl('Semana (elegí cualquier día de esa semana)'), React.createElement('input',{type:'date',style:Object.assign({},inp,{width:isMobile?'100%':230}),value:hForm.fecha,onChange:function(e){setHForm(Object.assign({},hForm,{fecha:e.target.value}));}})),
+                  React.createElement('div',null, lbl('Horas de la semana'), React.createElement('input',{type:'number',min:'0',step:'any',style:Object.assign({},inp,{width:isMobile?'100%':120}),value:hForm.horas,onChange:function(e){setHForm(Object.assign({},hForm,{horas:e.target.value}));},placeholder:'Ej: 40'})),
+                  React.createElement('button',{type:'button',onClick:function(){agregarHoras(p.id);},style:{backgroundColor:ORANGE,color:'#fff',border:'none',borderRadius:6,padding:'8px 14px',fontSize:12,fontWeight:700,cursor:'pointer'}},'+ Guardar semana')
                 ),
                 horasFiltradas.length===0
                   ? React.createElement('div',{style:{fontSize:12,color:'#94A3B8'}},'Sin horas cargadas en el período seleccionado.')
