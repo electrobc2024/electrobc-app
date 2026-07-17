@@ -7218,7 +7218,7 @@ function IngresosView({quotes, egresos, onSaveEgresos, clients, catalog, persona
           ),
           egForm.tipo==='egreso'?React.createElement('div',null,
             React.createElement('div',{style:{fontSize:10,color:'#94A3B8',fontWeight:700,marginBottom:4}},'CATEGORÍA'),
-            React.createElement('select',{value:egForm.cat,onChange:function(e){setEgForm(function(f){return Object.assign({},f,{cat:e.target.value});});},style:inp},
+            React.createElement('select',{value:egForm.cat,onChange:function(e){ var nc=e.target.value; setEgForm(function(f){ var upd={cat:nc}; if(nc!=='sueldos' && f.personaId){ upd.personaId=''; upd.desc=''; upd.monto=''; } return Object.assign({},f,upd); }); },style:inp},
               EGRESO_CATS.map(function(c){return React.createElement('option',{key:c.id,value:c.id},c.label);})
             )
           ):React.createElement('div',null),
