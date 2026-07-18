@@ -5873,10 +5873,10 @@ function BackupView({ quotes, catalog, clients, egresos, personas, onRestore }){
         var data=JSON.parse(reader.result);
         if(!data||(!data.quotes&&!data.clients&&!data.egresos)){ alert('El archivo no parece ser una copia válida de ELECTRO BC.'); ev.target.value=''; return; }
         var res='Presupuestos: '+((data.quotes||[]).length)+'\nClientes: '+((data.clients||[]).length)+'\nMovimientos: '+((data.egresos||[]).length)+'\nPersonas: '+((data.personas||[]).length);
-        if(data.meta&&data.meta.tipo==='periodo'){ res+='\n\n⚠️ Es una copia de un PERÍODO ('+fmtFecha(data.meta.desde)+' al '+fmtFecha(data.meta.hasta)+'): restaurarla dejará SOLO los presupuestos y movimientos de ese período.'; }
-        if(!confirm('⚠️ Restaurar esta copia REEMPLAZA todos los datos actuales.\n\nContenido de la copia:\n'+res+'\n\n¿Continuar?')){ ev.target.value=''; return; }
+        if(data.meta&&data.meta.tipo==='periodo'){ res+='\n\n⚠️ Es una copia de un PERÍODO ('+fmtFecha(data.meta.desde)+' al '+fmtFecha(data.meta.hasta)+'): sobrescribir dejará SOLO los presupuestos y movimientos de ese período.'; }
+        if(!confirm('⚠️ Sobrescribir con esta copia REEMPLAZA todos los datos actuales.\n\nContenido de la copia:\n'+res+'\n\n¿Continuar?')){ ev.target.value=''; return; }
         onRestore(data);
-        alert('Copia restaurada correctamente.');
+        alert('Datos sobrescritos correctamente.');
       }catch(e){ alert('No se pudo leer el archivo: '+e.message); }
       ev.target.value='';
     };
@@ -5910,10 +5910,10 @@ function BackupView({ quotes, catalog, clients, egresos, personas, onRestore }){
         React.createElement('button',{type:'button',onClick:backupPeriodo,style:{background:NAVY,border:'none',borderRadius:8,padding:'10px 18px',fontSize:13,fontWeight:700,color:'#fff',cursor:'pointer'}},'⬇ Descargar copia del período')
       )
     ),
-    // Restaurar
+    // Sobrescribir
     React.createElement('div',{style:card},
-      React.createElement('div',{style:{fontSize:14,fontWeight:700,color:NAVY,marginBottom:4}},'Restaurar una copia'),
-      React.createElement('div',{style:{fontSize:12,color:'#B45309',marginBottom:12}},'⚠️ Restaurar REEMPLAZA todos los datos actuales por los del archivo. Hacé primero una copia completa por las dudas.'),
+      React.createElement('div',{style:{fontSize:14,fontWeight:700,color:NAVY,marginBottom:4}},'Sobrescribir con una copia'),
+      React.createElement('div',{style:{fontSize:12,color:'#B45309',marginBottom:12}},'⚠️ Sobrescribir REEMPLAZA todos los datos actuales por los del archivo. Hacé primero una copia completa por las dudas.'),
       React.createElement('input',{ref:fileRef,type:'file',accept:'application/json,.json',onChange:onFile,style:{display:'none'}}),
       React.createElement('button',{type:'button',onClick:function(){ if(fileRef.current) fileRef.current.click(); },style:{background:'none',border:'1px solid #E2E8F0',borderRadius:8,padding:'10px 18px',fontSize:13,fontWeight:600,color:'#475569',cursor:'pointer'}},'📂 Elegir archivo de copia…')
     ),
