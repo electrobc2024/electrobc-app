@@ -5599,8 +5599,7 @@ function PersonasView({ personas, onSave, egresos }){
     if(!form.nombre || !form.nombre.trim()) faltan.push('Nombre y Apellido');
     var precio = parseFloat(form.precioHora);
     if(isNaN(precio) || precio<=0) faltan.push('Valor por hora');
-    var hsem = parseFloat(form.horasSemana);
-    if(isNaN(hsem) || hsem<=0) faltan.push('Horas por semana');
+    var hsem = parseFloat(form.horasSemana); if(isNaN(hsem)) hsem=0;
     if(faltan.length){ alert('Completá los campos obligatorios (marcados con *): '+faltan.join(', ')+'.'); return; }
     if(editId){
       onSave(list.map(function(p){
@@ -5666,7 +5665,6 @@ function PersonasView({ personas, onSave, egresos }){
         React.createElement('div',null, lbl('Nombre y Apellido', true), React.createElement('input',{style:inp,value:form.nombre||'',onChange:function(e){setForm(Object.assign({},form,{nombre:e.target.value}));},placeholder:'Ej: Juan Pérez'})),
         React.createElement('div',null, lbl('Puesto'), React.createElement('input',{style:inp,value:form.puesto||'',onChange:function(e){setForm(Object.assign({},form,{puesto:e.target.value}));},placeholder:'Ej: Oficial electricista'})),
         React.createElement('div',null, lbl('Valor por hora ($)', true), React.createElement('input',{style:inp,type:'number',min:'0',step:'any',value:form.precioHora||'',onChange:function(e){setForm(Object.assign({},form,{precioHora:e.target.value}));},placeholder:'Ej: 4500'})),
-        React.createElement('div',null, lbl('Horas por semana', true), React.createElement('input',{style:inp,type:'number',min:'0',step:'any',value:form.horasSemana||'',onChange:function(e){setForm(Object.assign({},form,{horasSemana:e.target.value}));},placeholder:'Ej: 40'})),
         React.createElement('div',{style:{gridColumn:isMobile?'auto':'1/-1'}}, lbl('Descripción del puesto'), React.createElement('textarea',{style:Object.assign({},inp,{minHeight:60,resize:'vertical',lineHeight:1.5}),value:form.descripcionPuesto||'',onChange:function(e){setForm(Object.assign({},form,{descripcionPuesto:e.target.value}));},placeholder:'Tareas, responsabilidades, etc.'}))
       ),
       editId? React.createElement('div',{style:{fontSize:11,color:'#94A3B8',marginBottom:10}},'Si cambiás el valor por hora, queda registrado en el historial de esta persona.'):null,
@@ -5708,10 +5706,9 @@ function PersonasView({ personas, onSave, egresos }){
                 )
               ),
               // métricas del período
-              React.createElement('div',{style:{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:10,marginTop:12,paddingTop:12,borderTop:'1px solid #F1F5F9'}},
+              React.createElement('div',{style:{display:'grid',gridTemplateColumns:'repeat(2,1fr)',gap:10,marginTop:12,paddingTop:12,borderTop:'1px solid #F1F5F9'}},
                 React.createElement('div',null, React.createElement('div',{style:{fontSize:10,color:'#94A3B8',textTransform:'uppercase',fontWeight:700}},'Horas (período)'), React.createElement('div',{style:{fontSize:17,fontWeight:700,color:NAVY,fontFamily:"'Oswald',system-ui"}}, (Math.round(horasPer*100)/100)+' h')),
-                React.createElement('div',null, React.createElement('div',{style:{fontSize:10,color:'#94A3B8',textTransform:'uppercase',fontWeight:700}},'Pagado (período)'), React.createElement('div',{style:{fontSize:17,fontWeight:700,color:'#166534',fontFamily:"'Oswald',system-ui"}}, fmt(pagadoPer))),
-                React.createElement('div',null, React.createElement('div',{style:{fontSize:10,color:'#94A3B8',textTransform:'uppercase',fontWeight:700}},'H/semana'), React.createElement('div',{style:{fontSize:17,fontWeight:700,color:'#475569',fontFamily:"'Oswald',system-ui"}}, (p.horasSemana||'—')))
+                React.createElement('div',null, React.createElement('div',{style:{fontSize:10,color:'#94A3B8',textTransform:'uppercase',fontWeight:700}},'Pagado (período)'), React.createElement('div',{style:{fontSize:17,fontWeight:700,color:'#166534',fontFamily:"'Oswald',system-ui"}}, fmt(pagadoPer)))
               ),
               // acciones
               React.createElement('div',{style:{display:'flex',gap:6,flexWrap:'wrap',marginTop:12}},
