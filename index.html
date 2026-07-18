@@ -7236,9 +7236,16 @@ function IngresosView({quotes, egresos, onSaveEgresos, clients, catalog, persona
               : null
           ):null,
           (egForm.tipo==='egreso' && egForm.cat==='sueldos' && egForm.personaId) ? React.createElement('div',null,
-            React.createElement('div',{style:{fontSize:10,color:'#94A3B8',fontWeight:700,marginBottom:4}},'SEMANA Y HORAS'),
-            React.createElement('div',{style:{display:'flex',gap:8}},
-              React.createElement('select',{value:egForm.semanaNum||'',onChange:function(e){var v=e.target.value;setEgForm(function(f){return Object.assign({},f,{semanaNum:v});});},style:Object.assign({},inp,{flex:'0 0 130px'})},
+            React.createElement('div',{style:{fontSize:10,color:'#94A3B8',fontWeight:700,marginBottom:4}},'MES, SEMANA Y HORAS'),
+            React.createElement('div',{style:{display:'flex',gap:8,flexWrap:'wrap'}},
+              React.createElement('input',{type:'month',value:(egForm.fecha||'').slice(0,7),onChange:function(e){
+                var m=e.target.value; // 'YYYY-MM'
+                setEgForm(function(f){
+                  var day=(f.fecha&&f.fecha.length>=10)?f.fecha.slice(8,10):'01';
+                  return Object.assign({},f,{fecha:m?(m+'-'+day):f.fecha});
+                });
+              },style:Object.assign({},inp,{flex:'0 0 150px'})}),
+              React.createElement('select',{value:egForm.semanaNum||'',onChange:function(e){var v=e.target.value;setEgForm(function(f){return Object.assign({},f,{semanaNum:v});});},style:Object.assign({},inp,{flex:'0 0 120px'})},
                 React.createElement('option',{value:''},'Semana…'),
                 ['1','2','3','4','5'].map(function(n){return React.createElement('option',{key:n,value:n},'Semana '+n);})
               ),
@@ -7249,9 +7256,9 @@ function IngresosView({quotes, egresos, onSaveEgresos, clients, catalog, persona
                   var sug=p?Math.round((parseFloat(h)||0)*(parseFloat(p.precioHora)||0)):null;
                   return Object.assign({},f,{horas:h, monto:(sug!=null&&sug>0)?String(sug):f.monto});
                 });
-              },style:Object.assign({},inp,{flex:1})})
+              },style:Object.assign({},inp,{flex:'1 1 120px'})})
             ),
-            React.createElement('div',{style:{fontSize:10,color:'#94A3B8',marginTop:3}},'Elegí la semana del mes (el mes lo toma de la FECHA). El MONTO se calcula solo (horas × valor hora) y podés ajustarlo.')
+            React.createElement('div',{style:{fontSize:10,color:'#94A3B8',marginTop:3}},'Elegí el mes y la semana del pago. El mes queda sincronizado con la FECHA (podés ajustar el día abajo). El MONTO se calcula solo (horas × valor hora) y podés ajustarlo.')
           ) : React.createElement('div',null,
             React.createElement('div',{style:{fontSize:10,color:'#94A3B8',fontWeight:700,marginBottom:4}},'DESCRIPCIÓN'),
             React.createElement('input',{type:'text',
