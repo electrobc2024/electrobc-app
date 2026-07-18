@@ -63,7 +63,8 @@ const SKEY = "ebc-quotes-v6",
   CKEY = "ebc-catalog-v2",
   CLKEY = "ebc-clients-v2",
   EKEY = "ebc-egresos-v2",
-  PKEY = "ebc-personas-v1";
+  PKEY = "ebc-personas-v1",
+  BKEY = "ebc-backups-v1";
 
 // Configurar con el enlace de invitación al grupo de WhatsApp de presupuestos
 const WA_GRUPO = "https://chat.whatsapp.com/IphhQd8vcU7HA4bgOALkyY?mode=gi_t";
@@ -5833,6 +5834,123 @@ function PersonasView({ personas, onSave, egresos }){
   );
 }
 
+function BackupView({ quotes, catalog, clients, egresos, personas, onRestore }){
+  const [hist, setHist] = React.useState(function(){ try { return JSON.parse(localStorage.getItem(BKEY)||"[]"); } catch(e){ return []; } });
+  const _from = (function(){ var n=new Date(); return n.getFullYear()+"-"+String(n.getMonth()+1).padStart(2,'0')+"-01"; })();
+  const _to = new Date().toISOString().slice(0,10);
+  const [bFrom, setBFrom] = React.useState(_from);
+  const [bTo, setBTo] = React.useState(_to);
+  const fileRef = React.useRef(null);
+  const inp = {border:'1px solid #E2E8F0',borderRadius:6,padding:'8px 10px',fontSize:13,backgroundColor:'#fff',boxSizing:'border-box'};
+  const card = {backgroundColor:'#fff',borderRadius:12,border:'1px solid #E2E8F0',padding:'18px 20px',marginBottom:16};
+
+  function logBackup(entry){ var next=[entry].concat(hist).slice(0,100); setHist(next); try{ localStorage.setItem(BKEY, JSON.stringify(next)); }catch(e){} }
+  function descargar(nombre, obj){
+    var blob=new Blob([JSON.stringify(obj,null,2)],{type:'application/json'});
+    var url=URL.createObjectURL(blob); var a=document.createElement('a'); a.href=url; a.download=nombre;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a); setTimeout(function(){URL.revokeObjectURL(url);},1000);
+  }
+  function nData(q,c,e,p){ return {presupuestos:(q||[]).length, clientes:(c||[]).length, movimientos:(e||[]).length, personas:(p||[]).length}; }
+  function backupCompleto(){
+    var data={meta:{app:'ELECTRO BC',tipo:'completa',version:3,fecha:new Date().toISOString(),autor:ebcUser()},quotes:quotes,catalog:catalog,clients:clients,egresos:egresos,personas:personas};
+    descargar('ELECTRO BC - Backup completo - '+fmtFechaFile(_to)+'.json', data);
+    logBackup({fecha:new Date().toISOString(),tipo:'Completa',periodo:'Todo',autor:ebcUser(),n:nData(quotes,clients,egresos,personas)});
+  }
+  function backupPeriodo(){
+    if(bFrom&&bTo&&bFrom>bTo){ alert("La fecha 'Desde' no puede ser posterior a 'Hasta'."); return; }
+    var inPer=function(f){ if(!f) return false; var d=String(f).slice(0,10); if(bFrom&&d<bFrom) return false; if(bTo&&d>bTo) return false; return true; };
+    var q=(quotes||[]).filter(function(x){return inPer(x.fecha);});
+    var e=(egresos||[]).filter(function(x){return inPer(x.fecha);});
+    var data={meta:{app:'ELECTRO BC',tipo:'periodo',version:3,fecha:new Date().toISOString(),autor:ebcUser(),desde:bFrom,hasta:bTo},quotes:q,catalog:catalog,clients:clients,egresos:e,personas:personas};
+    descargar('ELECTRO BC - Backup '+fmtFechaFile(bFrom)+' a '+fmtFechaFile(bTo)+'.json', data);
+    logBackup({fecha:new Date().toISOString(),tipo:'Período',periodo:fmtFecha(bFrom)+' al '+fmtFecha(bTo),autor:ebcUser(),n:nData(q,clients,e,personas)});
+  }
+  function onFile(ev){
+    var file=ev.target.files&&ev.target.files[0]; if(!file) return;
+    var reader=new FileReader();
+    reader.onload=function(){
+      try{
+        var data=JSON.parse(reader.result);
+        if(!data||(!data.quotes&&!data.clients&&!data.egresos)){ alert('El archivo no parece ser una copia válida de ELECTRO BC.'); ev.target.value=''; return; }
+        var res='Presupuestos: '+((data.quotes||[]).length)+'\nClientes: '+((data.clients||[]).length)+'\nMovimientos: '+((data.egresos||[]).length)+'\nPersonas: '+((data.personas||[]).length);
+        if(data.meta&&data.meta.tipo==='periodo'){ res+='\n\n⚠️ Es una copia de un PERÍODO ('+fmtFecha(data.meta.desde)+' al '+fmtFecha(data.meta.hasta)+'): restaurarla dejará SOLO los presupuestos y movimientos de ese período.'; }
+        if(!confirm('⚠️ Restaurar esta copia REEMPLAZA todos los datos actuales.\n\nContenido de la copia:\n'+res+'\n\n¿Continuar?')){ ev.target.value=''; return; }
+        onRestore(data);
+        alert('Copia restaurada correctamente.');
+      }catch(e){ alert('No se pudo leer el archivo: '+e.message); }
+      ev.target.value='';
+    };
+    reader.readAsText(file);
+  }
+  var thS={padding:'8px 10px',fontSize:10,fontWeight:700,color:'#94A3B8',textTransform:'uppercase',letterSpacing:'0.04em',textAlign:'left',borderBottom:'1px solid #E2E8F0',whiteSpace:'nowrap'};
+  var tdS={padding:'8px 10px',fontSize:12,color:'#475569',borderBottom:'1px solid #F1F5F9',whiteSpace:'nowrap'};
+  var fmtHora=function(iso){ try{ var d=new Date(iso); return fmtFecha(iso)+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); }catch(e){ return fmtFecha(iso); } };
+
+  return React.createElement('div',{style:{maxWidth:1100,margin:'0 auto',padding:'0 4px'}},
+    React.createElement('div',{style:{marginBottom:16}},
+      React.createElement('div',{style:{fontFamily:"'Oswald',system-ui",fontSize:22,fontWeight:700,color:NAVY,letterSpacing:'-0.01em'}},'💾 Copias de seguridad'),
+      React.createElement('div',{style:{fontSize:13,color:'#64748B',marginTop:6,lineHeight:1.45,maxWidth:640}},'Descargá una copia de todos tus datos (presupuestos, clientes, materiales, mano de obra, movimientos y personal) para guardarla en tu compu o la nube. Podés bajar la copia completa o solo la de un período, y ver el historial de copias hechas desde este dispositivo.')
+    ),
+    // Copia completa
+    React.createElement('div',{style:card},
+      React.createElement('div',{style:{fontSize:14,fontWeight:700,color:NAVY,marginBottom:4}},'Copia completa'),
+      React.createElement('div',{style:{fontSize:12,color:'#64748B',marginBottom:12}},'Incluye TODOS los datos de la app. Recomendada para respaldar todo antes de un cambio importante.'),
+      React.createElement('div',{style:{display:'flex',gap:14,flexWrap:'wrap',alignItems:'center',marginBottom:12}},
+        [['Presupuestos',(quotes||[]).length],['Clientes',(clients||[]).length],['Movimientos',(egresos||[]).length],['Personas',(personas||[]).length]].map(function(k){ return React.createElement('div',{key:k[0],style:{background:'#F8FAFC',border:'1px solid #E2E8F0',borderRadius:8,padding:'8px 12px'}}, React.createElement('div',{style:{fontSize:10,color:'#94A3B8',fontWeight:700,textTransform:'uppercase'}},k[0]), React.createElement('div',{style:{fontSize:18,fontWeight:700,color:NAVY,fontFamily:"'Oswald',system-ui"}},k[1])); })
+      ),
+      React.createElement('button',{type:'button',onClick:backupCompleto,style:{background:ORANGE,border:'none',borderRadius:8,padding:'10px 18px',fontSize:13,fontWeight:700,color:'#fff',cursor:'pointer'}},'⬇ Descargar copia completa')
+    ),
+    // Copia por período
+    React.createElement('div',{style:card},
+      React.createElement('div',{style:{fontSize:14,fontWeight:700,color:NAVY,marginBottom:4}},'Copia de un período'),
+      React.createElement('div',{style:{fontSize:12,color:'#64748B',marginBottom:12}},'Incluye solo los presupuestos y movimientos entre las fechas elegidas (clientes, materiales, mano de obra y personal se guardan completos como referencia).'),
+      React.createElement('div',{style:{display:'flex',gap:12,flexWrap:'wrap',alignItems:'flex-end'}},
+        React.createElement('div',null, React.createElement('div',{style:{fontSize:10,color:'#94A3B8',fontWeight:700,marginBottom:4,textTransform:'uppercase'}},'Desde'), React.createElement('input',{type:'date',value:bFrom,onChange:function(e){setBFrom(e.target.value);},style:inp})),
+        React.createElement('div',null, React.createElement('div',{style:{fontSize:10,color:'#94A3B8',fontWeight:700,marginBottom:4,textTransform:'uppercase'}},'Hasta'), React.createElement('input',{type:'date',value:bTo,onChange:function(e){setBTo(e.target.value);},style:inp})),
+        React.createElement('button',{type:'button',onClick:backupPeriodo,style:{background:NAVY,border:'none',borderRadius:8,padding:'10px 18px',fontSize:13,fontWeight:700,color:'#fff',cursor:'pointer'}},'⬇ Descargar copia del período')
+      )
+    ),
+    // Restaurar
+    React.createElement('div',{style:card},
+      React.createElement('div',{style:{fontSize:14,fontWeight:700,color:NAVY,marginBottom:4}},'Restaurar una copia'),
+      React.createElement('div',{style:{fontSize:12,color:'#B45309',marginBottom:12}},'⚠️ Restaurar REEMPLAZA todos los datos actuales por los del archivo. Hacé primero una copia completa por las dudas.'),
+      React.createElement('input',{ref:fileRef,type:'file',accept:'application/json,.json',onChange:onFile,style:{display:'none'}}),
+      React.createElement('button',{type:'button',onClick:function(){ if(fileRef.current) fileRef.current.click(); },style:{background:'none',border:'1px solid #E2E8F0',borderRadius:8,padding:'10px 18px',fontSize:13,fontWeight:600,color:'#475569',cursor:'pointer'}},'📂 Elegir archivo de copia…')
+    ),
+    // Historial
+    React.createElement('div',{style:card},
+      React.createElement('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}},
+        React.createElement('div',{style:{fontSize:14,fontWeight:700,color:NAVY}},'Historial de copias'),
+        hist.length>0? React.createElement('button',{type:'button',onClick:function(){ if(confirm('¿Vaciar el historial de copias? (No borra los archivos ya descargados.)')){ setHist([]); try{localStorage.removeItem(BKEY);}catch(e){} } },style:{background:'none',border:'1px solid #E2E8F0',borderRadius:6,padding:'5px 11px',fontSize:12,color:'#64748B',cursor:'pointer'}},'Vaciar historial'):null
+      ),
+      hist.length===0
+        ? React.createElement('div',{style:{fontSize:12,color:'#94A3B8'}},'Todavía no hiciste copias desde este dispositivo. El historial se guarda localmente en este navegador.')
+        : React.createElement('div',{style:{overflowX:'auto'}},
+            React.createElement('table',{style:{width:'100%',borderCollapse:'collapse'}},
+              React.createElement('thead',null, React.createElement('tr',null,
+                React.createElement('th',{style:thS},'Fecha y hora'),
+                React.createElement('th',{style:thS},'Tipo'),
+                React.createElement('th',{style:thS},'Período'),
+                React.createElement('th',{style:Object.assign({},thS,{textAlign:'right'})},'Presup.'),
+                React.createElement('th',{style:Object.assign({},thS,{textAlign:'right'})},'Movim.'),
+                React.createElement('th',{style:thS},'Autor')
+              )),
+              React.createElement('tbody',null,
+                hist.map(function(h,i){ return React.createElement('tr',{key:i},
+                  React.createElement('td',{style:tdS}, fmtHora(h.fecha)),
+                  React.createElement('td',{style:tdS}, React.createElement('span',{style:{fontWeight:700,color:h.tipo==='Completa'?ORANGE:'#4338CA'}}, h.tipo)),
+                  React.createElement('td',{style:tdS}, h.periodo||'—'),
+                  React.createElement('td',{style:Object.assign({},tdS,{textAlign:'right'})}, (h.n&&h.n.presupuestos!=null)?h.n.presupuestos:'—'),
+                  React.createElement('td',{style:Object.assign({},tdS,{textAlign:'right'})}, (h.n&&h.n.movimientos!=null)?h.n.movimientos:'—'),
+                  React.createElement('td',{style:tdS}, h.autor? ebcUserLabel(h.autor):'—')
+                ); })
+              )
+            )
+          )
+    )
+  );
+}
+
 function App() {
   const [menuOpen, setMenuOpen] = React.useState(false);
   const [view, setView] = useState(() => { try { var v = localStorage.getItem("ebc-last-view"); return v || "form"; } catch(e){ return "form"; } });
@@ -5879,6 +5997,13 @@ function App() {
   const handlePersonas = async (list) => {
     setPersonas(list);
     savePersonas(list).catch(()=>{});
+  };
+  const handleRestore = (data) => {
+    if(Array.isArray(data.quotes)){ setQuotes(data.quotes); try{localStorage.setItem(SKEY,JSON.stringify(data.quotes));}catch(e){} db.set(SKEY,JSON.stringify(data.quotes)).catch(()=>{}); }
+    if(data.catalog&&(Array.isArray(data.catalog.mdo)||Array.isArray(data.catalog.mat))){ setCatalog(data.catalog); try{localStorage.setItem(CKEY,JSON.stringify(data.catalog));}catch(e){} db.set(CKEY,JSON.stringify(data.catalog)).catch(()=>{}); }
+    if(Array.isArray(data.clients)){ setClients(data.clients); try{localStorage.setItem(CLKEY,JSON.stringify(data.clients));}catch(e){} db.set(CLKEY,JSON.stringify(data.clients)).catch(()=>{}); }
+    if(Array.isArray(data.egresos)){ saveEgresos(data.egresos); }
+    if(Array.isArray(data.personas)){ handlePersonas(data.personas); }
   };
   React.useEffect(function(){window.__ebc_quotes=quotes;window.__ebc_highlight=function(id){setTrackerHighlight(id);setView("tracker");};},[quotes]);
   const deepLinkDone = useRef(false);
@@ -6095,6 +6220,7 @@ function App() {
     {id:"personal",    label:"🧑‍🔧 Personal / Sueldos"},
     {id:"movimientos", label:"💱 Cargar Ingresos / Egresos"},
     {id:"dashboard",   label:"📊 Dashboard Financiero"},
+    {id:"backups",     label:"💾 Copias de seguridad"},
   ];
   const nav = [...navMain, ...navFin];
   return /*#__PURE__*/React.createElement("div", {
@@ -6286,6 +6412,13 @@ function App() {
     personas: personas,
     onSave: handlePersonas,
     egresos: egresos
+  }), view === "backups" && /*#__PURE__*/React.createElement(BackupView, {
+    quotes: quotes,
+    catalog: catalog,
+    clients: clients,
+    egresos: egresos,
+    personas: personas,
+    onRestore: handleRestore
   }), (view==="dashboard"||view==="movimientos") && /*#__PURE__*/React.createElement(IngresosView, {
     quotes: quotes,
     egresos: egresos,
