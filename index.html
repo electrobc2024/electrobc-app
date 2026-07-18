@@ -6169,9 +6169,11 @@ function App() {
   useEffect(() => {
     setupGlobalNav();
     Promise.all([loadQ(), loadCat(), loadCl()]).then(([qs, cat, cls]) => {
-      // Backfill de códigos correlativos fijos
-      var mdoN=assignNums((cat&&cat.mdo)||[]), matN=assignNums((cat&&cat.mat)||[]);
-      if(mdoN!==((cat&&cat.mdo)||[]) || matN!==((cat&&cat.mat)||[])){ cat=Object.assign({},cat,{mdo:mdoN,mat:matN}); db.set(CKEY, JSON.stringify(cat)).catch(()=>{}); try{localStorage.setItem(CKEY,JSON.stringify(cat));}catch(e){} }
+      // Backfill de códigos correlativos fijos + normalización de nombres (una vez)
+      var _normNames=function(list){ return (list||[]).map(function(it){ var nn=normalizeMaterialName(it.nombre); return nn!==it.nombre ? Object.assign({},it,{nombre:nn}) : it; }); };
+      var mdoN=_normNames(assignNums((cat&&cat.mdo)||[])), matN=_normNames(assignNums((cat&&cat.mat)||[]));
+      var _newCat=Object.assign({},cat,{mdo:mdoN,mat:matN});
+      if(JSON.stringify(_newCat)!==JSON.stringify(cat)){ cat=_newCat; db.set(CKEY, JSON.stringify(cat)).catch(()=>{}); try{localStorage.setItem(CKEY,JSON.stringify(cat));}catch(e){} }
       var clsN=assignNums(cls||[]);
       if(clsN!==(cls||[])){ cls=clsN; db.set(CLKEY, JSON.stringify(cls)).catch(()=>{}); try{localStorage.setItem(CLKEY,JSON.stringify(cls));}catch(e){} }
       setQuotes(qs);
