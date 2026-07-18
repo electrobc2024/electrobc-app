@@ -5727,7 +5727,7 @@ function PersonasView({ personas, onSave, egresos }){
                   ? React.createElement('div',{style:{fontSize:12,color:'#94A3B8'}},'Sin pagos registrados en el período. Se cargan desde Cargar Ingresos / Egresos (categoría Sueldos).')
                   : React.createElement('div',{style:{display:'flex',flexDirection:'column',gap:4}},
                       pagos.map(function(e){ return React.createElement('div',{key:e.id,style:{display:'flex',justifyContent:'space-between',alignItems:'center',fontSize:12,color:'#475569',padding:'4px 0',borderBottom:'1px solid #F1F5F9'}},
-                        React.createElement('span',null, fmtFecha(e.fecha)+ (e.horas? ' · '+(parseFloat(e.horas)||0)+' h':'') + (e.autor?' · '+ebcUserLabel(e.autor):'')),
+                        React.createElement('span',null, (e.semanaNum? 'Sem '+e.semanaNum+' · ':'')+fmtFecha(e.fecha)+ (e.horas? ' · '+(parseFloat(e.horas)||0)+' h':'') + (e.autor?' · '+ebcUserLabel(e.autor):'')),
                         React.createElement('span',{style:{fontWeight:700,color:'#166534'}}, fmt(arsDe(e)))
                       ); })
                     )
@@ -6947,6 +6947,13 @@ function IngresosView({quotes, egresos, onSaveEgresos, clients, catalog, persona
     var per = isSueldo ? (personas||[]).find(function(x){return x.id===egForm.personaId;}) : null;
     var effDesc = (egForm.desc && egForm.desc.trim()) ? egForm.desc.trim() : (per ? (per.nombre||'Sueldo') : '');
     if((!egForm.cat&&egForm.tipo==='egreso')|| !effDesc ||!egForm.monto||!egForm.fecha||!egForm.medio){alert('Complet\u00e1 todos los campos antes de guardar.');return;}
+    if(isSueldo && !egForm.semanaNum){ alert('Eleg\u00ed la semana del mes para este sueldo.'); return; }
+    // Aviso si ya hay un sueldo de la misma persona, mismo mes y misma semana
+    if(isSueldo){
+      var mesSel = String(egForm.fecha).slice(0,7);
+      var dup = (egresos||[]).some(function(e){ return e.id!==editId && e.cat==='sueldos' && e.personaId===egForm.personaId && String(e.fecha).slice(0,7)===mesSel && String(e.semanaNum||'')===String(egForm.semanaNum); });
+      if(dup && !confirm('Ya cargaste la Semana '+egForm.semanaNum+' de '+mesSel.slice(5,7)+'/'+mesSel.slice(0,4)+' para '+(per?per.nombre:'esta persona')+'. \u00bfCargar igual otro pago para esa semana?')) return;
+    }
     var payload = Object.assign({}, egForm, {desc: effDesc});
     const list = egresos||[];
     if(editId) {
@@ -6954,7 +6961,7 @@ function IngresosView({quotes, egresos, onSaveEgresos, clients, catalog, persona
     } else {
       onSaveEgresos([...list, Object.assign({}, payload, {id:Math.random().toString(36).slice(2,9), autor:ebcUser()})]);
     }
-    setEgForm({id:'',tipo:'egreso',cat:'sueldos',desc:'',monto:'',fecha:'',medio:'efectivo',moneda:'$',tcambio:'',personaId:'',horas:''});
+    setEgForm({id:'',tipo:'egreso',cat:'sueldos',desc:'',monto:'',fecha:'',medio:'efectivo',moneda:'$',tcambio:'',personaId:'',horas:'',semanaNum:''});
     setShowForm(false);
     setEditId(null);
   }
@@ -7229,16 +7236,22 @@ function IngresosView({quotes, egresos, onSaveEgresos, clients, catalog, persona
               : null
           ):null,
           (egForm.tipo==='egreso' && egForm.cat==='sueldos' && egForm.personaId) ? React.createElement('div',null,
-            React.createElement('div',{style:{fontSize:10,color:'#94A3B8',fontWeight:700,marginBottom:4}},'HORAS DE LA SEMANA'),
-            React.createElement('input',{type:'number',min:'0',step:'any',value:egForm.horas||'',placeholder:'Ej: 40',onChange:function(e){
-              var h=e.target.value;
-              setEgForm(function(f){
-                var p=(personas||[]).find(function(x){return x.id===f.personaId;});
-                var sug=p?Math.round((parseFloat(h)||0)*(parseFloat(p.precioHora)||0)):null;
-                return Object.assign({},f,{horas:h, monto:(sug!=null&&sug>0)?String(sug):f.monto});
-              });
-            },style:inp}),
-            React.createElement('div',{style:{fontSize:10,color:'#94A3B8',marginTop:3}},'El MONTO se calcula solo (horas × valor hora); podés ajustarlo. La FECHA marca la semana.')
+            React.createElement('div',{style:{fontSize:10,color:'#94A3B8',fontWeight:700,marginBottom:4}},'SEMANA Y HORAS'),
+            React.createElement('div',{style:{display:'flex',gap:8}},
+              React.createElement('select',{value:egForm.semanaNum||'',onChange:function(e){var v=e.target.value;setEgForm(function(f){return Object.assign({},f,{semanaNum:v});});},style:Object.assign({},inp,{flex:'0 0 130px'})},
+                React.createElement('option',{value:''},'Semana…'),
+                ['1','2','3','4','5'].map(function(n){return React.createElement('option',{key:n,value:n},'Semana '+n);})
+              ),
+              React.createElement('input',{type:'number',min:'0',step:'any',value:egForm.horas||'',placeholder:'Horas (ej: 40)',onChange:function(e){
+                var h=e.target.value;
+                setEgForm(function(f){
+                  var p=(personas||[]).find(function(x){return x.id===f.personaId;});
+                  var sug=p?Math.round((parseFloat(h)||0)*(parseFloat(p.precioHora)||0)):null;
+                  return Object.assign({},f,{horas:h, monto:(sug!=null&&sug>0)?String(sug):f.monto});
+                });
+              },style:Object.assign({},inp,{flex:1})})
+            ),
+            React.createElement('div',{style:{fontSize:10,color:'#94A3B8',marginTop:3}},'Elegí la semana del mes (el mes lo toma de la FECHA). El MONTO se calcula solo (horas × valor hora) y podés ajustarlo.')
           ) : React.createElement('div',null,
             React.createElement('div',{style:{fontSize:10,color:'#94A3B8',fontWeight:700,marginBottom:4}},'DESCRIPCIÓN'),
             React.createElement('input',{type:'text',
