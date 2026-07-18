@@ -859,6 +859,23 @@ const CardBox = ({
   }
 }, children));
 const capitalize = v => v.replace(/(^|\s)([a-záéíóúüñ])/gi, (_, sp, c) => sp + c.toUpperCase());
+// Normaliza nombres de catálogo (materiales / mano de obra) a un formato consistente
+function normalizeMaterialName(raw){
+  let s = (raw || '').trim().replace(/\s+/g, ' ');
+  if (!s) return s;
+  s = capitalize(s);
+  s = s.replace(/(\d),(\d)/g, '$1.$2');                                   // decimal coma -> punto
+  s = s.replace(/(\d(?:\.\d+)?)\s*mm\s*(?:2|\^2|²)\b/gi, '$1mm²');          // mm2 -> mm²
+  s = s.replace(/(\d(?:\.\d+)?)\s*mm\b/gi, '$1mm');                        // "10 mm" -> "10mm"
+  s = s.replace(/(\d(?:\.\d+)?)\s*(?:w|watt|watts)\b/gi, '$1W');           // watts -> NW
+  s = s.replace(/(\d(?:\.\d+)?)\s*(?:lts|lt|litros|litro|l)\b/gi, '$1 L'); // litros -> N L
+  s = s.replace(/(\d(?:\.\d+)?)\s*a\b/gi, '$1A');                          // amperios -> NA
+  s = s.replace(/\b[xX]\s*(?:metros?|mts?|m)\b\.?/gi, 'x m');              // por metro -> x m
+  s = s.replace(/\sX\s(?=\d)/g, ' x ');                                    // "X" (por) -> x
+  s = s.replace(/\bpvc\b/gi, 'PVC');                                       // PVC en mayúscula
+  s = s.replace(/\s+/g, ' ').trim();
+  return s;
+}
 const shouldCap = type => !type || type === "text" || type === "search";
 
 // Simple Inp — no internal state to avoid hook-related bugs
@@ -1739,8 +1756,8 @@ function CatalogView({
     [f]: v
   }));
   const save = useCallback(() => {
-    // Normalize name first (in case blur didn't fire via Enter key)
-    const normalizedNombre = capitalize(form.nombre.trim());
+    // Normalize name first (formato consistente de catálogo)
+    const normalizedNombre = normalizeMaterialName(form.nombre);
     const normalizedForm = {
       ...form,
       nombre: normalizedNombre
@@ -1752,7 +1769,7 @@ function CatalogView({
     }
     // Duplicate check (only for new items)
     if (!editId) {
-      const dup = items.find(i => i.id !== (editId || "") && capitalize(i.nombre.trim()).toLowerCase() === normalizedNombre.toLowerCase());
+      const dup = items.find(i => i.id !== (editId || "") && normalizeMaterialName(i.nombre).toLowerCase() === normalizedNombre.toLowerCase());
       if (dup) {
         setErrs(["Ya existe un ítem con ese nombre: " + dup.nombre]);
         return;
@@ -1868,6 +1885,15 @@ function CatalogView({
     alert("Listo, se unificaron " + applied.length + " materiales.");
   }, [items, onSave]);
   const _dupesPresentes = (title && title.indexOf("Materiales") >= 0) ? KNOWN_DUPES.filter(p => { const n = s => (s || "").trim().toLowerCase(); return items.some(i => n(i.nombre) === n(p.keep)) && items.some(i => n(i.nombre) === n(p.drop)); }).length : 0;
+  const _normCambios = items.filter(i => normalizeMaterialName(i.nombre) !== (i.nombre || "")).length;
+  const normalizeAll = useCallback(() => {
+    const cambios = items.filter(i => normalizeMaterialName(i.nombre) !== (i.nombre || ""));
+    if (cambios.length === 0) { alert("Los nombres ya están normalizados."); return; }
+    const muestra = cambios.slice(0, 12).map(i => "• " + i.nombre + "  →  " + normalizeMaterialName(i.nombre)).join("\n");
+    if (!confirm("Se van a normalizar " + cambios.length + " nombre(s) (unidades W/mm/L, 'x m', decimales con punto, PVC en mayúscula):\n\n" + muestra + (cambios.length > 12 ? "\n… y " + (cambios.length - 12) + " más" : "") + "\n\n¿Aplicar? (no cambia precios ni historial)")) return;
+    onSave(items.map(i => ({ ...i, nombre: normalizeMaterialName(i.nombre) })));
+    alert("Listo, se normalizaron " + cambios.length + " nombre(s).");
+  }, [items, onSave]);
   const ed = i => {
     setEditId(i.id);
     setForm({
@@ -1972,7 +1998,7 @@ function CatalogView({
     value: searchCat,
     onChange: setSearchCat,
     placeholder: "Buscar \xEDtem\u2026"
-  }), /*#__PURE__*/React.createElement("button",{type:"button",onClick:function(){ exportXLSX("ELECTRO BC - "+(title||"Catalogo")+" - "+fmtFechaFile(new Date())+".xlsx", [{name:(title||"Catálogo"),money:[1],rows:[["Nombre","Precio actual","N° de precios","Cargado por"]].concat((items||[]).map(function(it){ return [it.nombre||"", it.precioBase||"", (it.historial||[]).length, ebcUserLabel(it.autor||"guille")]; }))}]); }, style:{background:"none",border:"1px solid #86EFAC",borderRadius:8,padding:"7px 12px",fontSize:12,fontWeight:600,cursor:"pointer",color:"#16A34A",whiteSpace:"nowrap"}},"\ud83d\udcca Exportar Excel"), _dupesPresentes > 0 && /*#__PURE__*/React.createElement("button", { type: "button", onClick: applyKnownDupes, style: { background: "#FEF3C7", border: "1px solid #FBBF24", borderRadius: 8, padding: "7px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer", color: "#92400E", whiteSpace: "nowrap" } }, "\ud83e\uddf9 Unificar " + _dupesPresentes + " duplicados detectados")), selIds.length >= 2 && /*#__PURE__*/React.createElement("div", {
+  }), /*#__PURE__*/React.createElement("button",{type:"button",onClick:function(){ exportXLSX("ELECTRO BC - "+(title||"Catalogo")+" - "+fmtFechaFile(new Date())+".xlsx", [{name:(title||"Catálogo"),money:[1],rows:[["Nombre","Precio actual","N° de precios","Cargado por"]].concat((items||[]).map(function(it){ return [it.nombre||"", it.precioBase||"", (it.historial||[]).length, ebcUserLabel(it.autor||"guille")]; }))}]); }, style:{background:"none",border:"1px solid #86EFAC",borderRadius:8,padding:"7px 12px",fontSize:12,fontWeight:600,cursor:"pointer",color:"#16A34A",whiteSpace:"nowrap"}},"\ud83d\udcca Exportar Excel"), _dupesPresentes > 0 && /*#__PURE__*/React.createElement("button", { type: "button", onClick: applyKnownDupes, style: { background: "#FEF3C7", border: "1px solid #FBBF24", borderRadius: 8, padding: "7px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer", color: "#92400E", whiteSpace: "nowrap" } }, "\ud83e\uddf9 Unificar " + _dupesPresentes + " duplicados detectados"), _normCambios > 0 && /*#__PURE__*/React.createElement("button", { type: "button", onClick: normalizeAll, style: { background: "#EFF6FF", border: "1px solid #93C5FD", borderRadius: 8, padding: "7px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer", color: "#1D4ED8", whiteSpace: "nowrap" } }, "\u2728 Normalizar " + _normCambios + " nombres")), selIds.length >= 2 && /*#__PURE__*/React.createElement("div", {
     style: { display: "flex", gap: 8, alignItems: "center", marginBottom: 10, padding: "8px 12px", background: "#FEF3C7", border: "1px solid #FDE68A", borderRadius: 8, flexWrap: "wrap" }
   }, /*#__PURE__*/React.createElement("span", { style: { fontSize: 12, fontWeight: 700, color: "#92400E" } }, selIds.length + " seleccionados \u2014 \u00bfson el mismo \u00edtem?"),
     /*#__PURE__*/React.createElement("button", { type: "button", onClick: mergeSelected, style: { background: ORANGE, border: "none", borderRadius: 6, padding: "6px 12px", fontSize: 12, fontWeight: 700, color: "#fff", cursor: "pointer" } }, "\ud83d\udd17 Unificar en uno"),
