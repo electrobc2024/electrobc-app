@@ -5662,10 +5662,10 @@ function PersonasView({ personas, onSave, egresos }){
     showForm && React.createElement('div',{style:{backgroundColor:'#fff',border:'1px solid #E2E8F0',borderRadius:12,padding:16,marginBottom:18}},
       React.createElement('div',{style:{fontSize:13,fontWeight:700,color:NAVY,marginBottom:12}}, editId?'✏️ Editar persona':'➕ Nueva persona'),
       React.createElement('div',{style:{display:'grid',gridTemplateColumns:isMobile?'1fr':'1fr 1fr',gap:12,marginBottom:12}},
-        React.createElement('div',null, lbl('Nombre y Apellido', true), React.createElement('input',{style:inp,value:form.nombre||'',onChange:function(e){setForm(Object.assign({},form,{nombre:e.target.value}));},placeholder:'Ej: Juan Pérez'})),
-        React.createElement('div',null, lbl('Puesto'), React.createElement('input',{style:inp,value:form.puesto||'',onChange:function(e){setForm(Object.assign({},form,{puesto:e.target.value}));},placeholder:'Ej: Oficial electricista'})),
+        React.createElement('div',null, lbl('Nombre y Apellido', true), React.createElement('input',{style:inp,spellCheck:true,autoCapitalize:'words',value:form.nombre||'',onChange:function(e){setForm(Object.assign({},form,{nombre:e.target.value}));},onBlur:function(e){var v=e.target.value;if(v){var c=capitalize(v);if(c!==v)setForm(Object.assign({},form,{nombre:c}));}},placeholder:'Ej: Juan Pérez'})),
+        React.createElement('div',null, lbl('Puesto'), React.createElement('input',{style:inp,spellCheck:true,autoCapitalize:'sentences',value:form.puesto||'',onChange:function(e){setForm(Object.assign({},form,{puesto:e.target.value}));},onBlur:function(e){var v=e.target.value;if(v){var c=capitalize(v);if(c!==v)setForm(Object.assign({},form,{puesto:c}));}},placeholder:'Ej: Oficial electricista'})),
         React.createElement('div',null, lbl('Valor por hora ($)', true), React.createElement('input',{style:inp,type:'number',min:'0',step:'any',value:form.precioHora||'',onChange:function(e){setForm(Object.assign({},form,{precioHora:e.target.value}));},placeholder:'Ej: 4500'})),
-        React.createElement('div',{style:{gridColumn:isMobile?'auto':'1/-1'}}, lbl('Descripción del puesto'), React.createElement('textarea',{style:Object.assign({},inp,{minHeight:60,resize:'vertical',lineHeight:1.5}),value:form.descripcionPuesto||'',onChange:function(e){setForm(Object.assign({},form,{descripcionPuesto:e.target.value}));},placeholder:'Tareas, responsabilidades, etc.'}))
+        React.createElement('div',{style:{gridColumn:isMobile?'auto':'1/-1'}}, lbl('Descripción del puesto'), React.createElement('textarea',{style:Object.assign({},inp,{minHeight:60,resize:'vertical',lineHeight:1.5}),spellCheck:true,autoCapitalize:'sentences',value:form.descripcionPuesto||'',onChange:function(e){setForm(Object.assign({},form,{descripcionPuesto:e.target.value}));},onBlur:function(e){var v=e.target.value;if(v){var c=v.charAt(0).toUpperCase()+v.slice(1);if(c!==v)setForm(Object.assign({},form,{descripcionPuesto:c}));}},placeholder:'Tareas, responsabilidades, etc.'}))
       ),
       editId? React.createElement('div',{style:{fontSize:11,color:'#94A3B8',marginBottom:10}},'Si cambiás el valor por hora, queda registrado en el historial de esta persona.'):null,
       React.createElement('div',{style:{display:'flex',gap:8,justifyContent:'flex-end'}},
@@ -5724,7 +5724,11 @@ function PersonasView({ personas, onSave, egresos }){
                   ? React.createElement('div',{style:{fontSize:12,color:'#94A3B8'}},'Sin pagos registrados en el período. Se cargan desde Cargar Ingresos / Egresos (categoría Sueldos).')
                   : React.createElement('div',{style:{display:'flex',flexDirection:'column',gap:4}},
                       pagos.map(function(e){ return React.createElement('div',{key:e.id,style:{display:'flex',justifyContent:'space-between',alignItems:'center',fontSize:12,color:'#475569',padding:'4px 0',borderBottom:'1px solid #F1F5F9'}},
-                        React.createElement('span',null, (e.semanaNum? 'Sem '+e.semanaNum+' · ':'')+fmtFecha(e.fecha)+ (e.horas? ' · '+(parseFloat(e.horas)||0)+' h':'') + (e.autor?' · '+ebcUserLabel(e.autor):'')),
+                        React.createElement('span',null, (function(){
+                          var MESES=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+                          var mesTxt=''; if(e.fecha&&e.fecha.length>=7){var mm=parseInt(e.fecha.slice(5,7),10); if(mm>=1&&mm<=12) mesTxt=MESES[mm-1]+' '+e.fecha.slice(0,4);}
+                          return (e.semanaNum? 'Sem '+e.semanaNum+(mesTxt?' de '+mesTxt:'')+' · ':'')+fmtFecha(e.fecha)+ (e.horas? ' · '+(parseFloat(e.horas)||0)+' h':'') + (e.autor?' · '+ebcUserLabel(e.autor):'');
+                        })()),
                         React.createElement('span',{style:{fontWeight:700,color:'#166534'}}, fmt(arsDe(e)))
                       ); })
                     )
