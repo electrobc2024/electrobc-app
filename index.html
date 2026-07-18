@@ -873,8 +873,9 @@ function normalizeMaterialName(raw){
   s = s.replace(/\b[xX]\s*(?:metros?|mts?|m)\b\.?/gi, 'x m');              // por metro -> x m
   s = s.replace(/\sX\s(?=\d)/g, ' x ');                                    // "X" (por) -> x
   s = s.replace(/\bpvc\b/gi, 'PVC');                                       // PVC en mayúscula
-  // Si el nombre arranca con una medida (4 L, 20mm, 1.5kg…), mandarla al final
+  // Si el nombre arranca con una medida (4 L, 20mm, 1.5kg…) o con un número suelto, mandarlo al final
   s = s.replace(/^(\d+(?:\.\d+)?\s*(?:mm²|mm|cm|kg|W|L|m)\b\.?)\s+(.+)$/i, '$2 $1');
+  s = s.replace(/^(\d+(?:\.\d+)?)\s+(?=[A-Za-zÁÉÍÓÚÑáéíóúñ])(.+)$/, '$2 $1');
   s = s.replace(/\s+/g, ' ').trim();
   return s;
 }
