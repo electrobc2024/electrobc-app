@@ -5855,7 +5855,7 @@ function BackupView({ quotes, catalog, clients, egresos, personas, onRestore }){
     var url=URL.createObjectURL(blob); var a=document.createElement('a'); a.href=url; a.download=nombre;
     document.body.appendChild(a); a.click(); document.body.removeChild(a); setTimeout(function(){URL.revokeObjectURL(url);},1000);
   }
-  function nData(q,c,e,p){ return {presupuestos:(q||[]).length, clientes:(c||[]).length, movimientos:(e||[]).length, personas:(p||[]).length}; }
+  function nData(q,c,e,p){ return {presupuestos:(q||[]).length, clientes:(c||[]).length, manoObra:((catalog&&catalog.mdo)||[]).length, materiales:((catalog&&catalog.mat)||[]).length, movimientos:(e||[]).length, personas:(p||[]).length}; }
   function backupCompleto(){
     var data={meta:{app:'ELECTRO BC',tipo:'completa',version:3,fecha:new Date().toISOString(),autor:ebcUser()},quotes:quotes,catalog:catalog,clients:clients,egresos:egresos,personas:personas};
     descargar('ELECTRO BC - Backup completo - '+fmtFechaFile(_to)+'.json', data);
@@ -5935,7 +5935,9 @@ function BackupView({ quotes, catalog, clients, egresos, personas, onRestore }){
                   sortTh('periodo','Período'),
                   React.createElement('th',{style:Object.assign({},thS,{textAlign:'right'})},'Presup.'),
                   React.createElement('th',{style:Object.assign({},thS,{textAlign:'right'})},'Clientes'),
-                  React.createElement('th',{style:Object.assign({},thS,{textAlign:'right'})},'Movim.'),
+                  React.createElement('th',{style:Object.assign({},thS,{textAlign:'right'})},'M. de Obra'),
+                  React.createElement('th',{style:Object.assign({},thS,{textAlign:'right'})},'Materiales'),
+                  React.createElement('th',{style:Object.assign({},thS,{textAlign:'right'})},'Ingresos/Egresos'),
                   React.createElement('th',{style:Object.assign({},thS,{textAlign:'right'})},'Personas'),
                   sortTh('autor','Autor')
                 )),
@@ -5946,6 +5948,8 @@ function BackupView({ quotes, catalog, clients, egresos, personas, onRestore }){
                     React.createElement('td',{style:tdS}, h.periodo||'—'),
                     React.createElement('td',{style:Object.assign({},tdS,{textAlign:'right'})}, (h.n&&h.n.presupuestos!=null)?h.n.presupuestos:'—'),
                     React.createElement('td',{style:Object.assign({},tdS,{textAlign:'right'})}, (h.n&&h.n.clientes!=null)?h.n.clientes:'—'),
+                    React.createElement('td',{style:Object.assign({},tdS,{textAlign:'right'})}, (h.n&&h.n.manoObra!=null)?h.n.manoObra:'—'),
+                    React.createElement('td',{style:Object.assign({},tdS,{textAlign:'right'})}, (h.n&&h.n.materiales!=null)?h.n.materiales:'—'),
                     React.createElement('td',{style:Object.assign({},tdS,{textAlign:'right'})}, (h.n&&h.n.movimientos!=null)?h.n.movimientos:'—'),
                     React.createElement('td',{style:Object.assign({},tdS,{textAlign:'right'})}, (h.n&&h.n.personas!=null)?h.n.personas:'—'),
                     React.createElement('td',{style:tdS}, h.autor? ebcUserLabel(h.autor):'—')
