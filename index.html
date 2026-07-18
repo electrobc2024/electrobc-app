@@ -7224,23 +7224,22 @@ function IngresosView({quotes, egresos, onSaveEgresos, clients, catalog, persona
               React.createElement('option',{value:''},'— Elegí una persona —'),
               (personas||[]).filter(function(p){return p.activo!==false;}).map(function(p){return React.createElement('option',{key:p.id,value:p.id}, (p.nombre||'(sin nombre)')+(p.puesto?(' · '+p.puesto):'')+' — '+((parseFloat(p.precioHora)||0).toLocaleString('es-AR'))+'/h');})
             ),
-            egForm.personaId ? React.createElement('div',{style:{marginTop:8}},
-              React.createElement('div',{style:{fontSize:10,color:'#94A3B8',fontWeight:700,marginBottom:4}},'HORAS DE LA SEMANA'),
-              React.createElement('input',{type:'number',min:'0',step:'any',value:egForm.horas||'',placeholder:'Ej: 40',onChange:function(e){
-                var h=e.target.value;
-                setEgForm(function(f){
-                  var p=(personas||[]).find(function(x){return x.id===f.personaId;});
-                  var sug=p?Math.round((parseFloat(h)||0)*(parseFloat(p.precioHora)||0)):null;
-                  return Object.assign({},f,{horas:h, monto:(sug!=null&&sug>0)?String(sug):f.monto});
-                });
-              },style:inp}),
-              React.createElement('div',{style:{fontSize:10,color:'#94A3B8',marginTop:3}},'El monto se calcula solo (horas × valor hora); podés ajustarlo. La FECHA de abajo marca la semana.')
-            ) : null,
             ((personas||[]).filter(function(p){return p.activo!==false;}).length===0)
               ? React.createElement('div',{style:{fontSize:10,color:'#B45309',marginTop:3}},'No hay personas activas. Cargalas en "Personal / Sueldos".')
               : null
           ):null,
-          (egForm.tipo==='egreso' && egForm.cat==='sueldos' && egForm.personaId) ? React.createElement('div',null) : React.createElement('div',null,
+          (egForm.tipo==='egreso' && egForm.cat==='sueldos' && egForm.personaId) ? React.createElement('div',null,
+            React.createElement('div',{style:{fontSize:10,color:'#94A3B8',fontWeight:700,marginBottom:4}},'HORAS DE LA SEMANA'),
+            React.createElement('input',{type:'number',min:'0',step:'any',value:egForm.horas||'',placeholder:'Ej: 40',onChange:function(e){
+              var h=e.target.value;
+              setEgForm(function(f){
+                var p=(personas||[]).find(function(x){return x.id===f.personaId;});
+                var sug=p?Math.round((parseFloat(h)||0)*(parseFloat(p.precioHora)||0)):null;
+                return Object.assign({},f,{horas:h, monto:(sug!=null&&sug>0)?String(sug):f.monto});
+              });
+            },style:inp}),
+            React.createElement('div',{style:{fontSize:10,color:'#94A3B8',marginTop:3}},'El MONTO se calcula solo (horas × valor hora); podés ajustarlo. La FECHA marca la semana.')
+          ) : React.createElement('div',null,
             React.createElement('div',{style:{fontSize:10,color:'#94A3B8',fontWeight:700,marginBottom:4}},'DESCRIPCIÓN'),
             React.createElement('input',{type:'text',
     spellCheck:true,value:egForm.desc,onChange:function(e){setEgForm(function(f){return Object.assign({},f,{desc:e.target.value});});},placeholder:'Descripción...',style:inp})
