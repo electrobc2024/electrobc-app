@@ -369,7 +369,7 @@ function exportXLSX(filename, sheets){
     XLSX.writeFile(wb, filename);
   }catch(e){ console.error(e); alert('No se pudo exportar el Excel.'); }
 }
-function buildConsolidado(quotes, clients, catalog, egresos, fromDate, toDate, periodoLabel){
+function buildConsolidado(quotes, clients, catalog, egresos, fromDate, toDate, periodoLabel, personas){
   var AU="https://electrobc-app.vercel.app/";
   var inPer=function(f){ if(!f) return false; var d=String(f).slice(0,10); if(fromDate && d<fromDate) return false; if(toDate && d>toDate) return false; return true; };
   var fmtA=function(n){return "$ "+(Math.abs(Math.round(n))||0).toLocaleString('es-AR');};
@@ -383,6 +383,20 @@ function buildConsolidado(quotes, clients, catalog, egresos, fromDate, toDate, p
   var totEgresos=movs.filter(function(m){return m.monto<0;}).reduce(function(s,m){return s+Math.abs(arsOf(m));},0);
   var gan=totIngresos-totEgresos;
   var porCat=EGRESO_CATS.map(function(cat){ var t=(egresos||[]).filter(function(e){return e.tipo!=='ingreso'&&e.cat===cat.id&&inPer(e.fecha);}).reduce(function(s,e){ if((e.moneda||'$')==='USD') return s+(parseFloat(e.monto)||0)*(parseFloat(e.tcambio)||0); return s+(parseFloat(e.monto)||0); },0); return {label:cat.label,color:cat.color,id:cat.id,total:t}; }).sort(function(a,b){return b.total-a.total;});
+  // ── Personal / Sueldos ──
+  var persArs=function(e){ return (e.moneda||'$')==='USD' ? (parseFloat(e.monto)||0)*(parseFloat(e.tcambio)||0) : (parseFloat(e.monto)||0); };
+  var MESES_C=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  var mesTxtC=function(f){ if(f&&f.length>=7){var mm=parseInt(f.slice(5,7),10); if(mm>=1&&mm<=12) return MESES_C[mm-1]+' '+f.slice(0,4);} return ''; };
+  var sueldosPer=(egresos||[]).filter(function(e){return e.tipo!=='ingreso'&&e.cat==='sueldos'&&inPer(e.fecha);});
+  var perBody=(personas||[]).map(function(p){
+    var pagos=sueldosPer.filter(function(e){return e.personaId===p.id;});
+    var hrs=pagos.reduce(function(s,e){return s+(parseFloat(e.horas)||0);},0);
+    var pg=pagos.reduce(function(s,e){return s+persArs(e);},0);
+    return {p:p, hrs:hrs, pg:pg};
+  });
+  var perActivas=(personas||[]).filter(function(p){return p.activo!==false;}).length;
+  var totSueldos=sueldosPer.reduce(function(s,e){return s+persArs(e);},0);
+  var totHorasSueldos=sueldosPer.reduce(function(s,e){return s+(parseFloat(e.horas)||0);},0);
   // ── Presupuestos y métricas ──
   var quotesPer=(quotes||[]).filter(function(q){return inPer(q.fecha);});
   var emitidos=quotesPer.filter(function(q){return q.status!=='recotizado';});
@@ -433,6 +447,11 @@ function buildConsolidado(quotes, clients, catalog, egresos, fromDate, toDate, p
   section("EGRESOS POR CATEGORÍA");
   porCat.filter(function(c){return c.total>0;}).forEach(function(c){ push([c.label, fmtA(c.total), ""]); });
   push(["","",""]);
+  section("PERSONAL / SUELDOS");
+  push(["Personas activas", perActivas, ""]);
+  push(["Sueldos pagados (período)", fmtA(totSueldos), ""]);
+  push(["Horas trabajadas (período)", (Math.round(totHorasSueldos*100)/100)+" h", ""]);
+  push(["","",""]);
   var nf=push(["🟢 Bien · 🟡 Revisar · 🔴 Atención — Guía orientativa; no reemplaza el análisis de un contador con tus números reales.","",""]); merges.push({s:{r:nf,c:0},e:{r:nf,c:2}});
   // ── Ingresos y Egresos (con fila de total) ──
   var movRows=[["Fecha","Tipo","Categoría","Descripción","Monto","Moneda","TC"]].concat(movs.map(function(m){return [fmtFecha(m.fecha), m.monto>=0?'Ingreso':'Egreso', m.detalle||'', m.desc||'', m.monto, m.moneda||'$', m.tcambio||''];}));
@@ -446,10 +465,22 @@ function buildConsolidado(quotes, clients, catalog, egresos, fromDate, toDate, p
   var cliRows=[["Nombre","Tipo","Empresa","Administración","Teléfono","Teléfono Adm","Cargado por"]].concat((clients||[]).map(function(c){ var t=Array.isArray(c.tipo)?c.tipo.join("/"):(c.tipo||""); return [c.nombre||"", t, c.empresa||"", c.administracion||"", c.telefono||"", c.telefonoAdm||"", ebcUserLabel(c.autor||"guille")];}));
   var mdoRows=[["Nombre","Precio actual","N° de precios","Cargado por"]].concat(((catalog&&catalog.mdo)||[]).map(function(it){return [it.nombre||"", it.precioBase||"", (it.historial||[]).length, ebcUserLabel(it.autor||"guille")];}));
   var matRows=[["Nombre","Precio actual","N° de precios","Cargado por"]].concat(((catalog&&catalog.mat)||[]).map(function(it){return [it.nombre||"", it.precioBase||"", (it.historial||[]).length, ebcUserLabel(it.autor||"guille")];}));
+  // ── Personal / Sueldos: resumen por persona (con total) ──
+  var sumPerH=0,sumPerPg=0;
+  var perRows=[["Persona","Puesto","Valor hora","Estado","Horas (período)","Pagado (período)"]].concat(perBody.map(function(r){ sumPerH+=r.hrs; sumPerPg+=r.pg; return [r.p.nombre||"", r.p.puesto||"", parseFloat(r.p.precioHora)||0, (r.p.activo===false?"Baja":"Activa"), Math.round(r.hrs*100)/100, Math.round(r.pg)];}));
+  perRows.push(["TOTAL","","","", Math.round(sumPerH*100)/100, Math.round(sumPerPg)]); var perTotalRow=perRows.length-1;
+  // ── Detalle de pagos de sueldos (del período) ──
+  var perNombre=function(id){ var p=(personas||[]).find(function(x){return x.id===id;}); return p?(p.nombre||"(sin nombre)"):"—"; };
+  var pagosDet=sueldosPer.slice().sort(function(a,b){return (b.fecha||'').localeCompare(a.fecha||'');});
+  var sumDetH=0,sumDetM=0;
+  var pagoRows=[["Fecha","Persona","Mes","Semana","Horas","Monto ARS","Autor"]].concat(pagosDet.map(function(e){ var h=parseFloat(e.horas)||0; var m=persArs(e); sumDetH+=h; sumDetM+=m; return [fmtFecha(e.fecha), perNombre(e.personaId), mesTxtC(e.fecha)||"—", e.semanaNum?("Sem "+e.semanaNum):"—", h, Math.round(m), ebcUserLabel(e.autor||"guille")];}));
+  pagoRows.push(["TOTAL","","","", Math.round(sumDetH*100)/100, Math.round(sumDetM), ""]); var pagoTotalRow=pagoRows.length-1;
   return [
     {name:"Resumen",rows:R,noHeader:true,noFilter:true,titleRows:titleRows,sectionRows:sectionRows,merges:merges},
     {name:"Ingresos y Egresos",money:[4],rows:movRows,totalRow:movTotalRow,zebra:true},
     {name:"Seguimiento",money:[5,6,7,9,10],links:[{col:0,base:AU+"?p=",tooltip:"Ver en la app"},{col:2,base:AU+"?c=",tooltip:"Ver cliente en la app"}],rows:segRows,totalRow:segTotalRow,zebra:true},
+    {name:"Personal - Sueldos",money:[2,5],rows:perRows,totalRow:perTotalRow,zebra:true},
+    {name:"Sueldos (detalle)",money:[5],rows:pagoRows,totalRow:pagoTotalRow,zebra:true},
     {name:"Clientes",phoneCols:[4,5],links:[{col:0,base:AU+"?c=",tooltip:"Ver cliente en la app"}],rows:cliRows,zebra:true},
     {name:"Mano de Obra",money:[1],rows:mdoRows,zebra:true},
     {name:"Materiales",money:[1],rows:matRows,zebra:true}
@@ -6291,7 +6322,7 @@ function App() {
         ),
         React.createElement("div",{style:{display:"flex",gap:10,justifyContent:"flex-end"}},
           React.createElement("button",{type:"button",onClick:function(){setShowConsol(false);},style:{background:"none",border:"1px solid #E2E8F0",borderRadius:8,padding:"9px 16px",fontSize:13,fontWeight:600,color:"#64748B",cursor:"pointer"}},"Cancelar"),
-          React.createElement("button",{type:"button",onClick:function(){ if(consolFrom&&consolTo&&consolFrom>consolTo){alert("La fecha 'Desde' no puede ser posterior a 'Hasta'.");return;} var lbl=fmtFecha(consolFrom)+" al "+fmtFecha(consolTo); exportXLSX("ELECTRO BC - Consolidado - "+fmtFechaFile(consolFrom)+" a "+fmtFechaFile(consolTo)+".xlsx", buildConsolidado(quotes, clients, catalog, egresos, consolFrom, consolTo, lbl)); setShowConsol(false); },style:{background:ORANGE,border:"none",borderRadius:8,padding:"9px 18px",fontSize:13,fontWeight:700,color:"#fff",cursor:"pointer"}},"⬇ Descargar Excel")
+          React.createElement("button",{type:"button",onClick:function(){ if(consolFrom&&consolTo&&consolFrom>consolTo){alert("La fecha 'Desde' no puede ser posterior a 'Hasta'.");return;} var lbl=fmtFecha(consolFrom)+" al "+fmtFecha(consolTo); exportXLSX("ELECTRO BC - Consolidado - "+fmtFechaFile(consolFrom)+" a "+fmtFechaFile(consolTo)+".xlsx", buildConsolidado(quotes, clients, catalog, egresos, consolFrom, consolTo, lbl, personas)); setShowConsol(false); },style:{background:ORANGE,border:"none",borderRadius:8,padding:"9px 18px",fontSize:13,fontWeight:700,color:"#fff",cursor:"pointer"}},"⬇ Descargar Excel")
         )
       )
     )
