@@ -5761,15 +5761,40 @@ function PersonasView({ personas, onSave, egresos }){
               ),
               // panel historial de precio
               histFor===p.id && React.createElement('div',{style:{marginTop:12,padding:12,background:'#F8FAFC',borderRadius:8,border:'1px solid #E2E8F0'}},
-                React.createElement('div',{style:{fontSize:12,fontWeight:700,color:NAVY,marginBottom:8}},'Historial de valor por hora'),
+                React.createElement('div',{style:{fontSize:12,fontWeight:700,color:NAVY,marginBottom:8}},'Historial de precios'),
                 (p.historial||[]).length===0
                   ? React.createElement('div',{style:{fontSize:12,color:'#94A3B8'}},'Sin cambios registrados todavía.')
-                  : React.createElement('div',{style:{display:'flex',flexDirection:'column',gap:4}},
-                      (p.historial||[]).slice().reverse().map(function(hh,i){ return React.createElement('div',{key:i,style:{display:'flex',justifyContent:'space-between',fontSize:12,color:'#475569',padding:'4px 0',borderBottom:'1px solid #F1F5F9'}},
-                        React.createElement('span',null, fmtFecha(hh.fecha)+ (hh.autor? ' · '+ebcUserLabel(hh.autor):'')),
-                        React.createElement('span',{style:{fontWeight:700,color:ORANGE}}, fmt(hh.precio))
-                      ); })
-                    )
+                  : (function(){
+                      var hist=(p.historial||[]).slice();
+                      var thS={padding:'6px 8px',fontSize:10,fontWeight:700,color:'#94A3B8',textTransform:'uppercase',letterSpacing:'0.04em',textAlign:'left',borderBottom:'1px solid #E2E8F0',whiteSpace:'nowrap'};
+                      var tdS={padding:'6px 8px',fontSize:12,color:'#475569',borderBottom:'1px solid #F1F5F9',whiteSpace:'nowrap'};
+                      var rows=hist.map(function(hh,i){
+                        var prev=i>0?(parseFloat(hist[i-1].precio)||0):null;
+                        var cur=parseFloat(hh.precio)||0;
+                        var vari;
+                        if(prev===null){ vari={txt:'Inicial',color:'#94A3B8'}; }
+                        else { var d=cur-prev; var pct=prev>0?Math.round(d/prev*100):0; vari={txt:(d>=0?'+':'')+fmt(d)+' ('+(d>=0?'+':'')+pct+'%)', color:d>0?'#166534':(d<0?'#B91C1C':'#94A3B8')}; }
+                        return {hh:hh,cur:cur,vari:vari};
+                      }).reverse();
+                      return React.createElement('div',{style:{overflowX:'auto'}},
+                        React.createElement('table',{style:{width:'100%',borderCollapse:'collapse'}},
+                          React.createElement('thead',null, React.createElement('tr',null,
+                            React.createElement('th',{style:thS},'Fecha'),
+                            React.createElement('th',{style:Object.assign({},thS,{textAlign:'right'})},'Precio'),
+                            React.createElement('th',{style:Object.assign({},thS,{textAlign:'right'})},'Variación'),
+                            React.createElement('th',{style:thS},'Autor')
+                          )),
+                          React.createElement('tbody',null,
+                            rows.map(function(r,i){ return React.createElement('tr',{key:i},
+                              React.createElement('td',{style:tdS}, fmtFecha(r.hh.fecha)),
+                              React.createElement('td',{style:Object.assign({},tdS,{textAlign:'right',fontWeight:700,color:ORANGE})}, fmt(r.cur)),
+                              React.createElement('td',{style:Object.assign({},tdS,{textAlign:'right',fontWeight:700,color:r.vari.color})}, r.vari.txt),
+                              React.createElement('td',{style:tdS}, r.hh.autor? ebcUserLabel(r.hh.autor):'—')
+                            ); })
+                          )
+                        )
+                      );
+                    })()
               )
             );
           })
