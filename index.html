@@ -1309,17 +1309,12 @@ function ItemsTable({
         (function(){
           var q = r.desc.trim().toLowerCase();
           var matches = catalog.filter(function(c){ return (c.nombre||'').toLowerCase().includes(q); });
-          matches.sort(function(a,b){
-            var ap = (a.nombre||'').toLowerCase().indexOf(q)===0 ? 0 : 1;
-            var bp = (b.nombre||'').toLowerCase().indexOf(q)===0 ? 0 : 1;
-            if(ap!==bp) return ap-bp;                 // primero los que EMPIEZAN con lo escrito
-            return azKeyName(a.nombre).localeCompare(azKeyName(b.nombre)); // luego alfabético
-          });
-          matches = matches.slice(0,40);
+          matches.sort(function(a,b){ return azKeyName(a.nombre).localeCompare(azKeyName(b.nombre)); }); // alfabético
+          matches = matches.slice(0,50);
           var out = [], lastGrp = null;
           matches.forEach(function(c){
             var g = azGrpName(c.nombre);
-            if(g!==lastGrp){ lastGrp=g; out.push(/*#__PURE__*/React.createElement('div',{key:'g_'+g,style:{padding:'4px 10px',fontSize:10,fontWeight:700,color:'#64748B',backgroundColor:'#F1F5F9',letterSpacing:'0.06em',position:'sticky',top:0}}, g)); }
+            if(g!==lastGrp){ lastGrp=g; out.push(/*#__PURE__*/React.createElement('div',{key:'g_'+g,style:{padding:'3px 10px',fontSize:11,fontWeight:800,color:ORANGE,backgroundColor:'#FFF7ED',borderTop:'1px solid #FED7AA',borderBottom:'1px solid #FED7AA',letterSpacing:'0.08em',position:'sticky',top:0,zIndex:1}}, g)); }
             out.push(/*#__PURE__*/React.createElement('div',{key:c.id,
               onMouseDown:function(){setRow(r.id,'desc',c.nombre);setRow(r.id,'catId',c.id);setRow(r.id,'pu',c.precioBase);setDescSearch(function(s){var n=Object.assign({},s);n[r.id]=false;return n;});},
               style:{padding:'7px 10px',fontSize:12,color:'#1E293B',cursor:'pointer',borderBottom:'1px solid #F1F5F9',display:'flex',justifyContent:'space-between',gap:8}},
