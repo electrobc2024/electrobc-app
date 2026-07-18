@@ -5843,10 +5843,8 @@ function BackupView({ quotes, catalog, clients, egresos, personas, onRestore }){
   const _to = new Date().toISOString().slice(0,10);
   const [bFrom, setBFrom] = React.useState(_from);
   const [bTo, setBTo] = React.useState(_to);
-  const [fFecha, setFFecha] = React.useState('');
-  const [fTipo, setFTipo] = React.useState('');
-  const [fPeriodo, setFPeriodo] = React.useState('');
-  const [fAutor, setFAutor] = React.useState('');
+  const [sortCol, setSortCol] = React.useState('fecha');
+  const [sortDir, setSortDir] = React.useState('desc');
   const fileRef = React.useRef(null);
   const inp = {border:'1px solid #E2E8F0',borderRadius:6,padding:'8px 10px',fontSize:13,backgroundColor:'#fff',boxSizing:'border-box'};
   const card = {backgroundColor:'#fff',borderRadius:12,border:'1px solid #E2E8F0',padding:'18px 20px',marginBottom:16};
@@ -5920,46 +5918,33 @@ function BackupView({ quotes, catalog, clients, egresos, personas, onRestore }){
       hist.length===0
         ? React.createElement('div',{style:{fontSize:12,color:'#94A3B8'}},'Todavía no hiciste copias desde este dispositivo. El historial se guarda localmente en este navegador.')
         : (function(){
-            var autores=[]; hist.forEach(function(h){ if(h.autor && autores.indexOf(h.autor)<0) autores.push(h.autor); });
-            var filtrada=hist.filter(function(h){
-              if(fTipo && h.tipo!==fTipo) return false;
-              if(fAutor && h.autor!==fAutor) return false;
-              if(fFecha && fmtHora(h.fecha).toLowerCase().indexOf(fFecha.toLowerCase())<0) return false;
-              if(fPeriodo && (h.periodo||'').toLowerCase().indexOf(fPeriodo.toLowerCase())<0) return false;
-              return true;
-            });
-            var fInp={border:'1px solid #E2E8F0',borderRadius:5,padding:'4px 7px',fontSize:11,width:'100%',boxSizing:'border-box',background:'#fff'};
+            function keyOf(h){ if(sortCol==='fecha') return h.fecha||''; if(sortCol==='tipo') return h.tipo||''; if(sortCol==='periodo') return (h.periodo||'').toLowerCase(); if(sortCol==='autor') return (h.autor?ebcUserLabel(h.autor):'').toLowerCase(); return ''; }
+            var ordenada=hist.slice().sort(function(a,b){ var ka=keyOf(a),kb=keyOf(b); var c= ka<kb?-1:(ka>kb?1:0); return sortDir==='asc'?c:-c; });
+            function sortTh(col,label,align){
+              var act=sortCol===col;
+              return React.createElement('th',{style:Object.assign({},thS,{textAlign:align||'left',cursor:'pointer',userSelect:'none'}),onClick:function(){ if(act){ setSortDir(sortDir==='asc'?'desc':'asc'); } else { setSortCol(col); setSortDir(col==='fecha'?'desc':'asc'); } }},
+                React.createElement('span',{style:{display:'inline-flex',alignItems:'center',gap:3,color:act?ORANGE:undefined}}, label, React.createElement('span',{style:{fontSize:9,opacity:act?1:0.4}}, act?(sortDir==='asc'?'▲':'▼'):'⇅'))
+              );
+            }
             return React.createElement('div',{style:{overflowX:'auto'}},
               React.createElement('table',{style:{width:'100%',borderCollapse:'collapse'}},
-                React.createElement('thead',null,
-                  React.createElement('tr',null,
-                    React.createElement('th',{style:thS},'Fecha y hora'),
-                    React.createElement('th',{style:thS},'Tipo'),
-                    React.createElement('th',{style:thS},'Período'),
-                    React.createElement('th',{style:Object.assign({},thS,{textAlign:'right'})},'Presup.'),
-                    React.createElement('th',{style:Object.assign({},thS,{textAlign:'right'})},'Movim.'),
-                    React.createElement('th',{style:thS},'Autor')
-                  ),
-                  React.createElement('tr',null,
-                    React.createElement('th',{style:{padding:'4px 8px',borderBottom:'1px solid #E2E8F0'}}, React.createElement('input',{type:'text',value:fFecha,placeholder:'Buscar…',onChange:function(e){setFFecha(e.target.value);},style:fInp})),
-                    React.createElement('th',{style:{padding:'4px 8px',borderBottom:'1px solid #E2E8F0'}}, React.createElement('select',{value:fTipo,onChange:function(e){setFTipo(e.target.value);},style:fInp}, React.createElement('option',{value:''},'Todos'), React.createElement('option',{value:'Completa'},'Completa'), React.createElement('option',{value:'Período'},'Período'))),
-                    React.createElement('th',{style:{padding:'4px 8px',borderBottom:'1px solid #E2E8F0'}}, React.createElement('input',{type:'text',value:fPeriodo,placeholder:'Buscar…',onChange:function(e){setFPeriodo(e.target.value);},style:fInp})),
-                    React.createElement('th',{style:{padding:'4px 8px',borderBottom:'1px solid #E2E8F0'}}),
-                    React.createElement('th',{style:{padding:'4px 8px',borderBottom:'1px solid #E2E8F0'}}),
-                    React.createElement('th',{style:{padding:'4px 8px',borderBottom:'1px solid #E2E8F0'}}, React.createElement('select',{value:fAutor,onChange:function(e){setFAutor(e.target.value);},style:fInp}, React.createElement('option',{value:''},'Todos'), autores.map(function(a){return React.createElement('option',{key:a,value:a}, ebcUserLabel(a));})))
-                  )
-                ),
+                React.createElement('thead',null, React.createElement('tr',null,
+                  sortTh('fecha','Fecha y hora'),
+                  sortTh('tipo','Tipo'),
+                  sortTh('periodo','Período'),
+                  React.createElement('th',{style:Object.assign({},thS,{textAlign:'right'})},'Presup.'),
+                  React.createElement('th',{style:Object.assign({},thS,{textAlign:'right'})},'Movim.'),
+                  sortTh('autor','Autor')
+                )),
                 React.createElement('tbody',null,
-                  filtrada.length===0
-                    ? React.createElement('tr',null, React.createElement('td',{style:Object.assign({},tdS,{color:'#94A3B8'}),colSpan:6},'No hay copias que coincidan con los filtros.'))
-                    : filtrada.map(function(h,i){ return React.createElement('tr',{key:i},
-                        React.createElement('td',{style:tdS}, fmtHora(h.fecha)),
-                        React.createElement('td',{style:tdS}, React.createElement('span',{style:{fontWeight:700,color:h.tipo==='Completa'?ORANGE:'#4338CA'}}, h.tipo)),
-                        React.createElement('td',{style:tdS}, h.periodo||'—'),
-                        React.createElement('td',{style:Object.assign({},tdS,{textAlign:'right'})}, (h.n&&h.n.presupuestos!=null)?h.n.presupuestos:'—'),
-                        React.createElement('td',{style:Object.assign({},tdS,{textAlign:'right'})}, (h.n&&h.n.movimientos!=null)?h.n.movimientos:'—'),
-                        React.createElement('td',{style:tdS}, h.autor? ebcUserLabel(h.autor):'—')
-                      ); })
+                  ordenada.map(function(h,i){ return React.createElement('tr',{key:i},
+                    React.createElement('td',{style:tdS}, fmtHora(h.fecha)),
+                    React.createElement('td',{style:tdS}, React.createElement('span',{style:{fontWeight:700,color:h.tipo==='Completa'?ORANGE:'#4338CA'}}, h.tipo)),
+                    React.createElement('td',{style:tdS}, h.periodo||'—'),
+                    React.createElement('td',{style:Object.assign({},tdS,{textAlign:'right'})}, (h.n&&h.n.presupuestos!=null)?h.n.presupuestos:'—'),
+                    React.createElement('td',{style:Object.assign({},tdS,{textAlign:'right'})}, (h.n&&h.n.movimientos!=null)?h.n.movimientos:'—'),
+                    React.createElement('td',{style:tdS}, h.autor? ebcUserLabel(h.autor):'—')
+                  ); })
                 )
               )
             );
