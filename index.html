@@ -5886,7 +5886,7 @@ function BackupView({ quotes, catalog, clients, egresos, personas, onRestore }){
   var tdS={padding:'8px 10px',fontSize:12,color:'#475569',borderBottom:'1px solid #F1F5F9',whiteSpace:'nowrap'};
   var fmtHora=function(iso){ try{ var d=new Date(iso); return fmtFecha(iso)+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); }catch(e){ return fmtFecha(iso); } };
 
-  return React.createElement('div',{style:{maxWidth:1100,margin:'0 auto',padding:'0 4px'}},
+  return React.createElement(IngresosPane, null, React.createElement('div',{style:{maxWidth:1100,margin:'0 auto'}},
     React.createElement('div',{style:{marginBottom:16}},
       React.createElement('div',{style:{fontFamily:"'Oswald',system-ui",fontSize:22,fontWeight:700,color:NAVY,letterSpacing:'-0.01em'}},'💾 Copias de seguridad'),
       React.createElement('div',{style:{fontSize:13,color:'#64748B',marginTop:6,lineHeight:1.45,maxWidth:640}},'Descargá una copia de todos tus datos (presupuestos, clientes, materiales, mano de obra, movimientos y personal) para guardarla en tu compu o la nube. Podés bajar la copia completa o solo la de un período, y ver el historial de copias hechas desde este dispositivo.')
@@ -5948,7 +5948,7 @@ function BackupView({ quotes, catalog, clients, egresos, personas, onRestore }){
             )
           )
     )
-  );
+  ));
 }
 
 function App() {
@@ -6220,7 +6220,7 @@ function App() {
     {id:"personal",    label:"🧑‍🔧 Personal / Sueldos"},
     {id:"movimientos", label:"💱 Cargar Ingresos / Egresos"},
     {id:"dashboard",   label:"📊 Dashboard Financiero"},
-    {id:"backups",     label:"💾 Copias de seguridad"},
+    {id:"backups",     label:"💾 Copias"},
   ];
   const nav = [...navMain, ...navFin];
   return /*#__PURE__*/React.createElement("div", {
@@ -6247,18 +6247,20 @@ function App() {
       gap: 9,
       paddingRight: 18,
       marginRight: 4,
+      flexShrink: 0,
       borderRight: "1px solid rgba(255,255,255,0.08)"
     }
   }, /*#__PURE__*/React.createElement(LogoIcon, {
     size: 28
-  }), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+  }), /*#__PURE__*/React.createElement("div", {style:{whiteSpace:"nowrap"}}, /*#__PURE__*/React.createElement("div", {
     style: {
       fontFamily: "'Oswald',system-ui",
       fontSize: 14,
       fontWeight: 700,
       color: "#fff",
       lineHeight: 1,
-      letterSpacing: "0.04em"
+      letterSpacing: "0.04em",
+      whiteSpace: "nowrap"
     }
   }, "ELECTRO BC"), /*#__PURE__*/React.createElement("div", {
     style: {
@@ -6283,7 +6285,7 @@ function App() {
         key:item.id,
         onClick:function(){setView(item.id);},
         style:{
-          display:"flex",alignItems:"center",padding:"0 11px",
+          display:"flex",alignItems:"center",padding:"0 9px",
           background:"none",border:"none",fontSize:12,
           fontWeight:a?700:400,
           color:a?"#fff":fin?"rgba(255,210,100,0.8)":"rgba(255,255,255,0.45)",
