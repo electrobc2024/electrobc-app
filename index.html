@@ -5892,7 +5892,7 @@ function BackupView({ quotes, catalog, clients, egresos, personas, onRestore }){
   var fmtHora=function(iso){ try{ var d=new Date(iso); return fmtFecha(iso)+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); }catch(e){ return fmtFecha(iso); } };
 
   return React.createElement(IngresosPane, null, React.createElement('div',null,
-    React.createElement(PageHeader, { title: '💾 Copias de seguridad', subtitle: 'Descargá una copia de todos tus datos (presupuestos, clientes, materiales, mano de obra, movimientos y personal) para guardarla en tu compu o la nube. Podés bajar la copia completa o solo la de un período, y ver el historial de copias hechas desde este dispositivo.' }),
+    React.createElement(PageHeader, { title: '💾 Copias de seguridad', subtitle: 'Descargá una copia de todos tus datos para guardarla en tu compu o la nube. Podés bajar la copia completa o solo la de un período, y ver el historial de copias hechas desde este dispositivo.' }),
     // Copia completa + Copia por período (lado a lado, misma altura)
     React.createElement('div',{style:{display:'grid',gridTemplateColumns:'repeat(auto-fit, minmax(340px, 1fr))',gap:16,marginBottom:16,alignItems:'stretch'}},
       React.createElement('div',{style:Object.assign({},card,{marginBottom:0,display:'flex',flexDirection:'column'})},
