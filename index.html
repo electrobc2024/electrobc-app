@@ -5564,19 +5564,26 @@ function setupGlobalNav() {
 }
 
 // ── App ───────────────────────────────────────────────────────────────────────
-function PersonasView({ personas, onSave }){
+function PersonasView({ personas, onSave, egresos }){
   const NAVY = "#0A0F1E", ORANGE = "#F26B1D";
   const isMobile = useIsMobile();
   const list = personas || [];
+  const egr = egresos || [];
   const [form, setForm] = React.useState(mkPersona());
   const [editId, setEditId] = React.useState(null);
   const [showForm, setShowForm] = React.useState(false);
   const [anos, setAnos] = React.useState([String(new Date().getFullYear())]);
   const [meses, setMeses] = React.useState([String(new Date().getMonth()+1).padStart(2,'0')]);
   const [verInactivos, setVerInactivos] = React.useState(false);
-  const [hoursFor, setHoursFor] = React.useState(null);
-  const [hForm, setHForm] = React.useState({ fecha: new Date().toISOString().slice(0,10), horas: "" });
+  const [pagosFor, setPagosFor] = React.useState(null);
   const [histFor, setHistFor] = React.useState(null);
+  // Pagos (egresos de sueldos) de una persona, filtrados por período
+  const inPer = function(fecha){ if(!fecha) return false; var y=String(fecha).slice(0,4), m=String(fecha).slice(5,7); if(anos.length&&anos.indexOf(y)<0) return false; if(meses.length&&meses.indexOf(m)<0) return false; return true; };
+  const pagosDe = function(pid){ return egr.filter(function(e){ return e && e.tipo!=='ingreso' && e.cat==='sueldos' && e.personaId===pid; }); };
+  const pagosPeriodo = function(pid){ return pagosDe(pid).filter(function(e){ return inPer(e.fecha); }).sort(function(a,b){ return (b.fecha||'').localeCompare(a.fecha||''); }); };
+  const arsDe = function(e){ var m=parseFloat(e.monto)||0; return (e.moneda||'$')==='USD' ? m*(parseFloat(e.tcambio)||0) : m; };
+  const horasDe = function(pid){ return pagosPeriodo(pid).reduce(function(s,e){ return s+(parseFloat(e.horas)||0); }, 0); };
+  const pagadoDe = function(pid){ return pagosPeriodo(pid).reduce(function(s,e){ return s+arsDe(e); }, 0); };
 
   const fmt = n => (parseFloat(n)||0).toLocaleString('es-AR',{style:'currency',currency:'ARS',maximumFractionDigits:0});
   const mesLbl = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
@@ -5614,28 +5621,9 @@ function PersonasView({ personas, onSave }){
     if(active){ if(!confirm('¿Dar de baja a '+(p.nombre||'esta persona')+'?\n\nNo se elimina: queda inactiva (no aparece para cargar sueldos) y la podés reactivar cuando quieras.')) return; }
     onSave(list.map(function(x){return x.id===p.id?Object.assign({},x,{activo:!active}):x;}));
   }
-  function eliminar(p){ if(confirm('¿ELIMINAR a '+(p.nombre||'esta persona')+' definitivamente?\n\nSe borra la persona y TODO su historial de horas y precios. Esto NO se puede deshacer.\n\n(Si solo dejó de trabajar, mejor usá "Dar de baja".)')) onSave(list.filter(function(x){return x.id!==p.id;})); }
-  function weekStart(dstr){ try{ var d=new Date(String(dstr).slice(0,10)+'T12:00:00'); if(isNaN(d)) return String(dstr).slice(0,10); var day=(d.getDay()+6)%7; d.setDate(d.getDate()-day); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }catch(e){ return String(dstr).slice(0,10); } }
-  function agregarHoras(pid){
-    var hs = parseFloat(hForm.horas);
-    if(!hForm.fecha || isNaN(hs) || hs<=0){ alert('Elegí la semana y poné las horas (un número mayor a 0).'); return; }
-    if(hs>168){ alert('Una semana tiene 168 horas como máximo. Revisá el número.'); return; }
-    var wk = weekStart(hForm.fecha);
-    onSave(list.map(function(p){
-      if(p.id!==pid) return p;
-      var arr=(p.horas||[]).slice();
-      var idx=arr.findIndex(function(h){return weekStart(h.fecha)===wk;});
-      if(idx>=0){ arr[idx]=Object.assign({},arr[idx],{fecha:wk,horas:hs,autor:ebcUser()}); }
-      else { arr.push({id:Math.random().toString(36).slice(2,9), fecha:wk, horas:hs, autor:ebcUser()}); }
-      return Object.assign({},p,{horas:arr});
-    }));
-    setHForm({ fecha:new Date().toISOString().slice(0,10), horas:'' });
-  }
-  function borrarHora(pid, hid){ onSave(list.map(function(p){ if(p.id!==pid) return p; return Object.assign({},p,{horas:(p.horas||[]).filter(function(h){return h.id!==hid;})}); })); }
-
   const visibles = list.filter(function(p){ return verInactivos || p.activo!==false; }).sort(function(a,b){ return (a.nombre||'').localeCompare(b.nombre||''); });
   const activos = list.filter(function(p){return p.activo!==false;});
-  const totalSueldos = activos.reduce(function(s,p){ return s + horasEnPeriodo(p, anos, meses)*(parseFloat(p.precioHora)||0); }, 0);
+  const totalPagado = list.reduce(function(s,p){ return s + pagadoDe(p.id); }, 0);
 
   const chip = function(key, label, active, onClick){ return React.createElement('button',{key:key,type:'button',onClick:onClick,style:{padding:'5px 11px',borderRadius:20,border:'1px solid '+(active?ORANGE:'#E2E8F0'),background:active?ORANGE:'#fff',color:active?'#fff':'#475569',fontSize:12,fontWeight:active?700:500,cursor:'pointer',whiteSpace:'nowrap'}},label); };
   const lbl = function(t, req){ return React.createElement('div',{style:{fontSize:11,fontWeight:600,color:'#64748B',marginBottom:3}}, t, req?React.createElement('span',{style:{color:'#DC2626',fontWeight:700}},' *'):null); };
@@ -5644,7 +5632,7 @@ function PersonasView({ personas, onSave }){
     React.createElement('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'flex-start',gap:12,flexWrap:'wrap',marginBottom:16}},
       React.createElement('div',null,
         React.createElement('div',{style:{fontFamily:"'Oswald',system-ui",fontSize:22,fontWeight:700,color:NAVY,letterSpacing:'-0.01em',lineHeight:1.25}},'🧑‍🔧 Personal / Sueldos'),
-        React.createElement('div',{style:{fontSize:13,color:'#64748B',marginTop:6,lineHeight:1.45,maxWidth:560}},'Personas, su valor por hora (con historial), horas trabajadas y sueldo calculado del período. El pago se registra en Cargar Ingresos / Egresos.')
+        React.createElement('div',{style:{fontSize:13,color:'#64748B',marginTop:6,lineHeight:1.45,maxWidth:600}},'Alta de personas y su valor por hora (con historial). Las horas y los pagos se cargan desde Cargar Ingresos / Egresos (categoría Sueldos); acá ves el resumen y el historial de pagos de cada uno.')
       ),
       React.createElement('button',{type:'button',onClick:function(){ if(editId){setEditId(null);} setForm(mkPersona()); setShowForm(function(s){return !s;}); },style:{backgroundColor:showForm?'#fff':ORANGE,color:showForm?ORANGE:'#fff',border:'1px solid '+ORANGE,borderRadius:8,padding:'9px 16px',fontSize:13,fontWeight:700,cursor:'pointer',whiteSpace:'nowrap',flexShrink:0}}, showForm?'✕ Cerrar':'➕ Agregar persona')
     ),
@@ -5665,9 +5653,9 @@ function PersonasView({ personas, onSave }){
         React.createElement('div',{style:{fontFamily:"'Oswald',system-ui",fontSize:20,fontWeight:700,color:NAVY}}, String(activos.length))
       ),
       React.createElement('div',{style:{backgroundColor:'#FFF7ED',border:'1px solid #FED7AA',borderRadius:10,padding:'12px 14px'}},
-        React.createElement('div',{style:{fontSize:10,fontWeight:700,color:'#B45309',textTransform:'uppercase',marginBottom:3}},'💰 Sueldos del período'),
-        React.createElement('div',{style:{fontFamily:"'Oswald',system-ui",fontSize:20,fontWeight:700,color:NAVY}}, fmt(totalSueldos)),
-        React.createElement('div',{style:{fontSize:9,color:'#94A3B8',marginTop:2}}, 'Sugerido = horas × valor hora')
+        React.createElement('div',{style:{fontSize:10,fontWeight:700,color:'#B45309',textTransform:'uppercase',marginBottom:3}},'💰 Sueldos pagados (período)'),
+        React.createElement('div',{style:{fontFamily:"'Oswald',system-ui",fontSize:20,fontWeight:700,color:NAVY}}, fmt(totalPagado)),
+        React.createElement('div',{style:{fontSize:9,color:'#94A3B8',marginTop:2}}, 'Sumado desde Ingresos / Egresos')
       )
     ),
 
@@ -5700,11 +5688,11 @@ function PersonasView({ personas, onSave }){
       : React.createElement('div',{style:{display:'flex',flexDirection:'column',gap:12}},
           visibles.map(function(p){
             var precio = parseFloat(p.precioHora)||0;
-            var horasPer = horasEnPeriodo(p, anos, meses);
-            var sueldoPer = horasPer*precio;
+            var horasPer = horasDe(p.id);
+            var pagadoPer = pagadoDe(p.id);
+            var pagos = pagosPeriodo(p.id);
             var inactivo = p.activo===false;
-            var horasFiltradas = (p.horas||[]).filter(function(h){ if(!h.fecha) return false; var y=String(h.fecha).slice(0,4), m=String(h.fecha).slice(5,7); if(anos.length&&anos.indexOf(y)<0) return false; if(meses.length&&meses.indexOf(m)<0) return false; return true; }).sort(function(a,b){return (b.fecha||'').localeCompare(a.fecha||'');});
-            return React.createElement('div',{key:p.id,style:{backgroundColor:'#fff',border:'1px solid '+(inactivo?'#E2E8F0':'#E2E8F0'),borderRadius:12,padding:16,opacity:inactivo?0.6:1}},
+            return React.createElement('div',{key:p.id,style:{backgroundColor:'#fff',border:'1px solid #E2E8F0',borderRadius:12,padding:16,opacity:inactivo?0.6:1}},
               React.createElement('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'flex-start',gap:10,flexWrap:'wrap'}},
                 React.createElement('div',{style:{minWidth:0}},
                   React.createElement('div',{style:{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}},
@@ -5722,30 +5710,25 @@ function PersonasView({ personas, onSave }){
               // métricas del período
               React.createElement('div',{style:{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:10,marginTop:12,paddingTop:12,borderTop:'1px solid #F1F5F9'}},
                 React.createElement('div',null, React.createElement('div',{style:{fontSize:10,color:'#94A3B8',textTransform:'uppercase',fontWeight:700}},'Horas (período)'), React.createElement('div',{style:{fontSize:17,fontWeight:700,color:NAVY,fontFamily:"'Oswald',system-ui"}}, (Math.round(horasPer*100)/100)+' h')),
-                React.createElement('div',null, React.createElement('div',{style:{fontSize:10,color:'#94A3B8',textTransform:'uppercase',fontWeight:700}},'Sueldo (período)'), React.createElement('div',{style:{fontSize:17,fontWeight:700,color:'#166534',fontFamily:"'Oswald',system-ui"}}, fmt(sueldoPer))),
+                React.createElement('div',null, React.createElement('div',{style:{fontSize:10,color:'#94A3B8',textTransform:'uppercase',fontWeight:700}},'Pagado (período)'), React.createElement('div',{style:{fontSize:17,fontWeight:700,color:'#166534',fontFamily:"'Oswald',system-ui"}}, fmt(pagadoPer))),
                 React.createElement('div',null, React.createElement('div',{style:{fontSize:10,color:'#94A3B8',textTransform:'uppercase',fontWeight:700}},'H/semana'), React.createElement('div',{style:{fontSize:17,fontWeight:700,color:'#475569',fontFamily:"'Oswald',system-ui"}}, (p.horasSemana||'—')))
               ),
               // acciones
               React.createElement('div',{style:{display:'flex',gap:6,flexWrap:'wrap',marginTop:12}},
                 React.createElement('button',{type:'button',onClick:function(){editar(p);},style:{background:'none',border:'1px solid #E2E8F0',borderRadius:6,padding:'5px 11px',fontSize:12,color:'#475569',cursor:'pointer'}},'✏️ Editar'),
-                React.createElement('button',{type:'button',onClick:function(){setHoursFor(hoursFor===p.id?null:p.id);setHistFor(null);},style:{background:'none',border:'1px solid '+(hoursFor===p.id?ORANGE:'#E2E8F0'),borderRadius:6,padding:'5px 11px',fontSize:12,color:hoursFor===p.id?ORANGE:'#475569',cursor:'pointer'}},'🕐 Cargar / ver horas'),
-                React.createElement('button',{type:'button',onClick:function(){setHistFor(histFor===p.id?null:p.id);setHoursFor(null);},style:{background:'none',border:'1px solid '+(histFor===p.id?ORANGE:'#E2E8F0'),borderRadius:6,padding:'5px 11px',fontSize:12,color:histFor===p.id?ORANGE:'#475569',cursor:'pointer'}},'📈 Historial de precio'),
+                React.createElement('button',{type:'button',onClick:function(){setPagosFor(pagosFor===p.id?null:p.id);setHistFor(null);},style:{background:'none',border:'1px solid '+(pagosFor===p.id?ORANGE:'#E2E8F0'),borderRadius:6,padding:'5px 11px',fontSize:12,color:pagosFor===p.id?ORANGE:'#475569',cursor:'pointer'}},'🧾 Historial de pagos'),
+                React.createElement('button',{type:'button',onClick:function(){setHistFor(histFor===p.id?null:p.id);setPagosFor(null);},style:{background:'none',border:'1px solid '+(histFor===p.id?ORANGE:'#E2E8F0'),borderRadius:6,padding:'5px 11px',fontSize:12,color:histFor===p.id?ORANGE:'#475569',cursor:'pointer'}},'📈 Historial de precio'),
                 React.createElement('button',{type:'button',onClick:function(){toggleActivo(p);},style:{background:'none',border:'1px solid '+(inactivo?'#86EFAC':'#FDE68A'),borderRadius:6,padding:'5px 11px',fontSize:12,color:inactivo?'#16A34A':'#B45309',cursor:'pointer'}}, inactivo?'✓ Dar de alta':'⏸ Dar de baja')
               ),
-              // panel cargar/ver horas
-              hoursFor===p.id && React.createElement('div',{style:{marginTop:12,padding:12,background:'#F8FAFC',borderRadius:8,border:'1px solid #E2E8F0'}},
-                React.createElement('div',{style:{fontSize:11,color:'#64748B',marginBottom:8}},'Cargá el total de horas de la semana (un valor por semana). Si volvés a cargar una semana ya registrada, se reemplaza.'),
-                React.createElement('div',{style:{display:'flex',gap:8,alignItems:'flex-end',flexWrap:'wrap',marginBottom:10}},
-                  React.createElement('div',null, lbl('Semana (elegí cualquier día de esa semana)'), React.createElement('input',{type:'date',style:Object.assign({},inp,{width:isMobile?'100%':230}),value:hForm.fecha,onChange:function(e){setHForm(Object.assign({},hForm,{fecha:e.target.value}));}})),
-                  React.createElement('div',null, lbl('Horas de la semana'), React.createElement('input',{type:'number',min:'0',step:'any',style:Object.assign({},inp,{width:isMobile?'100%':120}),value:hForm.horas,onChange:function(e){setHForm(Object.assign({},hForm,{horas:e.target.value}));},placeholder:'Ej: 40'})),
-                  React.createElement('button',{type:'button',onClick:function(){agregarHoras(p.id);},style:{backgroundColor:ORANGE,color:'#fff',border:'none',borderRadius:6,padding:'8px 14px',fontSize:12,fontWeight:700,cursor:'pointer'}},'+ Guardar semana')
-                ),
-                horasFiltradas.length===0
-                  ? React.createElement('div',{style:{fontSize:12,color:'#94A3B8'}},'Sin horas cargadas en el período seleccionado.')
+              // panel historial de pagos (desde egresos)
+              pagosFor===p.id && React.createElement('div',{style:{marginTop:12,padding:12,background:'#F8FAFC',borderRadius:8,border:'1px solid #E2E8F0'}},
+                React.createElement('div',{style:{fontSize:12,fontWeight:700,color:NAVY,marginBottom:8}},'Historial de pagos (período)'),
+                pagos.length===0
+                  ? React.createElement('div',{style:{fontSize:12,color:'#94A3B8'}},'Sin pagos registrados en el período. Se cargan desde Cargar Ingresos / Egresos (categoría Sueldos).')
                   : React.createElement('div',{style:{display:'flex',flexDirection:'column',gap:4}},
-                      horasFiltradas.map(function(h){ return React.createElement('div',{key:h.id,style:{display:'flex',justifyContent:'space-between',alignItems:'center',fontSize:12,color:'#475569',padding:'4px 0',borderBottom:'1px solid #F1F5F9'}},
-                        React.createElement('span',null, 'Semana del '+fmtFecha(h.fecha)+' — '+ (parseFloat(h.horas)||0) +' h'),
-                        React.createElement('button',{type:'button',onClick:function(){borrarHora(p.id,h.id);},style:{background:'none',border:'none',color:'#DC2626',cursor:'pointer',fontSize:13}},'✕')
+                      pagos.map(function(e){ return React.createElement('div',{key:e.id,style:{display:'flex',justifyContent:'space-between',alignItems:'center',fontSize:12,color:'#475569',padding:'4px 0',borderBottom:'1px solid #F1F5F9'}},
+                        React.createElement('span',null, fmtFecha(e.fecha)+ (e.horas? ' · '+(parseFloat(e.horas)||0)+' h':'') + (e.autor?' · '+ebcUserLabel(e.autor):'')),
+                        React.createElement('span',{style:{fontWeight:700,color:'#166534'}}, fmt(arsDe(e)))
                       ); })
                     )
               ),
@@ -6218,7 +6201,8 @@ function App() {
     onClearHighlight: () => setTrackerHighlight(null)
   })), view === "personal" && /*#__PURE__*/React.createElement(PersonasView, {
     personas: personas,
-    onSave: handlePersonas
+    onSave: handlePersonas,
+    egresos: egresos
   }), (view==="dashboard"||view==="movimientos") && /*#__PURE__*/React.createElement(IngresosView, {
     quotes: quotes,
     egresos: egresos,
@@ -6959,14 +6943,18 @@ function IngresosView({quotes, egresos, onSaveEgresos, clients, catalog, persona
 
   // ── Form ───────────────────────────────────────────────────────────────────
   function handleSaveEgreso() {
-    if((!egForm.cat&&egForm.tipo==='egreso')||!egForm.desc.trim()||!egForm.monto||!egForm.fecha||!egForm.medio){alert('Complet\u00e1 todos los campos antes de guardar.');return;}
+    var isSueldo = egForm.tipo==='egreso' && egForm.cat==='sueldos' && egForm.personaId;
+    var per = isSueldo ? (personas||[]).find(function(x){return x.id===egForm.personaId;}) : null;
+    var effDesc = (egForm.desc && egForm.desc.trim()) ? egForm.desc.trim() : (per ? (per.nombre||'Sueldo') : '');
+    if((!egForm.cat&&egForm.tipo==='egreso')|| !effDesc ||!egForm.monto||!egForm.fecha||!egForm.medio){alert('Complet\u00e1 todos los campos antes de guardar.');return;}
+    var payload = Object.assign({}, egForm, {desc: effDesc});
     const list = egresos||[];
     if(editId) {
-      onSaveEgresos(list.map(function(e){return e.id===editId?{...egForm,id:editId}:e;}));
+      onSaveEgresos(list.map(function(e){return e.id===editId?Object.assign({}, payload, {id:editId}):e;}));
     } else {
-      onSaveEgresos([...list, {...egForm, id:Math.random().toString(36).slice(2,9), autor:ebcUser()}]);
+      onSaveEgresos([...list, Object.assign({}, payload, {id:Math.random().toString(36).slice(2,9), autor:ebcUser()})]);
     }
-    setEgForm({id:'',tipo:'egreso',cat:'sueldos',desc:'',monto:'',fecha:'',medio:'efectivo',moneda:'$',tcambio:''});
+    setEgForm({id:'',tipo:'egreso',cat:'sueldos',desc:'',monto:'',fecha:'',medio:'efectivo',moneda:'$',tcambio:'',personaId:'',horas:''});
     setShowForm(false);
     setEditId(null);
   }
@@ -7225,24 +7213,34 @@ function IngresosView({quotes, egresos, onSaveEgresos, clients, catalog, persona
             React.createElement('div',{style:{fontSize:10,color:'#94A3B8',fontWeight:700,marginBottom:4}},'PERSONA (solo activas)'),
             React.createElement('select',{value:egForm.personaId||'',onChange:function(e){
               var pid=e.target.value;
-              var p=(personas||[]).find(function(x){return x.id===pid;});
               setEgForm(function(f){
+                var p=(personas||[]).find(function(x){return x.id===pid;});
                 if(!p) return Object.assign({},f,{personaId:''});
-                var fch=f.fecha||new Date().toISOString().slice(0,10);
-                var y=String(fch).slice(0,4), mm=String(fch).slice(5,7);
-                var horas=horasEnPeriodo(p,[y],[mm]);
-                var sug=Math.round(horas*(parseFloat(p.precioHora)||0));
-                return Object.assign({},f,{personaId:pid, desc:(p.nombre||'')+(p.puesto?(' — '+p.puesto):'')+' · sueldo '+mm+'/'+y, monto: sug>0?String(sug):f.monto});
+                var hrs=parseFloat(f.horas)||0;
+                var sug=Math.round(hrs*(parseFloat(p.precioHora)||0));
+                return Object.assign({},f,{personaId:pid, monto: sug>0?String(sug):f.monto});
               });
             },style:inp},
               React.createElement('option',{value:''},'— Elegí una persona —'),
               (personas||[]).filter(function(p){return p.activo!==false;}).map(function(p){return React.createElement('option',{key:p.id,value:p.id}, (p.nombre||'(sin nombre)')+(p.puesto?(' · '+p.puesto):'')+' — '+((parseFloat(p.precioHora)||0).toLocaleString('es-AR'))+'/h');})
             ),
+            egForm.personaId ? React.createElement('div',{style:{marginTop:8}},
+              React.createElement('div',{style:{fontSize:10,color:'#94A3B8',fontWeight:700,marginBottom:4}},'HORAS DE LA SEMANA'),
+              React.createElement('input',{type:'number',min:'0',step:'any',value:egForm.horas||'',placeholder:'Ej: 40',onChange:function(e){
+                var h=e.target.value;
+                setEgForm(function(f){
+                  var p=(personas||[]).find(function(x){return x.id===f.personaId;});
+                  var sug=p?Math.round((parseFloat(h)||0)*(parseFloat(p.precioHora)||0)):null;
+                  return Object.assign({},f,{horas:h, monto:(sug!=null&&sug>0)?String(sug):f.monto});
+                });
+              },style:inp}),
+              React.createElement('div',{style:{fontSize:10,color:'#94A3B8',marginTop:3}},'El monto se calcula solo (horas × valor hora); podés ajustarlo. La FECHA de abajo marca la semana.')
+            ) : null,
             ((personas||[]).filter(function(p){return p.activo!==false;}).length===0)
               ? React.createElement('div',{style:{fontSize:10,color:'#B45309',marginTop:3}},'No hay personas activas. Cargalas en "Personal / Sueldos".')
-              : React.createElement('div',{style:{fontSize:10,color:'#94A3B8',marginTop:3}},'Monto sugerido = horas del mes × valor hora. Podés ajustarlo.')
+              : null
           ):null,
-          React.createElement('div',null,
+          (egForm.tipo==='egreso' && egForm.cat==='sueldos' && egForm.personaId) ? React.createElement('div',null) : React.createElement('div',null,
             React.createElement('div',{style:{fontSize:10,color:'#94A3B8',fontWeight:700,marginBottom:4}},'DESCRIPCIÓN'),
             React.createElement('input',{type:'text',
     spellCheck:true,value:egForm.desc,onChange:function(e){setEgForm(function(f){return Object.assign({},f,{desc:e.target.value});});},placeholder:'Descripción...',style:inp})
