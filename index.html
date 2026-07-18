@@ -7238,13 +7238,26 @@ function IngresosView({quotes, egresos, onSaveEgresos, clients, catalog, persona
           (egForm.tipo==='egreso' && egForm.cat==='sueldos' && egForm.personaId) ? React.createElement('div',null,
             React.createElement('div',{style:{fontSize:10,color:'#94A3B8',fontWeight:700,marginBottom:4}},'MES, SEMANA Y HORAS'),
             React.createElement('div',{style:{display:'flex',gap:8,flexWrap:'wrap'}},
-              React.createElement('input',{type:'month',value:(egForm.fecha||'').slice(0,7),onChange:function(e){
-                var m=e.target.value; // 'YYYY-MM'
-                setEgForm(function(f){
-                  var day=(f.fecha&&f.fecha.length>=10)?f.fecha.slice(8,10):'01';
-                  return Object.assign({},f,{fecha:m?(m+'-'+day):f.fecha});
-                });
-              },style:Object.assign({},inp,{flex:'0 0 150px'})}),
+              (function(){
+                var MESES=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+                var opts=[]; var y=2026, mo=6; // desde junio 2026
+                var hoy=new Date(); var endY=hoy.getFullYear()+1; // hasta un año hacia adelante
+                while(y<endY || (y===endY && mo<=12)){
+                  var mm=(mo<10?'0':'')+mo; opts.push({v:y+'-'+mm, l:MESES[mo-1]+' '+y});
+                  mo++; if(mo>12){mo=1;y++;}
+                  if(opts.length>60) break;
+                }
+                return React.createElement('select',{value:(egForm.fecha||'').slice(0,7),onChange:function(e){
+                  var m=e.target.value;
+                  setEgForm(function(f){
+                    var day=(f.fecha&&f.fecha.length>=10)?f.fecha.slice(8,10):'01';
+                    return Object.assign({},f,{fecha:m?(m+'-'+day):f.fecha});
+                  });
+                },style:Object.assign({},inp,{flex:'0 0 160px'})},
+                  React.createElement('option',{value:''},'Mes…'),
+                  opts.map(function(o){return React.createElement('option',{key:o.v,value:o.v},o.l);})
+                );
+              })(),
               React.createElement('select',{value:egForm.semanaNum||'',onChange:function(e){var v=e.target.value;setEgForm(function(f){return Object.assign({},f,{semanaNum:v});});},style:Object.assign({},inp,{flex:'0 0 120px'})},
                 React.createElement('option',{value:''},'Semana…'),
                 ['1','2','3','4','5'].map(function(n){return React.createElement('option',{key:n,value:n},'Semana '+n);})
