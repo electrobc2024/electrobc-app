@@ -7589,6 +7589,11 @@ function IngresosView({quotes, egresos, onSaveEgresos, clients, catalog, persona
       React.createElement(function MovTable(){
         var _sb=React.useState('fecha'), sortBy=_sb[0], setSortBy=_sb[1];
         var _sd=React.useState('desc'), sortDir=_sd[0], setSortDir=_sd[1];
+        var _fd=React.useState(''), fDesde=_fd[0], setFDesde=_fd[1];
+        var _fh=React.useState(''), fHasta=_fh[0], setFHasta=_fh[1];
+        var _fdet=React.useState(''), fDetalle=_fdet[0], setFDetalle=_fdet[1];
+        var _fds=React.useState(''), fDesc=_fds[0], setFDesc=_fds[1];
+        var _fa=React.useState(''), fAutor=_fa[0], setFAutor=_fa[1];
         var allMovs=[];
         allCobrosCombinadosMov.forEach(function(c){
           if (!c.manual) return;
@@ -7606,6 +7611,20 @@ function IngresosView({quotes, egresos, onSaveEgresos, clients, catalog, persona
           if(sortBy==='autor') return String(ebcUserLabel(m.autor||(m.eObj&&m.eObj.autor)||'guille')).toLowerCase();
           return m.fecha||'';
         }
+        // Opciones de filtro (a partir de todos los movimientos del período)
+        function _det(m){ return m.cliente||m.ref||'—'; }
+        var _detalles=[]; allMovs.forEach(function(m){ var d=_det(m); if(_detalles.indexOf(d)<0) _detalles.push(d); }); _detalles.sort(function(a,b){return a.localeCompare(b);});
+        var _autores=[]; allMovs.forEach(function(m){ var a=m.autor||(m.eObj&&m.eObj.autor)||'guille'; if(_autores.indexOf(a)<0) _autores.push(a); });
+        // Aplicar filtros
+        filtered=filtered.filter(function(m){
+          var d=String(m.fecha||'').slice(0,10);
+          if(fDesde && d<fDesde) return false;
+          if(fHasta && d>fHasta) return false;
+          if(fDetalle && _det(m)!==fDetalle) return false;
+          if(fAutor && (m.autor||(m.eObj&&m.eObj.autor)||'guille')!==fAutor) return false;
+          if(fDesc && String(m.desc||'').toLowerCase().indexOf(fDesc.toLowerCase())<0) return false;
+          return true;
+        });
         filtered=filtered.slice().sort(function(a,b){ var ka=_key(a),kb=_key(b); var c= ka<kb?-1:(ka>kb?1:0); return sortDir==='asc'?c:-c; });
         // Total neto: ARS + USD pesificado con TC de cada movimiento
         var total=filtered.reduce(function(s,m){
@@ -7613,8 +7632,19 @@ function IngresosView({quotes, egresos, onSaveEgresos, clients, catalog, persona
           return s+m.monto;
         },0);
         var totalUSD=blueHoy.buy?Math.round(total/blueHoy.buy):0;
-        if(filtered.length===0) return React.createElement('div',{style:{...card,textAlign:'center',color:'#94A3B8',padding:40}},'Sin movimientos en el período seleccionado');
+        var _fInp={border:'1px solid #E2E8F0',borderRadius:6,padding:'6px 9px',fontSize:12,backgroundColor:'#fff',boxSizing:'border-box'};
+        var _hayFiltro=fDesde||fHasta||fDetalle||fDesc||fAutor;
+        var filterBar=React.createElement('div',{style:{display:'flex',gap:10,flexWrap:'wrap',alignItems:'flex-end',marginBottom:12,padding:'12px 16px',backgroundColor:'#fff',borderRadius:10,border:'1px solid #E2E8F0'}},
+          React.createElement('div',null, React.createElement('div',{style:{fontSize:10,color:'#94A3B8',fontWeight:700,marginBottom:3,textTransform:'uppercase'}},'Desde'), React.createElement('input',{type:'date',value:fDesde,onChange:function(e){setFDesde(e.target.value);},style:_fInp})),
+          React.createElement('div',null, React.createElement('div',{style:{fontSize:10,color:'#94A3B8',fontWeight:700,marginBottom:3,textTransform:'uppercase'}},'Hasta'), React.createElement('input',{type:'date',value:fHasta,onChange:function(e){setFHasta(e.target.value);},style:_fInp})),
+          React.createElement('div',null, React.createElement('div',{style:{fontSize:10,color:'#94A3B8',fontWeight:700,marginBottom:3,textTransform:'uppercase'}},'Detalle'), React.createElement('select',{value:fDetalle,onChange:function(e){setFDetalle(e.target.value);},style:Object.assign({},_fInp,{maxWidth:180})}, React.createElement('option',{value:''},'Todos'), _detalles.map(function(d){return React.createElement('option',{key:d,value:d},d);}))),
+          React.createElement('div',{style:{flex:'1 1 160px'}}, React.createElement('div',{style:{fontSize:10,color:'#94A3B8',fontWeight:700,marginBottom:3,textTransform:'uppercase'}},'Descripción'), React.createElement('input',{type:'text',value:fDesc,placeholder:'Buscar…',onChange:function(e){setFDesc(e.target.value);},style:Object.assign({},_fInp,{width:'100%'})})),
+          React.createElement('div',null, React.createElement('div',{style:{fontSize:10,color:'#94A3B8',fontWeight:700,marginBottom:3,textTransform:'uppercase'}},'Autor'), React.createElement('select',{value:fAutor,onChange:function(e){setFAutor(e.target.value);},style:_fInp}, React.createElement('option',{value:''},'Todos'), _autores.map(function(a){return React.createElement('option',{key:a,value:a}, ebcUserLabel(a));}))),
+          _hayFiltro? React.createElement('button',{type:'button',onClick:function(){setFDesde('');setFHasta('');setFDetalle('');setFDesc('');setFAutor('');},style:{background:'none',border:'1px solid #E2E8F0',borderRadius:6,padding:'7px 12px',fontSize:12,color:'#64748B',cursor:'pointer'}},'✕ Limpiar'):null
+        );
+        if(filtered.length===0) return React.createElement('div',null, filterBar, React.createElement('div',{style:{...card,textAlign:'center',color:'#94A3B8',padding:40,marginBottom:0}}, _hayFiltro?'Sin movimientos que coincidan con los filtros.':'Sin movimientos en el período seleccionado'));
         return React.createElement('div',{style:{overflowX:'auto',WebkitOverflowScrolling:'touch'}},
+          filterBar,
           React.createElement('div',{style:{display:'flex',gap:24,marginBottom:12,padding:'10px 16px',
             backgroundColor:'#F8FAFC',borderRadius:10,border:'1px solid #E2E8F0',alignItems:'center',flexWrap:'wrap'}},
             React.createElement('div',{style:{fontSize:12,color:NAVY}},
