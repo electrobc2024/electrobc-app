@@ -1274,12 +1274,14 @@ function ItemsTable({
       }
     }, /*#__PURE__*/React.createElement("option", {
       value: "__custom__"
-    }, "\u270F Descripci\xF3n personalizada"), catalog.length > 0 && /*#__PURE__*/React.createElement("optgroup", {
-      label: "\u2500\u2500 Cat\xE1logo \u2500\u2500"
-    }, [...catalog].sort((a,b)=>azKeyName(a.nombre).localeCompare(azKeyName(b.nombre))).map(c => /*#__PURE__*/React.createElement("option", {
-      key: c.id,
-      value: c.id
-    }, c.nombre)))), isC && /*#__PURE__*/React.createElement("div", {
+    }, "\u270F Descripci\xF3n personalizada"), catalog.length > 0 && (function(){
+      var sorted = [...catalog].sort((a,b)=>azKeyName(a.nombre).localeCompare(azKeyName(b.nombre)));
+      var groups = {}, order = [];
+      sorted.forEach(function(c){ var g = azGrpName(c.nombre); if(!groups[g]){ groups[g]=[]; order.push(g); } groups[g].push(c); });
+      return order.map(function(g){ return /*#__PURE__*/React.createElement("optgroup", { key:g, label:g },
+        groups[g].map(function(c){ return /*#__PURE__*/React.createElement("option", { key:c.id, value:c.id }, c.nombre); })
+      ); });
+    })()), isC && /*#__PURE__*/React.createElement("div", {
       style: {
         display: "flex",
         gap: 4,
