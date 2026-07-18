@@ -6759,6 +6759,7 @@ function IngresosView({quotes, egresos, onSaveEgresos, clients, catalog, persona
   const [tipoFilter, setTipoFilter] = React.useState('todos');
   const [egForm, setEgForm] = React.useState({id:'',tipo:'egreso',cat:'sueldos',desc:'',monto:'',fecha:new Date().toISOString().slice(0,10),medio:'efectivo',moneda:'$',tcambio:''});
   const [editId, setEditId] = React.useState(null);
+  const [calYear, setCalYear] = React.useState(new Date().getFullYear());
   // Filtros AÑO/MES independientes por pestaña (no deben afectarse entre sí)
   const [dashMesesVer, setDashMesesVer] = React.useState([]);
   const [dashAnosVer, setDashAnosVer] = React.useState([String(new Date().getFullYear())]);
@@ -6949,6 +6950,7 @@ function IngresosView({quotes, egresos, onSaveEgresos, clients, catalog, persona
     var effDesc = (egForm.desc && egForm.desc.trim()) ? egForm.desc.trim() : (per ? (per.nombre||'Sueldo') : '');
     if((!egForm.cat&&egForm.tipo==='egreso')|| !effDesc ||!egForm.monto||!egForm.fecha||!egForm.medio){alert('Complet\u00e1 todos los campos antes de guardar.');return;}
     if(isSueldo && !egForm.semanaNum){ alert('Eleg\u00ed la semana del mes para este sueldo.'); return; }
+    if(isSueldo){ var hoyMes=new Date().toISOString().slice(0,7); if(String(egForm.fecha).slice(0,7)>hoyMes){ alert('No se puede cargar un sueldo a un mes futuro.'); return; } }
     // Aviso si ya hay un sueldo de la misma persona, mismo mes y misma semana
     if(isSueldo){
       var mesSel = String(egForm.fecha).slice(0,7);
@@ -7237,28 +7239,38 @@ function IngresosView({quotes, egresos, onSaveEgresos, clients, catalog, persona
               : null
           ):null,
           (egForm.tipo==='egreso' && egForm.cat==='sueldos' && egForm.personaId) ? React.createElement('div',null,
-            React.createElement('div',{style:{fontSize:10,color:'#94A3B8',fontWeight:700,marginBottom:4}},'MES, SEMANA Y HORAS'),
+            React.createElement('div',{style:{fontSize:10,color:'#94A3B8',fontWeight:700,marginBottom:4}},'MES DEL PAGO'),
+            (function(){
+              var MABR=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+              var hoy=new Date(); var curY=hoy.getFullYear(); var curM=hoy.getMonth()+1; var curD=hoy.getDate();
+              var minY=2026, minM=6;
+              var sel=(egForm.fecha||'').slice(0,7);
+              var canPrev=calYear>minY;
+              var canNext=calYear<curY;
+              function isEnabled(mm){
+                if(calYear<minY||(calYear===minY&&mm<minM)) return false; // antes de junio 2026
+                if(calYear>curY||(calYear===curY&&mm>curM)) return false; // futuro no permitido
+                return true;
+              }
+              function navBtn(txt,can,fn){ return React.createElement('button',{type:'button',disabled:!can,onClick:function(){if(can)fn();},style:{border:'1px solid #E2E8F0',background:can?'#fff':'#F1F5F9',color:can?'#1E293B':'#CBD5E1',borderRadius:6,width:30,height:30,cursor:can?'pointer':'default',fontWeight:800,fontSize:16,lineHeight:1}},txt); }
+              return React.createElement('div',{style:{border:'1px solid #E2E8F0',borderRadius:8,padding:10,background:'#fff',marginBottom:10}},
+                React.createElement('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:8}},
+                  navBtn('‹',canPrev,function(){setCalYear(calYear-1);}),
+                  React.createElement('div',{style:{fontWeight:800,fontSize:16,fontFamily:"'Oswald',system-ui",color:NAVY}},String(calYear)),
+                  navBtn('›',canNext,function(){setCalYear(calYear+1);})
+                ),
+                React.createElement('div',{style:{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:6}},
+                  MABR.map(function(lb,i){
+                    var mm=i+1; var val=calYear+'-'+(mm<10?'0':'')+mm;
+                    var en=isEnabled(mm); var isSel=sel===val;
+                    return React.createElement('button',{key:mm,type:'button',disabled:!en,onClick:function(){ if(!en)return; setEgForm(function(f){ var day=(f.fecha&&f.fecha.length>=10)?f.fecha.slice(8,10):'01'; if(calYear===curY&&mm===curM&&parseInt(day,10)>curD) day=(curD<10?'0':'')+curD; return Object.assign({},f,{fecha:val+'-'+day}); }); },
+                      style:{padding:'9px 0',borderRadius:6,fontSize:12,fontWeight:700,cursor:en?'pointer':'default',border:'1px solid '+(isSel?ORANGE:'#E2E8F0'),background:isSel?ORANGE:(en?'#fff':'#F8FAFC'),color:isSel?'#fff':(en?'#334155':'#CBD5E1')}}, lb);
+                  })
+                )
+              );
+            })(),
+            React.createElement('div',{style:{fontSize:10,color:'#94A3B8',fontWeight:700,marginBottom:4}},'SEMANA Y HORAS'),
             React.createElement('div',{style:{display:'flex',gap:8,flexWrap:'wrap'}},
-              (function(){
-                var MESES=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
-                var opts=[]; var y=2026, mo=6; // desde junio 2026
-                var hoy=new Date(); var endY=hoy.getFullYear()+1; // hasta un año hacia adelante
-                while(y<endY || (y===endY && mo<=12)){
-                  var mm=(mo<10?'0':'')+mo; opts.push({v:y+'-'+mm, l:MESES[mo-1]+' '+y});
-                  mo++; if(mo>12){mo=1;y++;}
-                  if(opts.length>60) break;
-                }
-                return React.createElement('select',{value:(egForm.fecha||'').slice(0,7),onChange:function(e){
-                  var m=e.target.value;
-                  setEgForm(function(f){
-                    var day=(f.fecha&&f.fecha.length>=10)?f.fecha.slice(8,10):'01';
-                    return Object.assign({},f,{fecha:m?(m+'-'+day):f.fecha});
-                  });
-                },style:Object.assign({},inp,{flex:'0 0 160px'})},
-                  React.createElement('option',{value:''},'Mes…'),
-                  opts.map(function(o){return React.createElement('option',{key:o.v,value:o.v},o.l);})
-                );
-              })(),
               React.createElement('select',{value:egForm.semanaNum||'',onChange:function(e){var v=e.target.value;setEgForm(function(f){return Object.assign({},f,{semanaNum:v});});},style:Object.assign({},inp,{flex:'0 0 120px'})},
                 React.createElement('option',{value:''},'Semana…'),
                 ['1','2','3','4','5'].map(function(n){return React.createElement('option',{key:n,value:n},'Semana '+n);})
@@ -7272,7 +7284,7 @@ function IngresosView({quotes, egresos, onSaveEgresos, clients, catalog, persona
                 });
               },style:Object.assign({},inp,{flex:'1 1 120px'})})
             ),
-            React.createElement('div',{style:{fontSize:10,color:'#94A3B8',marginTop:3}},'Elegí el mes y la semana del pago. El mes queda sincronizado con la FECHA (podés ajustar el día abajo). El MONTO se calcula solo (horas × valor hora) y podés ajustarlo.')
+            React.createElement('div',{style:{fontSize:10,color:'#94A3B8',marginTop:3}},'Elegí el mes en el calendario (desde junio 2026, sin futuro) y la semana. El mes queda sincronizado con la FECHA. El MONTO se calcula solo (horas × valor hora) y podés ajustarlo.')
           ) : React.createElement('div',null,
             React.createElement('div',{style:{fontSize:10,color:'#94A3B8',fontWeight:700,marginBottom:4}},'DESCRIPCIÓN'),
             React.createElement('input',{type:'text',
