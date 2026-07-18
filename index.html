@@ -7217,6 +7217,16 @@ function IngresosView({quotes, egresos, onSaveEgresos, clients, catalog, persona
       var dup = (egresos||[]).some(function(e){ return e.id!==editId && e.cat==='sueldos' && e.personaId===egForm.personaId && String(e.fecha).slice(0,7)===mesSel && String(e.semanaNum||'')===String(egForm.semanaNum); });
       if(dup && !confirm('Ya cargaste la Semana '+egForm.semanaNum+' de '+mesSel.slice(5,7)+'/'+mesSel.slice(0,4)+' para '+(per?per.nombre:'esta persona')+'. \u00bfCargar igual otro pago para esa semana?')) return;
     }
+    // Aviso general: movimiento id\u00e9ntico (misma fecha, monto y descripci\u00f3n) ya cargado
+    if(!isSueldo){
+      var _mNorm = String(effDesc).trim().toLowerCase();
+      var _mMonto = parseFloat(egForm.monto)||0;
+      var dupMov = (egresos||[]).find(function(e){ return e.id!==editId && e.tipo===egForm.tipo && String(e.fecha)===String(egForm.fecha) && (parseFloat(e.monto)||0)===_mMonto && String(e.desc||'').trim().toLowerCase()===_mNorm; });
+      if(dupMov){
+        var _cod = dupMov.num ? (' ('+codeStr('MOV',dupMov.num)+')') : '';
+        if(!confirm('Ya existe un movimiento id\u00e9ntico'+_cod+': '+(egForm.tipo==='ingreso'?'Ingreso':'Egreso')+' del '+fmtFecha(egForm.fecha)+' por $'+_mMonto.toLocaleString('es-AR')+' \u2014 "'+effDesc+'".\n\n\u00bfCargarlo igual (duplicado)?')) return;
+      }
+    }
     var payload = Object.assign({}, egForm, {desc: effDesc});
     const list = egresos||[];
     if(editId) {
