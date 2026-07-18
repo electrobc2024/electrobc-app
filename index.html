@@ -5886,7 +5886,7 @@ function BackupView({ quotes, catalog, clients, egresos, personas, onRestore }){
   var tdS={padding:'8px 10px',fontSize:12,color:'#475569',borderBottom:'1px solid #F1F5F9',whiteSpace:'nowrap'};
   var fmtHora=function(iso){ try{ var d=new Date(iso); return fmtFecha(iso)+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); }catch(e){ return fmtFecha(iso); } };
 
-  return React.createElement(IngresosPane, null, React.createElement('div',{style:{maxWidth:1100,margin:'0 auto'}},
+  return React.createElement(IngresosPane, null, React.createElement('div',null,
     React.createElement('div',{style:{marginBottom:16}},
       React.createElement('div',{style:{fontFamily:"'Oswald',system-ui",fontSize:22,fontWeight:700,color:NAVY,letterSpacing:'-0.01em'}},'💾 Copias de seguridad'),
       React.createElement('div',{style:{fontSize:13,color:'#64748B',marginTop:6,lineHeight:1.45,maxWidth:640}},'Descargá una copia de todos tus datos (presupuestos, clientes, materiales, mano de obra, movimientos y personal) para guardarla en tu compu o la nube. Podés bajar la copia completa o solo la de un período, y ver el historial de copias hechas desde este dispositivo.')
