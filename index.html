@@ -5910,13 +5910,6 @@ function BackupView({ quotes, catalog, clients, egresos, personas, onRestore }){
         React.createElement('button',{type:'button',onClick:backupPeriodo,style:{background:NAVY,border:'none',borderRadius:8,padding:'10px 18px',fontSize:13,fontWeight:700,color:'#fff',cursor:'pointer'}},'⬇ Descargar copia del período')
       )
     ),
-    // Sobrescribir
-    React.createElement('div',{style:card},
-      React.createElement('div',{style:{fontSize:14,fontWeight:700,color:NAVY,marginBottom:4}},'Sobrescribir con una copia'),
-      React.createElement('div',{style:{fontSize:12,color:'#B45309',marginBottom:12}},'⚠️ Sobrescribir REEMPLAZA todos los datos actuales por los del archivo. Hacé primero una copia completa por las dudas.'),
-      React.createElement('input',{ref:fileRef,type:'file',accept:'application/json,.json',onChange:onFile,style:{display:'none'}}),
-      React.createElement('button',{type:'button',onClick:function(){ if(fileRef.current) fileRef.current.click(); },style:{background:'none',border:'1px solid #E2E8F0',borderRadius:8,padding:'10px 18px',fontSize:13,fontWeight:600,color:'#475569',cursor:'pointer'}},'📂 Elegir archivo de copia…')
-    ),
     // Historial
     React.createElement('div',{style:card},
       React.createElement('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}},
