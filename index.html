@@ -5893,23 +5893,24 @@ function BackupView({ quotes, catalog, clients, egresos, personas, onRestore }){
 
   return React.createElement(IngresosPane, null, React.createElement('div',null,
     React.createElement(PageHeader, { title: '💾 Copias de seguridad', subtitle: 'Descargá una copia de todos tus datos (presupuestos, clientes, materiales, mano de obra, movimientos y personal) para guardarla en tu compu o la nube. Podés bajar la copia completa o solo la de un período, y ver el historial de copias hechas desde este dispositivo.' }),
-    // Copia completa
-    React.createElement('div',{style:card},
-      React.createElement('div',{style:{fontSize:14,fontWeight:700,color:NAVY,marginBottom:4}},'Copia completa'),
-      React.createElement('div',{style:{fontSize:12,color:'#64748B',marginBottom:12}},'Incluye TODOS los datos de la app. Recomendada para respaldar todo antes de un cambio importante.'),
-      React.createElement('div',{style:{display:'flex',gap:14,flexWrap:'wrap',alignItems:'center',marginBottom:12}},
-        [['Presupuestos',(quotes||[]).length],['Clientes',(clients||[]).length],['Movimientos',(egresos||[]).length],['Personas',(personas||[]).length]].map(function(k){ return React.createElement('div',{key:k[0],style:{background:'#F8FAFC',border:'1px solid #E2E8F0',borderRadius:8,padding:'8px 12px'}}, React.createElement('div',{style:{fontSize:10,color:'#94A3B8',fontWeight:700,textTransform:'uppercase'}},k[0]), React.createElement('div',{style:{fontSize:18,fontWeight:700,color:NAVY,fontFamily:"'Oswald',system-ui"}},k[1])); })
+    // Copia completa + Copia por período (lado a lado, misma altura)
+    React.createElement('div',{style:{display:'grid',gridTemplateColumns:'repeat(auto-fit, minmax(340px, 1fr))',gap:16,marginBottom:16,alignItems:'stretch'}},
+      React.createElement('div',{style:Object.assign({},card,{marginBottom:0,display:'flex',flexDirection:'column'})},
+        React.createElement('div',{style:{fontSize:14,fontWeight:700,color:NAVY,marginBottom:4}},'Copia completa'),
+        React.createElement('div',{style:{fontSize:12,color:'#64748B',marginBottom:12}},'Incluye TODOS los datos de la app. Recomendada para respaldar todo antes de un cambio importante.'),
+        React.createElement('div',{style:{display:'flex',gap:14,flexWrap:'wrap',alignItems:'center',marginBottom:12}},
+          [['Presupuestos',(quotes||[]).length],['Clientes',(clients||[]).length],['Movimientos',(egresos||[]).length],['Personas',(personas||[]).length]].map(function(k){ return React.createElement('div',{key:k[0],style:{background:'#F8FAFC',border:'1px solid #E2E8F0',borderRadius:8,padding:'8px 12px'}}, React.createElement('div',{style:{fontSize:10,color:'#94A3B8',fontWeight:700,textTransform:'uppercase'}},k[0]), React.createElement('div',{style:{fontSize:18,fontWeight:700,color:NAVY,fontFamily:"'Oswald',system-ui"}},k[1])); })
+        ),
+        React.createElement('div',{style:{marginTop:'auto'}}, React.createElement('button',{type:'button',onClick:backupCompleto,style:{background:ORANGE,border:'none',borderRadius:8,padding:'10px 18px',fontSize:13,fontWeight:700,color:'#fff',cursor:'pointer'}},'⬇ Descargar copia completa'))
       ),
-      React.createElement('button',{type:'button',onClick:backupCompleto,style:{background:ORANGE,border:'none',borderRadius:8,padding:'10px 18px',fontSize:13,fontWeight:700,color:'#fff',cursor:'pointer'}},'⬇ Descargar copia completa')
-    ),
-    // Copia por período
-    React.createElement('div',{style:card},
-      React.createElement('div',{style:{fontSize:14,fontWeight:700,color:NAVY,marginBottom:4}},'Copia de un período'),
-      React.createElement('div',{style:{fontSize:12,color:'#64748B',marginBottom:12}},'Incluye solo los presupuestos y movimientos entre las fechas elegidas (clientes, materiales, mano de obra y personal se guardan completos como referencia).'),
-      React.createElement('div',{style:{display:'flex',gap:12,flexWrap:'wrap',alignItems:'flex-end'}},
-        React.createElement('div',null, React.createElement('div',{style:{fontSize:10,color:'#94A3B8',fontWeight:700,marginBottom:4,textTransform:'uppercase'}},'Desde'), React.createElement('input',{type:'date',value:bFrom,onChange:function(e){setBFrom(e.target.value);},style:inp})),
-        React.createElement('div',null, React.createElement('div',{style:{fontSize:10,color:'#94A3B8',fontWeight:700,marginBottom:4,textTransform:'uppercase'}},'Hasta'), React.createElement('input',{type:'date',value:bTo,onChange:function(e){setBTo(e.target.value);},style:inp})),
-        React.createElement('button',{type:'button',onClick:backupPeriodo,style:{background:NAVY,border:'none',borderRadius:8,padding:'10px 18px',fontSize:13,fontWeight:700,color:'#fff',cursor:'pointer'}},'⬇ Descargar copia del período')
+      React.createElement('div',{style:Object.assign({},card,{marginBottom:0,display:'flex',flexDirection:'column'})},
+        React.createElement('div',{style:{fontSize:14,fontWeight:700,color:NAVY,marginBottom:4}},'Copia de un período'),
+        React.createElement('div',{style:{fontSize:12,color:'#64748B',marginBottom:12}},'Incluye solo los presupuestos y movimientos entre las fechas elegidas (clientes, materiales, mano de obra y personal se guardan completos como referencia).'),
+        React.createElement('div',{style:{display:'flex',gap:12,flexWrap:'wrap',alignItems:'flex-end',marginTop:'auto'}},
+          React.createElement('div',null, React.createElement('div',{style:{fontSize:10,color:'#94A3B8',fontWeight:700,marginBottom:4,textTransform:'uppercase'}},'Desde'), React.createElement('input',{type:'date',value:bFrom,onChange:function(e){setBFrom(e.target.value);},style:inp})),
+          React.createElement('div',null, React.createElement('div',{style:{fontSize:10,color:'#94A3B8',fontWeight:700,marginBottom:4,textTransform:'uppercase'}},'Hasta'), React.createElement('input',{type:'date',value:bTo,onChange:function(e){setBTo(e.target.value);},style:inp})),
+          React.createElement('button',{type:'button',onClick:backupPeriodo,style:{background:NAVY,border:'none',borderRadius:8,padding:'10px 18px',fontSize:13,fontWeight:700,color:'#fff',cursor:'pointer'}},'⬇ Descargar copia del período')
+        )
       )
     ),
     // Historial
