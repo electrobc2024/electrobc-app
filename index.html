@@ -5934,7 +5934,9 @@ function BackupView({ quotes, catalog, clients, egresos, personas, onRestore }){
                   sortTh('tipo','Tipo'),
                   sortTh('periodo','Período'),
                   React.createElement('th',{style:Object.assign({},thS,{textAlign:'right'})},'Presup.'),
+                  React.createElement('th',{style:Object.assign({},thS,{textAlign:'right'})},'Clientes'),
                   React.createElement('th',{style:Object.assign({},thS,{textAlign:'right'})},'Movim.'),
+                  React.createElement('th',{style:Object.assign({},thS,{textAlign:'right'})},'Personas'),
                   sortTh('autor','Autor')
                 )),
                 React.createElement('tbody',null,
@@ -5943,7 +5945,9 @@ function BackupView({ quotes, catalog, clients, egresos, personas, onRestore }){
                     React.createElement('td',{style:tdS}, React.createElement('span',{style:{fontWeight:700,color:h.tipo==='Completa'?ORANGE:'#4338CA'}}, h.tipo)),
                     React.createElement('td',{style:tdS}, h.periodo||'—'),
                     React.createElement('td',{style:Object.assign({},tdS,{textAlign:'right'})}, (h.n&&h.n.presupuestos!=null)?h.n.presupuestos:'—'),
+                    React.createElement('td',{style:Object.assign({},tdS,{textAlign:'right'})}, (h.n&&h.n.clientes!=null)?h.n.clientes:'—'),
                     React.createElement('td',{style:Object.assign({},tdS,{textAlign:'right'})}, (h.n&&h.n.movimientos!=null)?h.n.movimientos:'—'),
+                    React.createElement('td',{style:Object.assign({},tdS,{textAlign:'right'})}, (h.n&&h.n.personas!=null)?h.n.personas:'—'),
                     React.createElement('td',{style:tdS}, h.autor? ebcUserLabel(h.autor):'—')
                   ); })
                 )
