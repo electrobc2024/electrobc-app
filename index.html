@@ -1888,9 +1888,19 @@ function CatalogView({
     borderBottom: "1px solid #E2E8F0"
   };
   const filteredItems = searchCat.trim() ? items.filter(i => (i.nombre || "").toLowerCase().includes(searchCat.toLowerCase())) : items;
+  const azKey = n => {
+    n = (n || '').trim();
+    if (/^[0-9]/.test(n)) {
+      const mm = n.match(/^\d+(?:[.,]\d+)?/);
+      const num = mm ? (parseFloat(mm[0].replace(',', '.')) || 0) : 0;
+      return '￿' + String(Math.round(num * 100)).padStart(14, '0') + n.toLowerCase();
+    }
+    return n.toLowerCase();
+  };
+  const azGrp = nm => { const c = ((nm || '#').trim().charAt(0) || '#').toUpperCase(); return /[0-9]/.test(c) ? '0-9' : c; };
   const sortedItems = [...filteredItems].sort((a, b) => {
-    if (sortCat === "az") return (a.nombre || '').localeCompare(b.nombre || '');
-    if (sortCat === "za") return (b.nombre || '').localeCompare(a.nombre || '');
+    if (sortCat === "az") return azKey(a.nombre).localeCompare(azKey(b.nombre));
+    if (sortCat === "za") return azKey(b.nombre).localeCompare(azKey(a.nombre));
     if (sortCat === "asc") return parseFloat(a.precioBase || 0) - parseFloat(b.precioBase || 0);
     if (sortCat === "desc") return parseFloat(b.precioBase || 0) - parseFloat(a.precioBase || 0);
     return 0;
@@ -2025,8 +2035,8 @@ function CatalogView({
     const isHistOpen = histOpen === item.id;
     const letterSep = (function(){
       if (sortCat !== "az" && sortCat !== "za") return null;
-      var L = ((item.nombre || "#").trim().charAt(0) || "#").toUpperCase();
-      var prevL = i > 0 ? ((arr[i-1].nombre || "#").trim().charAt(0) || "#").toUpperCase() : null;
+      var L = azGrp(item.nombre);
+      var prevL = i > 0 ? azGrp(arr[i-1].nombre) : null;
       if (L === prevL) return null;
       return /*#__PURE__*/React.createElement("tr", {key: item.id + "sep"},
         /*#__PURE__*/React.createElement("td", {colSpan: 6, style:{padding:"6px 12px",backgroundColor:"#F1F5F9",fontSize:11,fontWeight:700,color:"#64748B",letterSpacing:"0.06em",borderBottom:"1px solid #E2E8F0"}}, L)
