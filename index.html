@@ -7587,6 +7587,8 @@ function IngresosView({quotes, egresos, onSaveEgresos, clients, catalog, persona
         })
       ),
       React.createElement(function MovTable(){
+        var _sb=React.useState('fecha'), sortBy=_sb[0], setSortBy=_sb[1];
+        var _sd=React.useState('desc'), sortDir=_sd[0], setSortDir=_sd[1];
         var allMovs=[];
         allCobrosCombinadosMov.forEach(function(c){
           if (!c.manual) return;
@@ -7596,6 +7598,15 @@ function IngresosView({quotes, egresos, onSaveEgresos, clients, catalog, persona
         egresosFiltradosMov.forEach(function(e){var cat=EGRESO_CATS.find(function(c){return c.id===e.cat;})||EGRESO_CATS[5];allMovs.push({fecha:e.fecha,tipo:'egreso',label:'📤 Egreso',ref:cat.label,cliente:cat.label,desc:e.desc,monto:-(parseFloat(e.monto)||0),moneda:e.moneda||'$',tcambio:e.tcambio||null,id:e.id,color:'#DC2626',bg:'#FFF1F2',eObj:e,detalle:cat.label});});
         allMovs.sort(function(a,b){return (b.fecha||'').localeCompare(a.fecha||'');});
         var filtered=tipoFilter==='todos'?allMovs:allMovs.filter(function(m){return tipoFilter==='ingresos'?(m.tipo==='cobro'||m.tipo==='ingreso'):m.tipo==='egreso';});
+        function _key(m){
+          if(sortBy==='codigo') return (m.eObj&&m.eObj.num)||0;
+          if(sortBy==='tipo') return m.tipo||'';
+          if(sortBy==='detalle') return (m.cliente||m.ref||'').toLowerCase();
+          if(sortBy==='monto') return m.moneda==='USD'?(Math.abs(m.monto)*(parseFloat(m.tcambio)||parseFloat(blueHoy.sell)||0)):Math.abs(m.monto);
+          if(sortBy==='autor') return String(ebcUserLabel(m.autor||(m.eObj&&m.eObj.autor)||'guille')).toLowerCase();
+          return m.fecha||'';
+        }
+        filtered=filtered.slice().sort(function(a,b){ var ka=_key(a),kb=_key(b); var c= ka<kb?-1:(ka>kb?1:0); return sortDir==='asc'?c:-c; });
         // Total neto: ARS + USD pesificado con TC de cada movimiento
         var total=filtered.reduce(function(s,m){
           if(m.moneda==='USD') return s+(m.monto*(parseFloat(m.tcambio)||parseFloat(blueHoy.sell)||0));
@@ -7619,7 +7630,13 @@ function IngresosView({quotes, egresos, onSaveEgresos, clients, catalog, persona
           ),
           React.createElement('table',{style:{width:'100%',borderCollapse:'collapse',backgroundColor:'#fff',borderRadius:12,overflow:'hidden',border:'1px solid #E2E8F0',minWidth:760}},
             React.createElement('thead',null,React.createElement('tr',{style:{backgroundColor:'#F8FAFC'}},
-              ['Código','Fecha','Tipo','Detalle','Descripción','Monto','TC','ARS','USD','Autor',''].map(function(h){return React.createElement('th',{key:h,style:{padding:'10px 14px',fontSize:11,fontWeight:700,color:'#94A3B8',textAlign:'left',textTransform:'uppercase',letterSpacing:'0.06em'}},h);})
+              [{l:'Código',k:'codigo'},{l:'Fecha',k:'fecha'},{l:'Tipo',k:'tipo'},{l:'Detalle',k:'detalle'},{l:'Descripción'},{l:'Monto',k:'monto'},{l:'TC'},{l:'ARS'},{l:'USD'},{l:'Autor',k:'autor'},{l:''}].map(function(h,ci){
+                var base={padding:'10px 14px',fontSize:11,fontWeight:700,color:'#94A3B8',textAlign:'left',textTransform:'uppercase',letterSpacing:'0.06em'};
+                if(!h.k) return React.createElement('th',{key:ci,style:base},h.l);
+                var act=sortBy===h.k;
+                return React.createElement('th',{key:ci,style:Object.assign({},base,{cursor:'pointer',userSelect:'none',color:act?ORANGE:'#94A3B8'}),onClick:function(){ if(act){setSortDir(sortDir==='asc'?'desc':'asc');} else {setSortBy(h.k); setSortDir(h.k==='fecha'?'desc':'asc');} }},
+                  React.createElement('span',{style:{display:'inline-flex',alignItems:'center',gap:3}}, h.l, React.createElement('span',{style:{fontSize:9,opacity:act?1:0.4}}, act?(sortDir==='asc'?'▲':'▼'):'⇅')));
+              })
             )),
             React.createElement('tbody',null,
               filtered.map(function(m,i){
