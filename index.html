@@ -5667,7 +5667,7 @@ function PersonasView({ personas, onSave, egresos }){
   const lbl = function(t, req){ return React.createElement('div',{style:{fontSize:11,fontWeight:600,color:'#64748B',marginBottom:3}}, t, req?React.createElement('span',{style:{color:'#DC2626',fontWeight:700}},' *'):null); };
 
   return React.createElement(IngresosPane, null,
-    React.createElement(PageHeader, { title: '🧑‍🔧 Personal / Sueldos', subtitle: 'Alta de personas y su valor por hora (con historial). Las horas y los pagos se cargan desde Cargar Ingresos / Egresos (categoría Sueldos); acá ves el resumen y el historial de pagos de cada uno.', right:
+    React.createElement(PageHeader, { title: '🧑‍🔧 Personal', subtitle: 'Alta de personas y su valor por hora (con historial). Las horas y los pagos se cargan desde Cargar Ingresos / Egresos (categoría Sueldos); acá ves el resumen y el historial de pagos de cada uno.', right:
       React.createElement('button',{type:'button',onClick:function(){ if(editId){setEditId(null);} setForm(mkPersona()); setShowForm(function(s){return !s;}); },style:{backgroundColor:showForm?'#fff':ORANGE,color:showForm?ORANGE:'#fff',border:'1px solid '+ORANGE,borderRadius:8,padding:'9px 16px',fontSize:13,fontWeight:700,cursor:'pointer',whiteSpace:'nowrap',flexShrink:0}}, showForm?'✕ Cerrar':'➕ Agregar persona')
     }),
 
@@ -6234,10 +6234,10 @@ function App() {
     {id:"tracker", label:"📈 Seguimiento de Presupuestos"},
   ];
   const navFin = [
-    {id:"personal",    label:"🧑‍🔧 Personal / Sueldos"},
-    {id:"movimientos", label:"💱 Cargar Ingresos / Egresos"},
-    {id:"dashboard",   label:"📊 Dashboard Financiero"},
-    {id:"backups",     label:"💾 Copias"},
+    {id:"personal",    label:"🧑‍🔧 Personal"},
+    {id:"movimientos", label:"💱 Ingresos / Egresos"},
+    {id:"dashboard",   label:"📊 Dashboard"},
+    {id:"backups",     label:"💾 Copias de Seguridad"},
   ];
   const nav = [...navMain, ...navFin];
   return /*#__PURE__*/React.createElement("div", {
@@ -6321,7 +6321,7 @@ function App() {
       .concat([React.createElement("button",{key:"consolidado",title:"Descargar Excel consolidado por rango de fechas",
         onClick:function(){ setShowConsol(true); },
         style:{display:"flex",alignItems:"center",gap:5,padding:"0 12px",marginLeft:8,background:ORANGE,border:"none",borderRadius:6,fontSize:12,fontWeight:700,color:"#fff",whiteSpace:"nowrap",cursor:"pointer",alignSelf:"center",height:32}
-      },"📚 Consolidado")]);
+      },"📚 Descargar Consolidado")]);
   })()), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
@@ -7256,7 +7256,7 @@ function IngresosView({quotes, egresos, onSaveEgresos, clients, catalog, persona
   return /*#__PURE__*/React.createElement(IngresosPane, null,
     // Header
     React.createElement(PageHeader, {
-      title: activeTab==='dashboard' ? '📊 Dashboard Financiero' : '💰 Ingresos y Egresos',
+      title: activeTab==='dashboard' ? '📊 Dashboard' : '💰 Ingresos / Egresos',
       subtitle: activeTab==='dashboard' ? 'Salud del negocio de un vistazo, con semáforo orientativo.' : 'Flujo de caja real: ingresos, egresos y sueldos cargados.'
     }),
 
