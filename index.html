@@ -5846,8 +5846,18 @@ function PersonasView({ personas, onSave, egresos }){
     ),
 
     // Toggle ver inactivos
-    React.createElement('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:10}},
-      React.createElement('div',{style:{fontSize:12,color:'#94A3B8'}}, list.length+' persona(s) · '+activos.length+' activa(s)'),
+    React.createElement('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:10,gap:12,flexWrap:'wrap'}},
+      React.createElement('div',{style:{display:'flex',alignItems:'center',gap:12,flexWrap:'wrap'}},
+        React.createElement('div',{style:{fontSize:12,color:'#94A3B8'}}, list.length+' persona(s) · '+activos.length+' activa(s)'),
+        list.length>0 ? React.createElement('button',{type:'button',onClick:function(){
+          if(!confirm('⚠️ Vas a BORRAR DEFINITIVAMENTE las '+list.length+' persona(s) cargadas. Esto NO se puede deshacer.\n\n(Los pagos de sueldos ya cargados en Ingresos/Egresos NO se borran.)\n\n¿Continuar?')) return;
+          var t=prompt('Para confirmar, escribí: BORRAR');
+          if(t===null) return;
+          if(t.trim().toUpperCase()!=='BORRAR'){ alert('No se borró nada (texto de confirmación incorrecto).'); return; }
+          onSave([]);
+          alert('Listo, se borraron todas las personas.');
+        },style:{background:'none',border:'1px solid #FECACA',borderRadius:6,padding:'4px 10px',fontSize:12,color:'#DC2626',cursor:'pointer',fontWeight:600}},'🗑 Borrar todas') : null
+      ),
       React.createElement('label',{style:{fontSize:12,color:'#475569',display:'inline-flex',alignItems:'center',gap:6,cursor:'pointer'}}, React.createElement('input',{type:'checkbox',checked:verInactivos,onChange:function(e){setVerInactivos(e.target.checked);}}), 'Ver inactivos (dados de baja)')
     ),
 
