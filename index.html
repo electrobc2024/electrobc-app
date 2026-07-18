@@ -999,6 +999,12 @@ const H1 = ({
     marginBottom: 18
   }
 }, children);
+const PageHeader = ({ title, subtitle, right }) => /*#__PURE__*/React.createElement("div", {
+  style: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, flexWrap: "wrap", marginBottom: 18 }
+}, /*#__PURE__*/React.createElement("div", { style: { minWidth: 0 } },
+  /*#__PURE__*/React.createElement("div", { style: { fontFamily: "'Oswald',system-ui", fontSize: 22, fontWeight: 700, color: NAVY, letterSpacing: "-0.01em", lineHeight: 1.2 } }, title),
+  subtitle ? /*#__PURE__*/React.createElement("div", { style: { fontSize: 13, color: "#64748B", marginTop: 4, lineHeight: 1.45, maxWidth: 680 } }, subtitle) : null
+), right || null);
 const LogoIcon = ({
   size = 28
 }) => /*#__PURE__*/React.createElement("svg", {
@@ -1705,6 +1711,7 @@ function PriceHistory({
 }
 function CatalogView({
   title,
+  subtitle,
   items,
   onSave
 }) {
@@ -1822,7 +1829,7 @@ function CatalogView({
       /*#__PURE__*/React.createElement("span",{style:{fontSize:9,opacity:act?1:0.4}}, isAsc?"▲":isDesc?"▼":"⇅")
     );
   }
-  return /*#__PURE__*/React.createElement(Pane, null, /*#__PURE__*/React.createElement(H1, null, title), /*#__PURE__*/React.createElement(CardBox, {
+  return /*#__PURE__*/React.createElement(Pane, null, /*#__PURE__*/React.createElement(PageHeader, { title: title, subtitle: subtitle }), /*#__PURE__*/React.createElement(CardBox, {
     title: editId ? "Editar ítem" : "Nuevo ítem"
   }, /*#__PURE__*/React.createElement(ErrBox, {
     errors: errs
@@ -2279,7 +2286,7 @@ function ClientesView({
       )
     );
   }
-  return /*#__PURE__*/React.createElement(Pane, null, /*#__PURE__*/React.createElement(H1, null, "Clientes"), /*#__PURE__*/React.createElement("button", {
+  return /*#__PURE__*/React.createElement(Pane, null, /*#__PURE__*/React.createElement(PageHeader, { title: "👤 Clientes", subtitle: "Base de clientes con sus datos de contacto y administración." }), /*#__PURE__*/React.createElement("button", {
     onClick: function(){ setShowForm(function(v){return !v;}); },
     onMouseDown: function(e){ e.preventDefault(); },
     style: {
@@ -3920,7 +3927,7 @@ function Tracker({
       )
     );
   }
-  return /*#__PURE__*/React.createElement(Pane, null, /*#__PURE__*/React.createElement(H1, null, "Seguimiento de Presupuestos"), /*#__PURE__*/React.createElement("div", {
+  return /*#__PURE__*/React.createElement(Pane, null, /*#__PURE__*/React.createElement(PageHeader, { title: "📈 Seguimiento de Presupuestos", subtitle: "Estado, aprobación y cobranza de todos tus presupuestos." }), /*#__PURE__*/React.createElement("div", {
     style: {display:"flex",alignItems:"center",gap:6,marginBottom:8}
   }, /*#__PURE__*/React.createElement("span",{style:{fontSize:11,color:"#94A3B8",fontWeight:600}},"👇 Tocá una tarjeta para filtrar por estado")),
   /*#__PURE__*/React.createElement("div", {
@@ -4989,7 +4996,7 @@ const updCli = (f, v) => {
   return /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement(FloatingError, {
     errors: errors,
     onClose: () => setErrors([])
-  }), /*#__PURE__*/React.createElement(Pane, null, /*#__PURE__*/React.createElement(H1, null, "Nuevo Presupuesto"), /*#__PURE__*/React.createElement(CardBox, {
+  }), /*#__PURE__*/React.createElement(Pane, null, /*#__PURE__*/React.createElement(PageHeader, { title: "📋 Nuevo Presupuesto", subtitle: "Creá y editá presupuestos de mano de obra y materiales para tus clientes." }), /*#__PURE__*/React.createElement(CardBox, {
     title: "Encabezado del Presupuesto",
     accent: ORANGE
   }, /*#__PURE__*/React.createElement("div", {
@@ -5660,13 +5667,9 @@ function PersonasView({ personas, onSave, egresos }){
   const lbl = function(t, req){ return React.createElement('div',{style:{fontSize:11,fontWeight:600,color:'#64748B',marginBottom:3}}, t, req?React.createElement('span',{style:{color:'#DC2626',fontWeight:700}},' *'):null); };
 
   return React.createElement(IngresosPane, null,
-    React.createElement('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'flex-start',gap:12,flexWrap:'wrap',marginBottom:16}},
-      React.createElement('div',null,
-        React.createElement('div',{style:{fontFamily:"'Oswald',system-ui",fontSize:22,fontWeight:700,color:NAVY,letterSpacing:'-0.01em',lineHeight:1.25}},'🧑‍🔧 Personal / Sueldos'),
-        React.createElement('div',{style:{fontSize:13,color:'#64748B',marginTop:6,lineHeight:1.45,maxWidth:600}},'Alta de personas y su valor por hora (con historial). Las horas y los pagos se cargan desde Cargar Ingresos / Egresos (categoría Sueldos); acá ves el resumen y el historial de pagos de cada uno.')
-      ),
+    React.createElement(PageHeader, { title: '🧑‍🔧 Personal / Sueldos', subtitle: 'Alta de personas y su valor por hora (con historial). Las horas y los pagos se cargan desde Cargar Ingresos / Egresos (categoría Sueldos); acá ves el resumen y el historial de pagos de cada uno.', right:
       React.createElement('button',{type:'button',onClick:function(){ if(editId){setEditId(null);} setForm(mkPersona()); setShowForm(function(s){return !s;}); },style:{backgroundColor:showForm?'#fff':ORANGE,color:showForm?ORANGE:'#fff',border:'1px solid '+ORANGE,borderRadius:8,padding:'9px 16px',fontSize:13,fontWeight:700,cursor:'pointer',whiteSpace:'nowrap',flexShrink:0}}, showForm?'✕ Cerrar':'➕ Agregar persona')
-    ),
+    }),
 
     // Filtro año/mes
     React.createElement('div',{style:{display:'flex',flexWrap:'wrap',alignItems:'center',gap:6,marginBottom:14}},
@@ -5887,10 +5890,7 @@ function BackupView({ quotes, catalog, clients, egresos, personas, onRestore }){
   var fmtHora=function(iso){ try{ var d=new Date(iso); return fmtFecha(iso)+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); }catch(e){ return fmtFecha(iso); } };
 
   return React.createElement(IngresosPane, null, React.createElement('div',null,
-    React.createElement('div',{style:{marginBottom:16}},
-      React.createElement('div',{style:{fontFamily:"'Oswald',system-ui",fontSize:22,fontWeight:700,color:NAVY,letterSpacing:'-0.01em'}},'💾 Copias de seguridad'),
-      React.createElement('div',{style:{fontSize:13,color:'#64748B',marginTop:6,lineHeight:1.45,maxWidth:640}},'Descargá una copia de todos tus datos (presupuestos, clientes, materiales, mano de obra, movimientos y personal) para guardarla en tu compu o la nube. Podés bajar la copia completa o solo la de un período, y ver el historial de copias hechas desde este dispositivo.')
-    ),
+    React.createElement(PageHeader, { title: '💾 Copias de seguridad', subtitle: 'Descargá una copia de todos tus datos (presupuestos, clientes, materiales, mano de obra, movimientos y personal) para guardarla en tu compu o la nube. Podés bajar la copia completa o solo la de un período, y ver el historial de copias hechas desde este dispositivo.' }),
     // Copia completa
     React.createElement('div',{style:card},
       React.createElement('div',{style:{fontSize:14,fontWeight:700,color:NAVY,marginBottom:4}},'Copia completa'),
@@ -6374,7 +6374,8 @@ function App() {
     }
   }), view === "catMdo" && /*#__PURE__*/React.createElement(CatalogView, {
     key: "catMdo",
-    title: "Cat\xE1logo \xB7 Mano de Obra",
+    title: "👷 Mano de Obra",
+    subtitle: "Catálogo de ítems de mano de obra con su precio y su historial.",
     items: catalog.mdo,
     onSave: items => handleCatalog({
       ...catalog,
@@ -6382,7 +6383,8 @@ function App() {
     })
   }), view === "catMat" && /*#__PURE__*/React.createElement(CatalogView, {
     key: "catMat",
-    title: "Cat\xE1logo \xB7 Materiales",
+    title: "📦 Materiales",
+    subtitle: "Catálogo de materiales con su precio y su historial.",
     items: catalog.mat,
     onSave: items => handleCatalog({
       ...catalog,
@@ -7229,13 +7231,10 @@ function IngresosView({quotes, egresos, onSaveEgresos, clients, catalog, persona
         ]);
   return /*#__PURE__*/React.createElement(IngresosPane, null,
     // Header
-    React.createElement('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}},
-      React.createElement('div',null,
-        React.createElement('h1',{style:{fontFamily:"'Oswald',system-ui",fontSize:28,fontWeight:700,color:NAVY,margin:0}}, activeTab==='dashboard' ? '\u{1F4CA} Dashboard Financiero' : '\u{1F4B0} Ingresos y Egresos'),
-        React.createElement('div',{style:{fontSize:12,color:'#94A3B8',marginTop:2}}, activeTab==='dashboard' ? 'Salud del negocio de un vistazo' : 'Flujo de caja real')
-      ),
-
-    ),
+    React.createElement(PageHeader, {
+      title: activeTab==='dashboard' ? '📊 Dashboard Financiero' : '💰 Ingresos y Egresos',
+      subtitle: activeTab==='dashboard' ? 'Salud del negocio de un vistazo, con semáforo orientativo.' : 'Flujo de caja real: ingresos, egresos y sueldos cargados.'
+    }),
 
 
 
