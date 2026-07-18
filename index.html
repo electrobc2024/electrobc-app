@@ -1829,6 +1829,45 @@ function CatalogView({
     setSelIds([]);
     alert("Unificado en \"" + finalName + "\" (" + codeStr(title && title.indexOf("Materiales") >= 0 ? "MAT" : "MO", survivor.num) + "). Precio actual: $ " + fmt(current.precio) + ". Se guardaron " + hist.length + " precio(s) en el historial.");
   }, [items, selIds, onSave, title]);
+  // Limpieza de duplicados detectados (Materiales)
+  const KNOWN_DUPES = [
+    { keep: "Caja Estanco 10x10", drop: "Caja Estanco 10x0", final: "Caja Estanco 10x10" },
+    { keep: "Lija P/madera N°150", drop: "Lijas 150", final: "Lija P/madera N°150" },
+    { keep: "Caño Pvc 20mm", drop: "Caño Pvc", final: "Caño Pvc 20mm" },
+    { keep: "Lampara Macroled 60w", drop: "Lampara 60W Macroled", final: "Lampara 60W Macroled" },
+    { keep: "Cable 1x2.5mm2 X Metro", drop: "Cable 1x2,5mm2", final: "Cable 1x2.5mm2 x Metro" },
+    { keep: "Placa Durlock 1.20x2.40m", drop: "Placa Durlock 1,20x2,40", final: "Placa Durlock 1.20x2.40m" }
+  ];
+  const applyKnownDupes = useCallback(() => {
+    const norm = s => (s || "").trim().toLowerCase();
+    const combine = (keep, drop, finalName) => {
+      let hist = [];
+      [keep, drop].forEach(it => {
+        const h = (it.historial && it.historial.length) ? it.historial : [{ fecha: new Date(0).toISOString(), precio: it.precioBase, autor: it.autor || "guille" }];
+        h.forEach(e => hist.push({ fecha: e.fecha, precio: e.precio, autor: e.autor || it.autor || "guille" }));
+      });
+      hist.sort((a, b) => String(a.fecha).localeCompare(String(b.fecha)));
+      const seen = {};
+      hist = hist.filter(e => { const k = String(e.fecha) + "|" + String(e.precio); if (seen[k]) return false; seen[k] = 1; return true; });
+      return { ...keep, nombre: finalName, precioBase: hist[hist.length - 1].precio, historial: hist };
+    };
+    let next = items.slice();
+    const applied = [];
+    KNOWN_DUPES.forEach(p => {
+      const keep = next.find(i => norm(i.nombre) === norm(p.keep));
+      const drop = next.find(i => norm(i.nombre) === norm(p.drop));
+      if (keep && drop && keep.id !== drop.id) {
+        const merged = combine(keep, drop, p.final);
+        next = next.filter(i => i.id !== drop.id).map(i => i.id === keep.id ? merged : i);
+        applied.push("• " + p.final + " → queda " + codeStr("MAT", keep.num) + ", se elimina " + codeStr("MAT", drop.num) + ", precio actual $ " + fmt(merged.precioBase));
+      }
+    });
+    if (applied.length === 0) { alert("No se encontraron los duplicados (probablemente ya los uniste)."); return; }
+    if (!confirm("Se van a unificar " + applied.length + " materiales:\n\n" + applied.join("\n") + "\n\nLos precios anteriores quedan en el historial. ¿Aplicar?")) return;
+    onSave(next);
+    alert("Listo, se unificaron " + applied.length + " materiales.");
+  }, [items, onSave]);
+  const _dupesPresentes = (title && title.indexOf("Materiales") >= 0) ? KNOWN_DUPES.filter(p => { const n = s => (s || "").trim().toLowerCase(); return items.some(i => n(i.nombre) === n(p.keep)) && items.some(i => n(i.nombre) === n(p.drop)); }).length : 0;
   const ed = i => {
     setEditId(i.id);
     setForm({
@@ -1923,7 +1962,7 @@ function CatalogView({
     value: searchCat,
     onChange: setSearchCat,
     placeholder: "Buscar \xEDtem\u2026"
-  }), /*#__PURE__*/React.createElement("button",{type:"button",onClick:function(){ exportXLSX("ELECTRO BC - "+(title||"Catalogo")+" - "+fmtFechaFile(new Date())+".xlsx", [{name:(title||"Catálogo"),money:[1],rows:[["Nombre","Precio actual","N° de precios","Cargado por"]].concat((items||[]).map(function(it){ return [it.nombre||"", it.precioBase||"", (it.historial||[]).length, ebcUserLabel(it.autor||"guille")]; }))}]); }, style:{background:"none",border:"1px solid #86EFAC",borderRadius:8,padding:"7px 12px",fontSize:12,fontWeight:600,cursor:"pointer",color:"#16A34A",whiteSpace:"nowrap"}},"\ud83d\udcca Exportar Excel")), selIds.length >= 2 && /*#__PURE__*/React.createElement("div", {
+  }), /*#__PURE__*/React.createElement("button",{type:"button",onClick:function(){ exportXLSX("ELECTRO BC - "+(title||"Catalogo")+" - "+fmtFechaFile(new Date())+".xlsx", [{name:(title||"Catálogo"),money:[1],rows:[["Nombre","Precio actual","N° de precios","Cargado por"]].concat((items||[]).map(function(it){ return [it.nombre||"", it.precioBase||"", (it.historial||[]).length, ebcUserLabel(it.autor||"guille")]; }))}]); }, style:{background:"none",border:"1px solid #86EFAC",borderRadius:8,padding:"7px 12px",fontSize:12,fontWeight:600,cursor:"pointer",color:"#16A34A",whiteSpace:"nowrap"}},"\ud83d\udcca Exportar Excel"), _dupesPresentes > 0 && /*#__PURE__*/React.createElement("button", { type: "button", onClick: applyKnownDupes, style: { background: "#FEF3C7", border: "1px solid #FBBF24", borderRadius: 8, padding: "7px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer", color: "#92400E", whiteSpace: "nowrap" } }, "\ud83e\uddf9 Unificar " + _dupesPresentes + " duplicados detectados")), selIds.length >= 2 && /*#__PURE__*/React.createElement("div", {
     style: { display: "flex", gap: 8, alignItems: "center", marginBottom: 10, padding: "8px 12px", background: "#FEF3C7", border: "1px solid #FDE68A", borderRadius: 8, flexWrap: "wrap" }
   }, /*#__PURE__*/React.createElement("span", { style: { fontSize: 12, fontWeight: 700, color: "#92400E" } }, selIds.length + " seleccionados \u2014 \u00bfson el mismo \u00edtem?"),
     /*#__PURE__*/React.createElement("button", { type: "button", onClick: mergeSelected, style: { background: ORANGE, border: "none", borderRadius: 6, padding: "6px 12px", fontSize: 12, fontWeight: 700, color: "#fff", cursor: "pointer" } }, "\ud83d\udd17 Unificar en uno"),
