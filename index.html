@@ -6693,8 +6693,6 @@ function MdoCalc({tipoCliente,updMdoWithCalc,clienteSeleccionado}){
   const tLbls={particular:'\u{1F464} Particular',admin:'\u{1F3E2} Admin',empresa:'\u{1F3D7} Empresa',licitacion:'\u{1F4CB} Licitaci\xF3n'};
   const aplicar=()=>{
     if(comp==null){alert('Eleg\xED la complejidad / riesgo.');return;}
-    if(hGF===''||hGF==null){alert('Ingres\xE1 las horas de Guillermo/Fede (pod\xE9s poner 0).');return;}
-    if(hAyud===''||hAyud==null){alert('Ingres\xE1 las horas de Ayudante (pod\xE9s poner 0).');return;}
     updMdoWithCalc(total);
     setOpen(false);
   };
@@ -6723,34 +6721,16 @@ function MdoCalc({tipoCliente,updMdoWithCalc,clienteSeleccionado}){
       React.createElement('input',{type:'checkbox',id:'noct_cb',checked:noct,onChange:e=>setNoct(e.target.checked),style:{width:16,height:16}}),
       React.createElement('label',{htmlFor:'noct_cb',style:{fontSize:12,fontWeight:600,color:'#475569'}},'\u{1F319} Nocturno / Urgencia (\xD72)')
     ),
-    React.createElement('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:10,marginBottom:12}},
-      React.createElement('div',null,
-        React.createElement('div',{style:{fontSize:10,color:'#94A3B8',fontWeight:700,marginBottom:4}},'BOCAS'),
-        React.createElement('input',{type:'number',min:0,value:bocas,placeholder:'0',onChange:e=>setBocas(e.target.value),style:inp}),
-        bn>umbral&&React.createElement('div',{style:{fontSize:10,color:ORANGE,marginTop:2}},'\u{1F4C9} Descuento: -'+descVol+'%')
-      ),
-      React.createElement('div',null,
-        React.createElement('div',{style:{fontSize:10,color:'#94A3B8',fontWeight:700,marginBottom:4}},'HS. GUILLERMO/FEDE ',React.createElement('span',{style:{color:'#DC2626'}},'*')),
-        React.createElement('input',{type:'number',min:0,step:0.5,value:hGF,placeholder:'0',onChange:e=>setHGF(e.target.value),style:inp})
-      ),
-      React.createElement('div',null,
-        React.createElement('div',{style:{fontSize:10,color:'#94A3B8',fontWeight:700,marginBottom:4}},'HS. AYUDANTE ',React.createElement('span',{style:{color:'#DC2626'}},'*')),
-        React.createElement('input',{type:'number',min:0,step:0.5,value:hAyud,placeholder:'0',onChange:e=>setHAyud(e.target.value),style:inp})
-      )
+    React.createElement('div',{style:{marginBottom:12}},
+      React.createElement('div',{style:{fontSize:10,color:'#94A3B8',fontWeight:700,marginBottom:4}},'BOCAS'),
+      React.createElement('input',{type:'number',min:0,value:bocas,placeholder:'0',onChange:e=>setBocas(e.target.value),style:inp}),
+      bn>umbral&&React.createElement('div',{style:{fontSize:10,color:ORANGE,marginTop:2}},'\u{1F4C9} Descuento: -'+descVol+'%')
     ),
     React.createElement('div',{style:{backgroundColor:'#fff',borderRadius:8,border:'1px solid #E2E8F0',padding:'12px 14px',marginBottom:12}},
       React.createElement('div',{style:{fontSize:10,fontWeight:700,color:'#94A3B8',marginBottom:8}},'DESGLOSE'),
       bn>0&&React.createElement('div',{style:{display:'flex',justifyContent:'space-between',fontSize:12,marginBottom:4}},
         React.createElement('span',{style:{color:'#475569'}},bn+' bocas \xD7 $'+f2(pBoca)),
         React.createElement('span',{style:{fontWeight:600}},'$'+f2(tBoca))
-      ),
-      parseFloat(hGF)>0&&React.createElement('div',{style:{display:'flex',justifyContent:'space-between',fontSize:12,marginBottom:4}},
-        React.createElement('span',{style:{color:'#475569'}},hGF+'hs G/F \xD7 $'+f2(pGF)),
-        React.createElement('span',{style:{fontWeight:600}},'$'+f2(tGF))
-      ),
-      parseFloat(hAyud)>0&&React.createElement('div',{style:{display:'flex',justifyContent:'space-between',fontSize:12,marginBottom:4}},
-        React.createElement('span',{style:{color:'#475569'}},hAyud+'hs Ayudante \xD7 $'+f2(pAyud)),
-        React.createElement('span',{style:{fontWeight:600}},'$'+f2(tAyud))
       ),
       React.createElement('div',{style:{borderTop:'1px solid #E2E8F0',marginTop:8,paddingTop:8,display:'flex',justifyContent:'space-between'}},
         React.createElement('span',{style:{fontFamily:"'Oswald',system-ui",fontWeight:700,fontSize:15,color:NAVY}},'TOTAL MdO'),
