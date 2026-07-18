@@ -7266,35 +7266,17 @@ function IngresosView({quotes, egresos, onSaveEgresos, clients, catalog, persona
           ):null,
           (egForm.tipo==='egreso' && egForm.cat==='sueldos' && egForm.personaId) ? React.createElement('div',null,
             React.createElement('div',{style:{fontSize:10,color:'#94A3B8',fontWeight:700,marginBottom:4}},'MES DEL PAGO'),
-            (function(){
-              var MABR=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
-              var hoy=new Date(); var curY=hoy.getFullYear(); var curM=hoy.getMonth()+1; var curD=hoy.getDate();
-              var minY=2026, minM=6;
-              var sel=(egForm.fecha||'').slice(0,7);
-              var canPrev=calYear>minY;
-              var canNext=calYear<curY;
-              function isEnabled(mm){
-                if(calYear<minY||(calYear===minY&&mm<minM)) return false; // antes de junio 2026
-                if(calYear>curY||(calYear===curY&&mm>curM)) return false; // futuro no permitido
-                return true;
-              }
-              function navBtn(txt,can,fn){ return React.createElement('button',{type:'button',disabled:!can,onClick:function(){if(can)fn();},style:{border:'1px solid #E2E8F0',background:can?'#fff':'#F1F5F9',color:can?'#1E293B':'#CBD5E1',borderRadius:6,width:30,height:30,cursor:can?'pointer':'default',fontWeight:800,fontSize:16,lineHeight:1}},txt); }
-              return React.createElement('div',{style:{border:'1px solid #E2E8F0',borderRadius:8,padding:10,background:'#fff',marginBottom:10}},
-                React.createElement('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:8}},
-                  navBtn('‹',canPrev,function(){setCalYear(calYear-1);}),
-                  React.createElement('div',{style:{fontWeight:800,fontSize:16,fontFamily:"'Oswald',system-ui",color:NAVY}},String(calYear)),
-                  navBtn('›',canNext,function(){setCalYear(calYear+1);})
-                ),
-                React.createElement('div',{style:{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:6}},
-                  MABR.map(function(lb,i){
-                    var mm=i+1; var val=calYear+'-'+(mm<10?'0':'')+mm;
-                    var en=isEnabled(mm); var isSel=sel===val;
-                    return React.createElement('button',{key:mm,type:'button',disabled:!en,onClick:function(){ if(!en)return; setEgForm(function(f){ var day=(f.fecha&&f.fecha.length>=10)?f.fecha.slice(8,10):'01'; if(calYear===curY&&mm===curM&&parseInt(day,10)>curD) day=(curD<10?'0':'')+curD; return Object.assign({},f,{fecha:val+'-'+day}); }); },
-                      style:{padding:'9px 0',borderRadius:6,fontSize:12,fontWeight:700,cursor:en?'pointer':'default',border:'1px solid '+(isSel?ORANGE:'#E2E8F0'),background:isSel?ORANGE:(en?'#fff':'#F8FAFC'),color:isSel?'#fff':(en?'#334155':'#CBD5E1')}}, lb);
-                  })
-                )
-              );
-            })(),
+            React.createElement('input',{type:'month',lang:'es',min:'2026-06',max:new Date().toISOString().slice(0,7),value:(egForm.fecha||'').slice(0,7),onChange:function(e){
+              var m=e.target.value; if(!m) return;
+              if(m<'2026-06') m='2026-06';
+              var tope=new Date().toISOString().slice(0,7); if(m>tope) m=tope;
+              var hoy=new Date();
+              setEgForm(function(f){
+                var day=(f.fecha&&f.fecha.length>=10)?f.fecha.slice(8,10):'01';
+                if(m===tope && parseInt(day,10)>hoy.getDate()) day=(hoy.getDate()<10?'0':'')+hoy.getDate();
+                return Object.assign({},f,{fecha:m+'-'+day});
+              });
+            },style:Object.assign({},inp,{marginBottom:10})}),
             React.createElement('div',{style:{fontSize:10,color:'#94A3B8',fontWeight:700,marginBottom:4}},'SEMANA Y HORAS'),
             React.createElement('div',{style:{display:'flex',gap:8,flexWrap:'wrap'}},
               React.createElement('select',{value:egForm.semanaNum||'',onChange:function(e){var v=e.target.value;setEgForm(function(f){return Object.assign({},f,{semanaNum:v});});},style:Object.assign({},inp,{flex:'0 0 120px'})},
