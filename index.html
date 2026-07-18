@@ -7255,7 +7255,7 @@ function IngresosView({quotes, egresos, onSaveEgresos, clients, catalog, persona
           ) : React.createElement('div',null,
             React.createElement('div',{style:{fontSize:10,color:'#94A3B8',fontWeight:700,marginBottom:4}},'DESCRIPCIÓN'),
             React.createElement('input',{type:'text',
-    spellCheck:true,value:egForm.desc,onChange:function(e){setEgForm(function(f){return Object.assign({},f,{desc:e.target.value});});},placeholder:'Descripción...',style:inp})
+    spellCheck:true,autoCapitalize:'sentences',value:egForm.desc,onChange:function(e){setEgForm(function(f){return Object.assign({},f,{desc:e.target.value});});},onBlur:function(e){var v=e.target.value;if(v){var cap=capitalize(v);if(cap!==v)setEgForm(function(f){return Object.assign({},f,{desc:cap});});}},placeholder:'Descripción...',style:inp})
           ),
           React.createElement('div',null,
             React.createElement('div',{style:{fontSize:10,color:'#94A3B8',fontWeight:700,marginBottom:4}},'MONTO'),
