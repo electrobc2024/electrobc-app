@@ -692,23 +692,55 @@ const validateCat = f => {
 const loadQ = async () => {
   try {
     const r = await db.get(SKEY);
-    return r ? JSON.parse(r.value) : [];
+    var arr = r ? JSON.parse(r.value) : [];
+    setSyncBase(SKEY, arr);
+    return arr;
   } catch {
     return [];
   }
 };
+// ── Merge con la nube (evita que un dispositivo pise lo que cargó otro) ──
+// "base" = ids que este dispositivo vio la última vez (al cargar o guardar).
+// Sirve para distinguir un BORRADO local (estaba en base y ya no está) de un
+// AGREGADO por otro dispositivo (está en la nube pero nunca estuvo en base).
+var _syncBase = {};
+function _idset(arr){ var s = {}; (arr || []).forEach(function(it){ if(it && it.id) s[it.id] = 1; }); return s; }
+function setSyncBase(key, arr){ _syncBase[key] = _idset(arr); }
+// Une localArr con la nube respetando borrados locales.
+function mergeArrByIdBase(cloudArr, localArr, baseKey){
+  var base = _syncBase[baseKey] || null;
+  var out = [], seen = {};
+  (localArr || []).forEach(function(it){ if(it && it.id) seen[it.id] = 1; out.push(it); });
+  (cloudArr || []).forEach(function(it){
+    if(!it || !it.id || seen[it.id]) return;
+    if(base && base[it.id]) return; // lo teníamos y lo borramos → no lo revivimos
+    out.push(it);                    // agregado por otro dispositivo → lo sumamos
+  });
+  _syncBase[baseKey] = _idset(out);
+  return out;
+}
+async function sbMergeArr(key, localArr){
+  var cloud = [];
+  try { var r = await sbGet(key); if(Array.isArray(r)) cloud = r; else if(typeof r === 'string'){ var p = JSON.parse(r); if(Array.isArray(p)) cloud = p; } } catch(e){}
+  return mergeArrByIdBase(cloud, localArr, key);
+}
+async function sbMergeCat(key, localCat){
+  var cloud = {mdo:[],mat:[]};
+  try { var r = await sbGet(key); var c = (typeof r === 'string') ? JSON.parse(r) : r; if(c && typeof c === 'object' && !Array.isArray(c)) cloud = c; } catch(e){}
+  return { mdo: mergeArrByIdBase(cloud.mdo || [], localCat.mdo || [], key+':mdo'), mat: mergeArrByIdBase(cloud.mat || [], localCat.mat || [], key+':mat') };
+}
 const saveQ = async d => {
   try {
-    await db.set(SKEY, JSON.stringify(d));
-  } catch {}
+    var merged = await sbMergeArr(SKEY, d);
+    await db.set(SKEY, JSON.stringify(merged));
+  } catch { try { await db.set(SKEY, JSON.stringify(d)); } catch {} }
 };
 const loadCat = async () => {
   try {
     const r = await db.get(CKEY);
-    return r ? JSON.parse(r.value) : {
-      mdo: [],
-      mat: []
-    };
+    var c = r ? JSON.parse(r.value) : { mdo: [], mat: [] };
+    setSyncBase(CKEY+':mdo', c.mdo||[]); setSyncBase(CKEY+':mat', c.mat||[]);
+    return c;
   } catch {
     return {
       mdo: [],
@@ -718,34 +750,41 @@ const loadCat = async () => {
 };
 const saveCat = async d => {
   try {
-    await db.set(CKEY, JSON.stringify(d));
-  } catch {}
+    var merged = await sbMergeCat(CKEY, d);
+    await db.set(CKEY, JSON.stringify(merged));
+  } catch { try { await db.set(CKEY, JSON.stringify(d)); } catch {} }
 };
 const loadCl = async () => {
   try {
     const r = await db.get(CLKEY);
-    return r ? JSON.parse(r.value) : [];
+    var arr = r ? JSON.parse(r.value) : [];
+    setSyncBase(CLKEY, arr);
+    return arr;
   } catch {
     return [];
   }
 };
 const saveCl = async d => {
   try {
-    await db.set(CLKEY, JSON.stringify(d));
-  } catch {}
+    var merged = await sbMergeArr(CLKEY, d);
+    await db.set(CLKEY, JSON.stringify(merged));
+  } catch { try { await db.set(CLKEY, JSON.stringify(d)); } catch {} }
 };
 const loadPersonas = async () => {
   try {
     const r = await db.get(PKEY);
-    return r ? JSON.parse(r.value) : [];
+    var arr = r ? JSON.parse(r.value) : [];
+    setSyncBase(PKEY, arr);
+    return arr;
   } catch {
     return [];
   }
 };
 const savePersonas = async d => {
   try {
-    await db.set(PKEY, JSON.stringify(d));
-  } catch {}
+    var merged = await sbMergeArr(PKEY, d);
+    await db.set(PKEY, JSON.stringify(merged));
+  } catch { try { await db.set(PKEY, JSON.stringify(d)); } catch {} }
 };
 // Suma de horas de una persona en un período (arrays de años/meses; vacío = todo)
 function horasEnPeriodo(persona, anos, meses){
@@ -6136,6 +6175,7 @@ function App() {
       if (val && Array.isArray(val) && val.length > 0) {
         var n=assignNums(val);
         setEgresos(n);
+        setSyncBase(EKEY, n);
         localStorage.setItem(EKEY, JSON.stringify(n));
         if(n!==val) sbSet(EKEY, n).catch(()=>{});
       }
@@ -6145,7 +6185,12 @@ function App() {
     var n=assignNums(list);
     setEgresos(n);
     localStorage.setItem(EKEY, JSON.stringify(n));
-    sbSet(EKEY, n).catch(()=>{});
+    try {
+      var merged = await sbMergeArr(EKEY, n);
+      if(merged.length !== n.length){ setEgresos(merged); }
+      localStorage.setItem(EKEY, JSON.stringify(merged));
+      sbSet(EKEY, merged).catch(()=>{});
+    } catch(e){ sbSet(EKEY, n).catch(()=>{}); }
   };
   const [personas, setPersonas] = useState([]);
   React.useEffect(function(){
