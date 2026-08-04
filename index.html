@@ -6215,6 +6215,7 @@ function PlanificacionView({ actividades, onSave, quotes, personas }){
   const [view, setView] = React.useState('mes');       // mes | semana | dia
   const [ref, setRef] = React.useState(function(){ var d=new Date(); d.setHours(0,0,0,0); return d; });
   const [editing, setEditing] = React.useState(null);   // objeto actividad en edición (o null)
+  const [showProd, setShowProd] = React.useState(false);
 
   const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
   const DOW = ['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
@@ -6457,7 +6458,8 @@ function PlanificacionView({ actividades, onSave, quotes, personas }){
         React.createElement('button',{type:'button',onClick:function(){ var d=new Date(); d.setHours(0,0,0,0); setRef(d); },style:{border:'1px solid #E2E8F0',background:'#fff',borderRadius:6,padding:'6px 12px',fontSize:12,cursor:'pointer',color:'#475569',fontWeight:600}},'Hoy'),
         React.createElement('div',{style:{width:1,height:20,background:'#E2E8F0',margin:'0 2px'}}),
         React.createElement('button',{type:'button',title:'Compartir la agenda de este período por WhatsApp',onClick:compartirWA,style:{border:'1px solid #86EFAC',background:'#fff',borderRadius:6,padding:'6px 11px',fontSize:12,cursor:'pointer',color:'#16A34A',fontWeight:600,whiteSpace:'nowrap'}},'📲 WhatsApp'),
-        React.createElement('button',{type:'button',title:'Descargar la agenda de este período en PDF',onClick:pdfPeriodo,style:{border:'1px solid #E2E8F0',background:'#fff',borderRadius:6,padding:'6px 11px',fontSize:12,cursor:'pointer',color:'#475569',fontWeight:600,whiteSpace:'nowrap'}},'📄 PDF')
+        React.createElement('button',{type:'button',title:'Descargar la agenda de este período en PDF',onClick:pdfPeriodo,style:{border:'1px solid #E2E8F0',background:'#fff',borderRadius:6,padding:'6px 11px',fontSize:12,cursor:'pointer',color:'#475569',fontWeight:600,whiteSpace:'nowrap'}},'📄 PDF'),
+        React.createElement('button',{type:'button',title:'Productividad: horas estimadas vs reales',onClick:function(){setShowProd(true);},style:{border:'1px solid #C4B5FD',background:'#fff',borderRadius:6,padding:'6px 11px',fontSize:12,cursor:'pointer',color:'#6D28D9',fontWeight:600,whiteSpace:'nowrap'}},'📊 Productividad')
       )
     ),
     // Franja de sin fecha / por planificar
@@ -6468,7 +6470,72 @@ function PlanificacionView({ actividades, onSave, quotes, personas }){
     // Calendario
     view==='anio'?renderAnio():view==='mes'?renderMes():view==='semana'?renderSemana():renderDia(),
     // Editor
-    editing ? React.createElement(ActividadEditor, { act: editing, onChange: setEditing, onSave: saveAct, onDelete: delAct, onClose: function(){ setEditing(null); }, quotesAceptados: aceptados, quoteById: quoteById, personas: pers }) : null
+    editing ? React.createElement(ActividadEditor, { act: editing, onChange: setEditing, onSave: saveAct, onDelete: delAct, onClose: function(){ setEditing(null); }, quotesAceptados: aceptados, quoteById: quoteById, personas: pers }) : null,
+    // Productividad
+    showProd ? (function(){
+      var hechas = list.filter(function(a){ return a.estado==='hecho' && parseFloat(a.horasEst)>0 && parseFloat(a.horasReal)>0; });
+      var pendientes = list.filter(function(a){ return a.estado==='hecho' && !(parseFloat(a.horasReal)>0); }).length;
+      var thS={padding:'7px 9px',fontSize:10,fontWeight:700,color:'#94A3B8',textTransform:'uppercase',textAlign:'left',borderBottom:'1px solid #E2E8F0',whiteSpace:'nowrap'};
+      var tdS={padding:'7px 9px',fontSize:12,color:'#475569',borderBottom:'1px solid #F1F5F9',whiteSpace:'nowrap'};
+      function efColor(ef){ return ef>=100?'#166534':(ef>=85?'#B45309':'#B91C1C'); }
+      var totE=0, totR=0;
+      var filas = hechas.map(function(a){ var e=parseFloat(a.horasEst)||0, r=parseFloat(a.horasReal)||0; totE+=e; totR+=r; var ef=r>0?Math.round(e/r*100):0; return {a:a,e:e,r:r,ef:ef}; });
+      var efTot = totR>0?Math.round(totE/totR*100):0;
+      // por persona (la actividad compartida cuenta para cada integrante)
+      var porPers = (pers||[]).map(function(p){ var e=0,r=0,n=0; hechas.forEach(function(a){ if((a.equipo||[]).indexOf(p.id)>=0){ e+=parseFloat(a.horasEst)||0; r+=parseFloat(a.horasReal)||0; n++; } }); return {p:p,e:e,r:r,n:n,ef:r>0?Math.round(e/r*100):0}; }).filter(function(x){return x.n>0;}).sort(function(x,y){return y.n-x.n;});
+      return React.createElement('div',{onMouseDown:function(){setShowProd(false);},style:{position:'fixed',inset:0,zIndex:10000,background:'rgba(0,0,0,0.5)',display:'flex',alignItems:'flex-start',justifyContent:'center',padding:'40px 16px',overflowY:'auto'}},
+        React.createElement('div',{onMouseDown:function(e){e.stopPropagation();},style:{background:'#fff',borderRadius:14,width:760,maxWidth:'100%',padding:20,boxShadow:'0 10px 40px rgba(0,0,0,0.25)'}},
+          React.createElement('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:6}},
+            React.createElement('div',{style:{fontFamily:"'Oswald',system-ui",fontSize:18,fontWeight:700,color:NAVY}},'📊 Productividad — estimado vs real'),
+            React.createElement('button',{type:'button',onClick:function(){setShowProd(false);},style:{background:'none',border:'none',fontSize:18,color:'#94A3B8',cursor:'pointer'}},'✕')
+          ),
+          React.createElement('div',{style:{fontSize:11,color:'#94A3B8',marginBottom:14}},'Toma las actividades en estado "Hecho" con horas reales cargadas. Eficiencia = estimadas ÷ reales (100% = clavado; más de 100% = más rápido de lo estimado).'+(pendientes?(' · '+pendientes+' hecha(s) sin horas reales cargadas.'):'')),
+          hechas.length===0
+            ? React.createElement('div',{style:{textAlign:'center',color:'#94A3B8',fontSize:13,padding:'24px 0'}},'Todavía no hay actividades finalizadas con horas reales cargadas.')
+            : React.createElement('div',null,
+                // Resumen
+                React.createElement('div',{style:{display:'flex',gap:10,flexWrap:'wrap',marginBottom:14}},
+                  [['Actividades',hechas.length,NAVY],['Horas estimadas',(Math.round(totE*10)/10)+' h','#6D28D9'],['Horas reales',(Math.round(totR*10)/10)+' h','#0369A1'],['Eficiencia global',efTot+'%',efColor(efTot)]].map(function(k){ return React.createElement('div',{key:k[0],style:{background:'#F8FAFC',border:'1px solid #E2E8F0',borderRadius:8,padding:'8px 12px'}}, React.createElement('div',{style:{fontSize:10,color:'#94A3B8',fontWeight:700,textTransform:'uppercase'}},k[0]), React.createElement('div',{style:{fontSize:17,fontWeight:700,color:k[2],fontFamily:"'Oswald',system-ui"}},k[1])); })
+                ),
+                // Por actividad
+                React.createElement('div',{style:{fontSize:12,fontWeight:700,color:NAVY,margin:'6px 0 4px'}},'Por actividad'),
+                React.createElement('div',{style:{overflowX:'auto',marginBottom:16}}, React.createElement('table',{style:{width:'100%',borderCollapse:'collapse'}},
+                  React.createElement('thead',null,React.createElement('tr',null,
+                    React.createElement('th',{style:thS},'Actividad'), React.createElement('th',{style:thS},'Equipo'),
+                    React.createElement('th',{style:Object.assign({},thS,{textAlign:'right'})},'Est.'), React.createElement('th',{style:Object.assign({},thS,{textAlign:'right'})},'Real'),
+                    React.createElement('th',{style:Object.assign({},thS,{textAlign:'right'})},'Desvío'), React.createElement('th',{style:Object.assign({},thS,{textAlign:'right'})},'Efic.')
+                  )),
+                  React.createElement('tbody',null, filas.map(function(f){ var dv=f.r-f.e; return React.createElement('tr',{key:f.a.id},
+                    React.createElement('td',{style:tdS}, tituloDe(f.a)),
+                    React.createElement('td',{style:tdS}, (f.a.equipo||[]).map(persLabel).join(', ')||'—'),
+                    React.createElement('td',{style:Object.assign({},tdS,{textAlign:'right'})}, f.e+'h'),
+                    React.createElement('td',{style:Object.assign({},tdS,{textAlign:'right'})}, f.r+'h'),
+                    React.createElement('td',{style:Object.assign({},tdS,{textAlign:'right',color:dv<=0?'#166534':'#B91C1C',fontWeight:700})}, (dv>0?'+':'')+dv+'h'),
+                    React.createElement('td',{style:Object.assign({},tdS,{textAlign:'right',fontWeight:700,color:efColor(f.ef)})}, f.ef+'%')
+                  ); }))
+                )),
+                // Por persona
+                porPers.length? React.createElement('div',null,
+                  React.createElement('div',{style:{fontSize:12,fontWeight:700,color:NAVY,margin:'6px 0 4px'}},'Por persona ',React.createElement('span',{style:{fontWeight:400,color:'#94A3B8',fontSize:10}},'(las tareas compartidas cuentan para cada integrante)')),
+                  React.createElement('div',{style:{overflowX:'auto'}}, React.createElement('table',{style:{width:'100%',borderCollapse:'collapse'}},
+                    React.createElement('thead',null,React.createElement('tr',null,
+                      React.createElement('th',{style:thS},'Persona'), React.createElement('th',{style:Object.assign({},thS,{textAlign:'right'})},'Tareas'),
+                      React.createElement('th',{style:Object.assign({},thS,{textAlign:'right'})},'Est.'), React.createElement('th',{style:Object.assign({},thS,{textAlign:'right'})},'Real'),
+                      React.createElement('th',{style:Object.assign({},thS,{textAlign:'right'})},'Efic.')
+                    )),
+                    React.createElement('tbody',null, porPers.map(function(x){ return React.createElement('tr',{key:x.p.id},
+                      React.createElement('td',{style:tdS}, x.p.nombre||'—'),
+                      React.createElement('td',{style:Object.assign({},tdS,{textAlign:'right'})}, x.n),
+                      React.createElement('td',{style:Object.assign({},tdS,{textAlign:'right'})}, (Math.round(x.e*10)/10)+'h'),
+                      React.createElement('td',{style:Object.assign({},tdS,{textAlign:'right'})}, (Math.round(x.r*10)/10)+'h'),
+                      React.createElement('td',{style:Object.assign({},tdS,{textAlign:'right',fontWeight:700,color:efColor(x.ef)})}, x.ef+'%')
+                    ); }))
+                  ))
+                ):null
+              )
+        )
+      );
+    })() : null
   );
 }
 
