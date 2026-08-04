@@ -6229,6 +6229,23 @@ function PlanificacionView({ actividades, onSave, quotes, personas }){
   const sinFecha = list.filter(function(a){ return !a.fecha; });
 
   function saveAct(a){
+    // Aviso si se superponen personas con otra actividad en los mismos días
+    var diasA = diasCubiertosAct(a);
+    if((a.equipo&&a.equipo.length) && diasA.length){
+      var conf = [];
+      list.forEach(function(o){
+        if(o.id===a.id || !(o.equipo&&o.equipo.length)) return;
+        var comunes = (o.equipo||[]).filter(function(pid){ return (a.equipo||[]).indexOf(pid)>=0; });
+        if(!comunes.length) return;
+        var diasO = diasCubiertosAct(o);
+        var solap = diasO.filter(function(s){ return diasA.indexOf(s)>=0; });
+        if(solap.length){ comunes.forEach(function(pid){ conf.push(persLabel(pid)+' · '+fmtFecha(solap[0])+(solap.length>1?(' +'+(solap.length-1)):'')+' · "'+tituloDe(o)+'"'); }); }
+      });
+      if(conf.length){
+        var uniq = conf.filter(function(v,i,arr){return arr.indexOf(v)===i;});
+        if(!confirm('⚠️ Se superponen personas con otra(s) actividad(es):\n\n'+uniq.slice(0,8).join('\n')+(uniq.length>8?'\n…y más':'')+'\n\n¿Guardar igual?')) return;
+      }
+    }
     var exists = list.some(function(x){return x.id===a.id;});
     var nl = exists ? list.map(function(x){return x.id===a.id?a:x;}) : list.concat([a]);
     onSave(nl);
@@ -6436,7 +6453,7 @@ function ActividadEditor({ act, onChange, onSave, onDelete, onClose, quotesAcept
       React.createElement('div',{style:{display:'flex',gap:10,marginBottom:8,flexWrap:'wrap'}},
         React.createElement('div',{style:{flex:'1 1 110px'}}, lbl('Horas estimadas'), React.createElement('input',{type:'number',min:'0',step:'0.5',value:act.horasEst||'',placeholder:'—',onChange:function(e){upd('horasEst',e.target.value);},style:inp})),
         React.createElement('div',{style:{flex:'1 1 100px'}}, lbl('Horas por día'), React.createElement('input',{type:'number',min:'1',step:'0.5',value:act.horasPorDia||'',placeholder:'8',onChange:function(e){upd('horasPorDia',e.target.value);},style:inp})),
-        React.createElement('div',{style:{flex:'1 1 110px'}}, lbl('Horas reales (al finalizar)'), React.createElement('input',{type:'number',min:'0',step:'0.5',value:act.horasReal||'',placeholder:'—',onChange:function(e){upd('horasReal',e.target.value);},style:inp}))
+        React.createElement('div',{style:{flex:'1 1 110px'}}, lbl('Horas reales (al finalizar)'), React.createElement('input',{type:'number',min:'0',step:'0.5',value:act.horasReal||'',disabled:act.estado!=='hecho',placeholder:act.estado==='hecho'?'—':'marcá "Hecho"',onChange:function(e){upd('horasReal',e.target.value);},style:Object.assign({},inp, act.estado!=='hecho'?{background:'#F1F5F9',color:'#94A3B8',cursor:'not-allowed'}:{})}))
       ),
       React.createElement('div',{style:{display:'flex',gap:16,flexWrap:'wrap',marginBottom:8}},
         React.createElement('label',{style:{display:'inline-flex',alignItems:'center',gap:6,fontSize:12,color:'#475569',cursor:'pointer'}},
