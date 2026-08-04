@@ -6251,6 +6251,8 @@ function PlanificacionView({ actividades, onSave, quotes, personas }){
     if(!(a.equipo&&a.equipo.length)) falta.push('Quién lo hace (al menos una persona)');
     if(!(parseFloat(a.horasEst)>0)) falta.push('Horas estimadas');
     if(falta.length){ alert('Para guardar la actividad completá:\n\n• '+falta.join('\n• ')); return; }
+    var _hoyY2=(function(){ var d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); })();
+    if(a.estado==='hecho' && a.fecha && String(a.fecha).slice(0,10)>_hoyY2){ alert('No se puede marcar "Hecho": la fecha de inicio todavía no llegó.'); return; }
     // Aviso si se superponen personas con otra actividad en los mismos días
     var diasA = diasCubiertosAct(a);
     if((a.equipo&&a.equipo.length) && diasA.length){
@@ -6545,6 +6547,8 @@ function ActividadEditor({ act, onChange, onSave, onDelete, onClose, quotesAcept
   const lbl = function(t, req){ return React.createElement('div',{style:{fontSize:10,color:'#94A3B8',fontWeight:700,marginBottom:4,textTransform:'uppercase'}}, t, req?React.createElement('span',{style:{color:'#DC2626'}},' *'):null); };
   const q = act.quoteId ? quoteById(act.quoteId) : null;
   const mats = q ? (q.mat||[]).filter(function(m){return (m.desc&&m.desc.trim())||m.pu;}) : [];
+  const _hoyY = (function(){ var d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); })();
+  const _futuro = !!(act.fecha && String(act.fecha).slice(0,10) > _hoyY); // fecha de inicio todavía no llegó
   const toggleP = function(id){ var e=(act.equipo||[]).slice(); var i=e.indexOf(id); if(i>=0) e.splice(i,1); else e.push(id); upd('equipo',e); };
   const activas = (personas||[]).filter(function(p){return p.activo!==false;});
   return React.createElement('div',{onMouseDown:onClose,style:{position:'fixed',inset:0,zIndex:10000,background:'rgba(0,0,0,0.5)',display:'flex',alignItems:'flex-start',justifyContent:'center',padding:'40px 16px',overflowY:'auto'}},
@@ -6568,7 +6572,7 @@ function ActividadEditor({ act, onChange, onSave, onDelete, onClose, quotesAcept
       ),
       // Fecha / Hora
       React.createElement('div',{style:{marginBottom:12}},
-        lbl('Fecha de inicio', true), React.createElement('input',{type:'date',value:act.fecha||'',onChange:function(e){upd('fecha',e.target.value);},style:inp})
+        lbl('Fecha de inicio', true), React.createElement('input',{type:'date',value:act.fecha||'',onChange:function(e){ var v=e.target.value; var esFut=v && String(v).slice(0,10)>_hoyY; upd({fecha:v, estado:(esFut && act.estado==='hecho')?'programado':act.estado}); },style:inp})
       ),
       // Equipo
       React.createElement('div',{style:{marginBottom:12}},
@@ -6584,7 +6588,8 @@ function ActividadEditor({ act, onChange, onSave, onDelete, onClose, quotesAcept
       // Estado (4 en fila)
       React.createElement('div',{style:{marginBottom:12}},
         lbl('Estado'),
-        React.createElement('div',{style:{display:'flex',gap:4,flexWrap:'wrap'}}, EST_ORDER.map(function(k){ var e=EST_ACT[k]; var on=act.estado===k; return React.createElement('button',{key:k,type:'button',onClick:function(){upd('estado',k);},style:{padding:'6px 10px',borderRadius:7,fontSize:11.5,fontWeight:700,cursor:'pointer',border:'1.5px solid '+(on?e.color:'#E2E8F0'),background:on?e.bg:'#fff',color:on?e.color:'#94A3B8',display:'inline-flex',alignItems:'center',gap:5}}, React.createElement('span',{style:{width:8,height:8,borderRadius:'50%',background:e.dot}}), e.label); }))
+        React.createElement('div',{style:{display:'flex',gap:4,flexWrap:'wrap'}}, EST_ORDER.map(function(k){ var e=EST_ACT[k]; var on=act.estado===k; var bloq=(k==='hecho' && _futuro); return React.createElement('button',{key:k,type:'button',disabled:bloq,title:bloq?'La fecha de inicio todavía no llegó':'',onClick:function(){ if(bloq) return; upd('estado',k); },style:{padding:'6px 10px',borderRadius:7,fontSize:11.5,fontWeight:700,cursor:bloq?'not-allowed':'pointer',border:'1.5px solid '+(on?e.color:'#E2E8F0'),background:on?e.bg:'#fff',color:bloq?'#CBD5E1':(on?e.color:'#94A3B8'),opacity:bloq?0.6:1,display:'inline-flex',alignItems:'center',gap:5}}, React.createElement('span',{style:{width:8,height:8,borderRadius:'50%',background:bloq?'#CBD5E1':e.dot}}), e.label); })),
+        _futuro? React.createElement('div',{style:{fontSize:10,color:'#94A3B8',marginTop:4}},'"Hecho" se habilita cuando llega la fecha de inicio.'):null
       ),
       // Materiales vinculados
       q ? React.createElement('div',{style:{marginBottom:12,background:'#F8FAFC',border:'1px solid #E2E8F0',borderRadius:8,padding:'10px 12px'}},
