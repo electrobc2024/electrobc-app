@@ -6332,13 +6332,40 @@ function PlanificacionView({ actividades, onSave, quotes, personas }){
       })
     );
   }
+  // ── Agenda del día: texto / WhatsApp / PDF ──
+  function agendaTexto(d){
+    var acts=actsDelDia(d);
+    var t='🗓 Agenda del '+fmtFecha(ymd(d))+' — ELECTRO BC\n';
+    if(!acts.length) return t+'\nSin actividades programadas.';
+    acts.forEach(function(a){ var est=EST_ACT[a.estado]||EST_ACT.por_planificar; var per=(a.equipo||[]).map(persLabel).join(', '); t+='\n• '+tituloDe(a)+' — '+est.label+(per?(' ('+per+')'):'')+(parseFloat(a.horasEst)>0?(' · '+a.horasEst+'h est.'):''); });
+    return t;
+  }
+  function compartirWA(d){ window.open('https://wa.me/?text='+encodeURIComponent(agendaTexto(d)),'_blank'); }
+  function pdfDia(d){
+    var acts=actsDelDia(d);
+    var rows = acts.length ? acts.map(function(a){ var est=EST_ACT[a.estado]||EST_ACT.por_planificar; var per=(a.equipo||[]).map(persLabel).join(', '); var q=a.quoteId?quoteById(a.quoteId):null;
+      return '<div style="border-left:5px solid '+(a.color||'#F26B1D')+';padding:9px 12px;margin-bottom:8px;background:#F8FAFC;border-radius:6px"><div style="font-weight:700;font-size:14px">'+tituloDe(a)+'</div><div style="font-size:12px;color:#475569;margin-top:2px">'+est.label+(per?(' · '+per):'')+(parseFloat(a.horasEst)>0?(' · '+a.horasEst+'h est.'):'')+(q?(' · Presup. #'+(q.numero||''))+' ('+((q.mat||[]).filter(function(m){return m.desc&&m.desc.trim();}).length)+' materiales)':'')+'</div>'+(a.notas&&a.notas.trim()?('<div style="font-size:11px;color:#64748B;margin-top:3px">'+a.notas.trim()+'</div>'):'')+'</div>';
+    }).join('') : '<div style="color:#94A3B8">Sin actividades programadas.</div>';
+    var el=document.createElement('div');
+    el.style.padding='4px'; el.style.fontFamily="system-ui,'Segoe UI',sans-serif"; el.style.color='#1E293B';
+    el.innerHTML='<div style="border-bottom:3px solid #F26B1D;padding-bottom:8px;margin-bottom:16px"><div style="font-size:20px;font-weight:800;color:#0A0F1E;font-family:Oswald,system-ui">ELECTRO BC — Agenda del día</div><div style="color:#64748B;font-size:13px">'+fmtFecha(ymd(d))+'</div></div>'+rows;
+    if(typeof html2pdf!=='undefined'){ html2pdf().set({margin:10,filename:'ELECTRO BC - Agenda '+fmtFechaFile(ymd(d))+'.pdf',html2canvas:{scale:2},jsPDF:{unit:'mm',format:'a4',orientation:'portrait'}}).from(el).save(); }
+    else { alert('No se pudo generar el PDF.'); }
+  }
   // ── Vista DÍA ──
   function renderDia(){
     var acts=actsDelDia(ref);
-    return React.createElement('div',{style:{background:'#fff',border:'1px solid '+(sameDay(ref,hoy)?ORANGE:'#E2E8F0'),borderRadius:10,padding:14,minHeight:240}},
-      acts.length===0
-        ? React.createElement('div',{style:{textAlign:'center',color:'#94A3B8',fontSize:13,padding:'30px 0'}}, 'Sin actividades este día. Tocá "Nueva actividad" para agregar.')
-        : React.createElement('div',{style:{display:'flex',flexDirection:'column',gap:6}}, acts.map(function(a){ return chip(a,{big:true}); }))
+    var btn={border:'1px solid #E2E8F0',background:'#fff',borderRadius:8,padding:'7px 12px',fontSize:12,fontWeight:600,cursor:'pointer',color:'#475569',whiteSpace:'nowrap'};
+    return React.createElement('div',null,
+      React.createElement('div',{style:{display:'flex',gap:8,justifyContent:'flex-end',marginBottom:8,flexWrap:'wrap'}},
+        React.createElement('button',{type:'button',onClick:function(){compartirWA(ref);},style:Object.assign({},btn,{border:'1px solid #86EFAC',color:'#16A34A'})},'📲 Compartir por WhatsApp'),
+        React.createElement('button',{type:'button',onClick:function(){pdfDia(ref);},style:btn},'📄 Descargar PDF')
+      ),
+      React.createElement('div',{style:{background:'#fff',border:'1px solid '+(sameDay(ref,hoy)?ORANGE:'#E2E8F0'),borderRadius:10,padding:14,minHeight:240}},
+        acts.length===0
+          ? React.createElement('div',{style:{textAlign:'center',color:'#94A3B8',fontSize:13,padding:'30px 0'}}, 'Sin actividades este día. Tocá "Nueva actividad" para agregar.')
+          : React.createElement('div',{style:{display:'flex',flexDirection:'column',gap:6}}, acts.map(function(a){ return chip(a,{big:true}); }))
+      )
     );
   }
 
@@ -6470,6 +6497,22 @@ function ActividadEditor({ act, onChange, onSave, onDelete, onClose, quotesAcept
         var findeTxt = (act.trabajaSab&&act.trabajaDom)?'incluye finde':(act.trabajaSab?'incluye sábados':(act.trabajaDom?'incluye domingos':'sin fines de semana'));
         if(dias.length<=1) return React.createElement('div',{style:{fontSize:11,color:'#94A3B8',marginBottom:12}}, act.fecha? 'Se programa en 1 día'+(parseFloat(act.horasEst)>0?'':' (cargá horas estimadas para repartir en varios días)') : 'Poné una fecha de inicio para armar el cronograma.');
         return React.createElement('div',{style:{fontSize:12,color:'#166534',background:'#F0FDF4',border:'1px solid #BBF7D0',borderRadius:8,padding:'8px 10px',marginBottom:12}}, '🗓 Se programa en '+dias.length+' días: del '+fmtFecha(dias[0])+' al '+fmtFecha(dias[dias.length-1])+' ('+(parseFloat(act.horasEst)||0)+'h ÷ '+(parseFloat(act.horasPorDia)||8)+'h/día, '+findeTxt+')');
+      })(),
+      // Google Calendar
+      (function(){
+        var dias = diasCubiertosAct(act);
+        if(!dias.length) return null;
+        function compact(s){ return String(s).replace(/-/g,''); }
+        function nextDay(s){ var p=String(s).split('-'); var d=new Date(+p[0],+p[1]-1,+p[2]); d.setDate(d.getDate()+1); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+        var titulo = (act.titulo&&act.titulo.trim()) ? act.titulo.trim() : (q?((q.cliente&&q.cliente.nombre)||'Actividad'):'Actividad');
+        var est = EST_ACT[act.estado]||EST_ACT.por_planificar;
+        var per = (act.equipo||[]).map(function(id){ var p=(personas||[]).find(function(x){return x.id===id;}); return p?p.nombre:''; }).filter(Boolean).join(', ');
+        var det = 'Estado: '+est.label+(per?('\nEquipo: '+per):'')+(parseFloat(act.horasEst)>0?('\nHoras estimadas: '+act.horasEst):'')+(q?('\nPresupuesto #'+(q.numero||'')):'')+(act.notas&&act.notas.trim()?('\n'+act.notas.trim()):'');
+        var loc = q?[q.cliente&&q.cliente.calle,q.cliente&&q.cliente.numero,'La Plata'].filter(Boolean).join(' '):'';
+        var url = 'https://calendar.google.com/calendar/render?action=TEMPLATE&text='+encodeURIComponent(titulo)+'&dates='+compact(dias[0])+'/'+compact(nextDay(dias[dias.length-1]))+'&details='+encodeURIComponent(det)+(loc?('&location='+encodeURIComponent(loc)):'');
+        return React.createElement('div',{style:{marginBottom:12}},
+          React.createElement('a',{href:url,target:'_blank',rel:'noopener',style:{display:'inline-flex',alignItems:'center',gap:6,fontSize:12,fontWeight:600,color:'#1D4ED8',background:'#EFF6FF',border:'1px solid #BFDBFE',borderRadius:8,padding:'8px 12px',textDecoration:'none'}}, '📅 Agregar a Google Calendar')
+        );
       })(),
       // Notas
       React.createElement('div',{style:{marginBottom:14}},
