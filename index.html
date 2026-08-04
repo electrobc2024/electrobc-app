@@ -4588,7 +4588,7 @@ function Tracker({
       var color = pct >= 100 ? "#059669" : pct >= 50 ? "#2563EB" : "#F59E0B";
       var actsQ = (actividades||[]).filter(function(a){ return a.quoteId===q.id; });
       var ed, aLabel;
-      if(actsQ.length===0){ ed=null; aLabel="⚠ Sin planificar"; }
+      if(actsQ.length===0){ ed=null; var _dSin = q.aceptadoDesde ? Math.floor((Date.now()-new Date(q.aceptadoDesde).getTime())/86400000) : null; aLabel="⚠ Sin planificar"+((_dSin!=null && _dSin>=3)?(" (hace "+_dSin+"d)"):""); }
       else { var totA=actsQ.length, hechA=actsQ.filter(function(x){return x.estado==='hecho';}).length;
         if(hechA===totA){ ed=EST_ACT.hecho; aLabel="🗓 Hecho"; }
         else { var nonH=actsQ.filter(function(x){return x.estado!=='hecho';}); var minK=nonH.reduce(function(m,x){ return EST_ORDER.indexOf(x.estado)<EST_ORDER.indexOf(m)?x.estado:m; },'hecho'); ed=EST_ACT[minK]||EST_ACT.por_planificar; aLabel="🗓 "+ed.label+(hechA>0?(" ("+hechA+"/"+totA+")"):""); }
@@ -6974,7 +6974,9 @@ function App() {
   const handleStatus = useCallback(async (id, status) => {
     const extra = status === "espera" ? {
       esperaDesde: new Date().toISOString()
-    } : {};
+    } : (status === "aceptado" ? {
+      aceptadoDesde: new Date().toISOString()
+    } : {});
     await persist(quotes.map(q => q.id === id ? {
       ...q,
       status,
