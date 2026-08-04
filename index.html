@@ -799,7 +799,7 @@ const EST_ORDER = ['por_planificar','programado','materiales','hecho'];
 const mkActividad = () => ({
   id: uid(), quoteId: null, titulo: '', fecha: '',
   equipo: [], color: COLORS_ACT[0], estado: 'por_planificar',
-  horasEst: '', horasReal: '', horasPorDia: '8', excluirFinde: true, notas: '',
+  horasEst: '', horasReal: '', horasPorDia: '8', trabajaSab: false, trabajaDom: false, notas: '',
   createdAt: new Date().toISOString(), autor: ebcUser()
 });
 // Días que cubre una actividad (auto-cronograma): desde fecha de inicio, repartiendo
@@ -814,7 +814,8 @@ function diasCubiertosAct(a){
   var out = [], d = new Date(start), guard = 0;
   while(out.length < n && guard < 400){
     var wd = d.getDay(); // 0 dom, 6 sáb
-    if(!(a.excluirFinde && (wd===0 || wd===6))){
+    var skip = (wd===0 && !a.trabajaDom) || (wd===6 && !a.trabajaSab); // domingo/sábado solo si están tildados
+    if(!skip){
       out.push(d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'));
     }
     d.setDate(d.getDate()+1); guard++;
@@ -6437,14 +6438,21 @@ function ActividadEditor({ act, onChange, onSave, onDelete, onClose, quotesAcept
         React.createElement('div',{style:{flex:'1 1 100px'}}, lbl('Horas por día'), React.createElement('input',{type:'number',min:'1',step:'0.5',value:act.horasPorDia||'',placeholder:'8',onChange:function(e){upd('horasPorDia',e.target.value);},style:inp})),
         React.createElement('div',{style:{flex:'1 1 110px'}}, lbl('Horas reales (al finalizar)'), React.createElement('input',{type:'number',min:'0',step:'0.5',value:act.horasReal||'',placeholder:'—',onChange:function(e){upd('horasReal',e.target.value);},style:inp}))
       ),
-      React.createElement('label',{style:{display:'inline-flex',alignItems:'center',gap:6,fontSize:12,color:'#475569',cursor:'pointer',marginBottom:8}},
-        React.createElement('input',{type:'checkbox',checked:act.excluirFinde!==false,onChange:function(e){upd('excluirFinde',e.target.checked);},style:{width:15,height:15}}),
-        'No contar fines de semana (sábado y domingo)'
+      React.createElement('div',{style:{display:'flex',gap:16,flexWrap:'wrap',marginBottom:8}},
+        React.createElement('label',{style:{display:'inline-flex',alignItems:'center',gap:6,fontSize:12,color:'#475569',cursor:'pointer'}},
+          React.createElement('input',{type:'checkbox',checked:!!act.trabajaSab,onChange:function(e){upd('trabajaSab',e.target.checked);},style:{width:15,height:15}}),
+          'Trabajar sábados'
+        ),
+        React.createElement('label',{style:{display:'inline-flex',alignItems:'center',gap:6,fontSize:12,color:'#475569',cursor:'pointer'}},
+          React.createElement('input',{type:'checkbox',checked:!!act.trabajaDom,onChange:function(e){upd('trabajaDom',e.target.checked);},style:{width:15,height:15}}),
+          'Trabajar domingos'
+        )
       ),
       (function(){
         var dias = diasCubiertosAct(act);
+        var findeTxt = (act.trabajaSab&&act.trabajaDom)?'incluye finde':(act.trabajaSab?'incluye sábados':(act.trabajaDom?'incluye domingos':'sin fines de semana'));
         if(dias.length<=1) return React.createElement('div',{style:{fontSize:11,color:'#94A3B8',marginBottom:12}}, act.fecha? 'Se programa en 1 día'+(parseFloat(act.horasEst)>0?'':' (cargá horas estimadas para repartir en varios días)') : 'Poné una fecha de inicio para armar el cronograma.');
-        return React.createElement('div',{style:{fontSize:12,color:'#166534',background:'#F0FDF4',border:'1px solid #BBF7D0',borderRadius:8,padding:'8px 10px',marginBottom:12}}, '🗓 Se programa en '+dias.length+' días: del '+fmtFecha(dias[0])+' al '+fmtFecha(dias[dias.length-1])+' ('+(parseFloat(act.horasEst)||0)+'h ÷ '+(parseFloat(act.horasPorDia)||8)+'h/día'+(act.excluirFinde!==false?', sin fines de semana':'')+')');
+        return React.createElement('div',{style:{fontSize:12,color:'#166534',background:'#F0FDF4',border:'1px solid #BBF7D0',borderRadius:8,padding:'8px 10px',marginBottom:12}}, '🗓 Se programa en '+dias.length+' días: del '+fmtFecha(dias[0])+' al '+fmtFecha(dias[dias.length-1])+' ('+(parseFloat(act.horasEst)||0)+'h ÷ '+(parseFloat(act.horasPorDia)||8)+'h/día, '+findeTxt+')');
       })(),
       // Notas
       React.createElement('div',{style:{marginBottom:14}},
