@@ -797,7 +797,7 @@ const EST_ACT = {
 };
 const EST_ORDER = ['por_planificar','programado','materiales','hecho'];
 const mkActividad = () => ({
-  id: uid(), quoteId: null, titulo: '', fecha: '', hora: '',
+  id: uid(), quoteId: null, titulo: '', fecha: '',
   equipo: [], color: COLORS_ACT[0], estado: 'por_planificar',
   horasEst: '', horasReal: '', horasPorDia: '8', excluirFinde: true, notas: '',
   createdAt: new Date().toISOString(), autor: ebcUser()
@@ -6224,7 +6224,7 @@ function PlanificacionView({ actividades, onSave, quotes, personas }){
   };
   const diasCache = {};
   const diasDe = function(a){ if(!diasCache[a.id]) diasCache[a.id]=diasCubiertosAct(a); return diasCache[a.id]; };
-  const actsDelDia = function(d){ var s=ymd(d); return list.filter(function(a){ return diasDe(a).indexOf(s)>=0; }).sort(function(x,y){ return (x.hora||'').localeCompare(y.hora||''); }); };
+  const actsDelDia = function(d){ var s=ymd(d); return list.filter(function(a){ return diasDe(a).indexOf(s)>=0; }).sort(function(x,y){ return tituloDe(x).localeCompare(tituloDe(y)); }); };
   const sinFecha = list.filter(function(a){ return !a.fecha; });
 
   function saveAct(a){
@@ -6237,15 +6237,26 @@ function PlanificacionView({ actividades, onSave, quotes, personas }){
   function nueva(fecha){ var a=mkActividad(); if(fecha) a.fecha=fecha; setEditing(a); }
 
   // ── Chip de actividad ──
+  function resumenDe(a){
+    var est = EST_ACT[a.estado]||EST_ACT.por_planificar;
+    var dias = diasDe(a);
+    var per = (a.equipo||[]).map(persLabel).join(', ');
+    var rango = dias.length ? (dias.length>1 ? ('Del '+fmtFecha(dias[0])+' al '+fmtFecha(dias[dias.length-1])+' · '+dias.length+' días') : fmtFecha(dias[0])) : 'Sin fecha';
+    var q = a.quoteId ? quoteById(a.quoteId) : null;
+    var s = tituloDe(a) + '\n• Estado: '+est.label + (per?('\n• Equipo: '+per):'') + '\n• '+rango;
+    if(parseFloat(a.horasEst)>0) s += '\n• Estimadas: '+a.horasEst+' h'+(parseFloat(a.horasReal)>0?(' · Reales: '+a.horasReal+' h'):'');
+    if(q) s += '\n• Presup. #'+(q.numero||'')+' · '+((q.mat||[]).filter(function(m){return m.desc&&m.desc.trim();}).length)+' materiales';
+    if(a.notas && a.notas.trim()) s += '\n• '+a.notas.trim();
+    s += '\n(clic para ver / editar)';
+    return s;
+  }
   function chip(a, opts){
     opts = opts||{};
     var est = EST_ACT[a.estado]||EST_ACT.por_planificar;
-    return React.createElement('div',{key:a.id, onClick:function(e){ e.stopPropagation(); setEditing(Object.assign({},a)); },
+    return React.createElement('div',{key:a.id, title: resumenDe(a), onClick:function(e){ e.stopPropagation(); setEditing(Object.assign({},a)); },
       style:{background:a.color||'#F26B1D', color:'#fff', borderRadius:6, padding:opts.big?'6px 9px':'3px 7px', fontSize:opts.big?12:11, cursor:'pointer', marginBottom:3, display:'flex', alignItems:'center', gap:5, overflow:'hidden', whiteSpace:'nowrap', textOverflow:'ellipsis'}},
       React.createElement('span',{style:{width:7,height:7,borderRadius:'50%',background:est.dot,flexShrink:0,boxShadow:'0 0 0 1.5px rgba(255,255,255,0.7)'}}),
-      a.hora? React.createElement('span',{style:{fontWeight:700,opacity:0.9}}, a.hora):null,
-      React.createElement('span',{style:{overflow:'hidden',textOverflow:'ellipsis'}}, tituloDe(a)),
-      (a.equipo&&a.equipo.length)? React.createElement('span',{style:{marginLeft:'auto',fontSize:9,fontWeight:700,opacity:0.9,flexShrink:0}}, a.equipo.map(persIni).join(' ')) : null
+      React.createElement('span',{style:{overflow:'hidden',textOverflow:'ellipsis'}}, tituloDe(a))
     );
   }
 
@@ -6395,9 +6406,8 @@ function ActividadEditor({ act, onChange, onSave, onDelete, onClose, quotesAcept
         React.createElement('input',{type:'text',value:act.titulo||'',spellCheck:true,onChange:function(e){upd('titulo',e.target.value);},onBlur:function(e){var v=e.target.value;if(v){var c=capitalize(v);if(c!==v)upd('titulo',c);}},placeholder:q?((q.cliente&&q.cliente.nombre)||'Presupuesto'):'Ej: Emergencia cambio de térmica',style:inp})
       ),
       // Fecha / Hora
-      React.createElement('div',{style:{display:'flex',gap:10,marginBottom:12,flexWrap:'wrap'}},
-        React.createElement('div',{style:{flex:'1 1 160px'}}, lbl('Fecha de inicio (opcional)'), React.createElement('input',{type:'date',value:act.fecha||'',onChange:function(e){upd('fecha',e.target.value);},style:inp})),
-        React.createElement('div',{style:{flex:'0 0 120px'}}, lbl('Hora de inicio'), React.createElement('input',{type:'time',value:act.hora||'',onChange:function(e){upd('hora',e.target.value);},style:inp}))
+      React.createElement('div',{style:{marginBottom:12}},
+        lbl('Fecha de inicio (opcional)'), React.createElement('input',{type:'date',value:act.fecha||'',onChange:function(e){upd('fecha',e.target.value);},style:inp})
       ),
       // Equipo
       React.createElement('div',{style:{marginBottom:12}},
@@ -6425,7 +6435,7 @@ function ActividadEditor({ act, onChange, onSave, onDelete, onClose, quotesAcept
       React.createElement('div',{style:{display:'flex',gap:10,marginBottom:8,flexWrap:'wrap'}},
         React.createElement('div',{style:{flex:'1 1 110px'}}, lbl('Horas estimadas'), React.createElement('input',{type:'number',min:'0',step:'0.5',value:act.horasEst||'',placeholder:'—',onChange:function(e){upd('horasEst',e.target.value);},style:inp})),
         React.createElement('div',{style:{flex:'1 1 100px'}}, lbl('Horas por día'), React.createElement('input',{type:'number',min:'1',step:'0.5',value:act.horasPorDia||'',placeholder:'8',onChange:function(e){upd('horasPorDia',e.target.value);},style:inp})),
-        React.createElement('div',{style:{flex:'1 1 110px'}}, lbl('Horas reales'), React.createElement('input',{type:'number',min:'0',step:'0.5',value:act.horasReal||'',placeholder:'—',onChange:function(e){upd('horasReal',e.target.value);},style:inp}))
+        React.createElement('div',{style:{flex:'1 1 110px'}}, lbl('Horas reales (al finalizar)'), React.createElement('input',{type:'number',min:'0',step:'0.5',value:act.horasReal||'',placeholder:'—',onChange:function(e){upd('horasReal',e.target.value);},style:inp}))
       ),
       React.createElement('label',{style:{display:'inline-flex',alignItems:'center',gap:6,fontSize:12,color:'#475569',cursor:'pointer',marginBottom:8}},
         React.createElement('input',{type:'checkbox',checked:act.excluirFinde!==false,onChange:function(e){upd('excluirFinde',e.target.checked);},style:{width:15,height:15}}),
