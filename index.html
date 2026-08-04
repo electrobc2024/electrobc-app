@@ -6231,8 +6231,6 @@ function PlanificacionView({ actividades, onSave, quotes, personas }){
   const [ref, setRef] = React.useState(function(){ var d=new Date(); d.setHours(0,0,0,0); return d; });
   const [editing, setEditing] = React.useState(null);   // objeto actividad en edición (o null)
   const [showProd, setShowProd] = React.useState(false);
-  const [inicioJornada, setInicioJornada] = React.useState(function(){ var v=parseInt(localStorage.getItem('ebc-jornada-inicio')); return (v>=0&&v<=23)?v:WORK_START_H; });
-  function setInicio(h){ setInicioJornada(h); try{ localStorage.setItem('ebc-jornada-inicio', String(h)); }catch(e){} }
 
   const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
   const DOW = ['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
@@ -6257,23 +6255,8 @@ function PlanificacionView({ actividades, onSave, quotes, personas }){
   const diasCache = {};
   const diasDe = function(a){ if(!diasCache[a.id]) diasCache[a.id]=diasCubiertosAct(a); return diasCache[a.id]; };
   const actsDelDia = function(d){ var s=ymd(d); return list.filter(function(a){ return diasDe(a).indexOf(s)>=0; }).sort(function(x,y){ return (x.createdAt||'').localeCompare(y.createdAt||''); }); };
-  // Horario del día: apila las actividades por persona (arranca cuando todo el equipo está libre).
-  const _schedCache = {};
-  function scheduleForDay(s){
-    if(_schedCache[s]) return _schedCache[s];
-    var acts = list.filter(function(a){ return diasDe(a).indexOf(s)>=0; }).sort(function(x,y){ return (x.createdAt||'').localeCompare(y.createdAt||''); });
-    var load = {}, res = {};
-    acts.forEach(function(a){
-      var h = horasDelDiaAct(a, s);
-      var eq = (a.equipo&&a.equipo.length) ? a.equipo : ['_'];
-      var startLoad = 0; eq.forEach(function(pid){ if((load[pid]||0) > startLoad) startLoad = load[pid]; });
-      res[a.id] = { start: startLoad, hours: h, end: startLoad + h };
-      eq.forEach(function(pid){ load[pid] = startLoad + h; });
-    });
-    _schedCache[s] = res; return res;
-  }
-  function fmtHM(hFromStart){ var t = inicioJornada + hFromStart; var hh = Math.floor(t); var mm = Math.round((t-hh)*60); if(mm===60){hh++;mm=0;} return String(hh).padStart(2,'0')+':'+String(mm).padStart(2,'0'); }
-  function horaRango(a, s){ if(!s) return ''; var sc = scheduleForDay(s)[a.id]; if(!sc || !(sc.hours>0)) return ''; return fmtHM(sc.start)+'–'+fmtHM(sc.end); }
+  // Horas que una actividad dedica ese día (bloque), sin horario fijo
+  function horasLabel(a, s){ if(!s) return ''; var h=horasDelDiaAct(a, s); if(!(h>0)) return ''; return (Math.round(h*10)/10)+'h'; }
   // Carga horaria de una persona en un día (excluyendo una actividad)
   function cargaPersonaDia(pid, s, exceptId){ var t=0; list.forEach(function(o){ if(o.id===exceptId) return; if((o.equipo||[]).indexOf(pid)<0) return; if(diasDe(o).indexOf(s)<0) return; t += horasDelDiaAct(o, s); }); return t; }
   const sinFecha = list.filter(function(a){ return !a.fecha; });
@@ -6345,7 +6328,7 @@ function PlanificacionView({ actividades, onSave, quotes, personas }){
     if(s && typeof s==='object'){ opts=s; s=null; }
     opts = opts||{};
     var est = EST_ACT[a.estado]||EST_ACT.por_planificar;
-    var hr = horaRango(a, s);
+    var hr = horasLabel(a, s);
     return React.createElement('div',{key:a.id, title: resumenDe(a), onClick:function(e){ e.stopPropagation(); setEditing(Object.assign({},a)); },
       style:{background:a.color||'#F26B1D', color:'#fff', borderRadius:6, padding:opts.big?'6px 9px':'3px 7px', fontSize:opts.big?12:11, cursor:'pointer', marginBottom:3, display:'flex', alignItems:'center', gap:5, overflow:'hidden', whiteSpace:'nowrap', textOverflow:'ellipsis'}},
       React.createElement('span',{style:{width:7,height:7,borderRadius:'50%',background:est.dot,flexShrink:0,boxShadow:'0 0 0 1.5px rgba(255,255,255,0.7)'}}),
@@ -6432,7 +6415,7 @@ function PlanificacionView({ actividades, onSave, quotes, personas }){
         var dur=diasDe(a).length;
         var q=a.quoteId?quoteById(a.quoteId):null;
         var dir=q?[q.cliente&&q.cliente.calle,q.cliente&&q.cliente.numero,q.cliente&&q.cliente.depto].filter(Boolean).join(' '):'';
-        var hr=horaRango(a, ymd(g.d));
+        var hr=horasLabel(a, ymd(g.d));
         t+='\n• '+(hr?(hr+' · '):'')+tituloDe(a)+' ['+est.label+']';
         var l2=[]; if(per) l2.push(per); if(parseFloat(a.horasEst)>0) l2.push(a.horasEst+'h est.'); l2.push(dur===1?'1 día':dur+' días');
         t+='\n   '+l2.join(' · ');
@@ -6461,36 +6444,30 @@ function PlanificacionView({ actividades, onSave, quotes, personas }){
     if(typeof html2pdf!=='undefined'){ html2pdf().set({margin:10,filename:fname,html2canvas:{scale:2},jsPDF:{unit:'mm',format:'a4',orientation:'portrait'}}).from(el).save(); }
     else { alert('No se pudo generar el PDF.'); }
   }
-  // ── Vista DÍA (línea de tiempo por horas) ──
+  // ── Vista DÍA (bloques de horas, sin horario fijo) ──
   function renderDia(){
     var s = ymd(ref);
     var acts = actsDelDia(ref);
-    var sched = scheduleForDay(s);
-    var H0 = Math.max(0, inicioJornada-1), H1 = Math.min(23, inicioJornada+13), pxH = 46;  // enmarca la jornada
-    var alto = (H1-H0)*pxH;
-    var horas=[]; for(var h=H0; h<=H1; h++) horas.push(h);
-    var now=new Date(), nowOff=null;
-    if(sameDay(ref,hoy)){ var nh=now.getHours()+now.getMinutes()/60; if(nh>=H0 && nh<=H1) nowOff=(nh-H0)*pxH; }
-    return React.createElement('div',{style:{background:'#fff',border:'1px solid '+(sameDay(ref,hoy)?ORANGE:'#E2E8F0'),borderRadius:10,padding:'12px 12px 12px 0'}},
-      React.createElement('div',{style:{position:'relative',height:alto,marginLeft:56}},
-        // líneas y etiquetas de hora
-        horas.map(function(h){ var top=(h-H0)*pxH; return React.createElement('div',{key:h,style:{position:'absolute',top:top,left:0,right:0,borderTop:'1px solid #F1F5F9'}},
-          React.createElement('span',{style:{position:'absolute',left:-52,top:-7,fontSize:10,color:'#94A3B8',fontWeight:600,width:46,textAlign:'right'}}, String(h).padStart(2,'0')+':00')
-        ); }),
-        // actividades posicionadas
-        acts.map(function(a){ var sc=sched[a.id]||{start:0,hours:1}; var top=(inicioJornada+sc.start-H0)*pxH; var hgt=Math.max(26, (sc.hours||1)*pxH-3); var est=EST_ACT[a.estado]||EST_ACT.por_planificar;
-          return React.createElement('div',{key:a.id,title:resumenDe(a),onClick:function(){ setEditing(Object.assign({},a)); },
-            style:{position:'absolute',top:Math.max(0,top),left:0,right:6,height:hgt,background:a.color||'#F26B1D',color:'#fff',borderRadius:7,padding:'5px 9px',cursor:'pointer',overflow:'hidden',boxShadow:'0 1px 3px rgba(0,0,0,0.15)'}},
-            React.createElement('div',{style:{fontSize:11,fontWeight:700,display:'flex',alignItems:'center',gap:5}}, React.createElement('span',{style:{width:7,height:7,borderRadius:'50%',background:est.dot,boxShadow:'0 0 0 1.5px rgba(255,255,255,0.7)'}}), horaRango(a,s)||'', ' ', tituloDe(a)),
-            (a.equipo&&a.equipo.length)? React.createElement('div',{style:{fontSize:10,opacity:0.9,marginTop:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}, (a.equipo||[]).map(persLabel).join(', ')):null
-          );
-        }),
-        // línea de "ahora"
-        nowOff!=null? React.createElement('div',{style:{position:'absolute',top:nowOff,left:-4,right:0,height:2,background:'#DC2626',zIndex:5}},
-          React.createElement('span',{style:{position:'absolute',left:-52,top:-7,fontSize:10,fontWeight:700,color:'#DC2626',width:46,textAlign:'right'}}, String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0')),
-          React.createElement('span',{style:{position:'absolute',left:-6,top:-3,width:8,height:8,borderRadius:'50%',background:'#DC2626'}})
-        ):null,
-        acts.length===0? React.createElement('div',{style:{position:'absolute',top:alto/2-10,left:0,right:0,textAlign:'center',color:'#94A3B8',fontSize:13}}, 'Sin actividades este día.'):null
+    // carga por persona ese día
+    var carga = {};
+    acts.forEach(function(a){ var h=horasDelDiaAct(a,s); (a.equipo||[]).forEach(function(pid){ carga[pid]=(carga[pid]||0)+h; }); });
+    var cargaArr = Object.keys(carga).map(function(pid){ return {pid:pid, h:carga[pid]}; }).sort(function(x,y){ return y.h-x.h; });
+    return React.createElement('div',null,
+      // Resumen de carga por persona
+      cargaArr.length? React.createElement('div',{style:{display:'flex',gap:8,flexWrap:'wrap',marginBottom:10}}, cargaArr.map(function(c){ var over=c.h>8.001; return React.createElement('div',{key:c.pid,style:{background:over?'#FEF2F2':'#F8FAFC',border:'1px solid '+(over?'#FCA5A5':'#E2E8F0'),borderRadius:20,padding:'4px 11px',fontSize:12,color:over?'#B91C1C':'#475569',fontWeight:600}}, persLabel(c.pid)+': '+(Math.round(c.h*10)/10)+'h / 8h'); })):null,
+      React.createElement('div',{style:{background:'#fff',border:'1px solid '+(sameDay(ref,hoy)?ORANGE:'#E2E8F0'),borderRadius:10,padding:14,minHeight:200}},
+        acts.length===0
+          ? React.createElement('div',{style:{textAlign:'center',color:'#94A3B8',fontSize:13,padding:'30px 0'}}, 'Sin actividades este día. Tocá "Nueva actividad" para agregar.')
+          : React.createElement('div',{style:{display:'flex',flexDirection:'column',gap:8}}, acts.map(function(a){ var est=EST_ACT[a.estado]||EST_ACT.por_planificar; var h=horasDelDiaAct(a,s);
+              return React.createElement('div',{key:a.id,title:resumenDe(a),onClick:function(){ setEditing(Object.assign({},a)); },
+                style:{display:'flex',alignItems:'center',gap:10,background:'#fff',border:'1px solid #E2E8F0',borderLeft:'5px solid '+(a.color||'#F26B1D'),borderRadius:8,padding:'10px 12px',cursor:'pointer'}},
+                React.createElement('div',{style:{background:a.color||'#F26B1D',color:'#fff',borderRadius:7,padding:'4px 9px',fontSize:13,fontWeight:800,minWidth:44,textAlign:'center'}}, (Math.round(h*10)/10)+'h'),
+                React.createElement('div',{style:{minWidth:0,flex:1}},
+                  React.createElement('div',{style:{fontSize:13,fontWeight:700,color:NAVY,display:'flex',alignItems:'center',gap:6}}, React.createElement('span',{style:{width:8,height:8,borderRadius:'50%',background:est.dot,flexShrink:0}}), tituloDe(a)),
+                  React.createElement('div',{style:{fontSize:11,color:'#64748B',marginTop:2}}, est.label+((a.equipo&&a.equipo.length)?(' · '+(a.equipo||[]).map(persLabel).join(', ')):''))
+                )
+              );
+            }))
       )
     );
   }
@@ -6527,16 +6504,8 @@ function PlanificacionView({ actividades, onSave, quotes, personas }){
     }),
     // Barra: toggle de vista + navegación
     React.createElement('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',gap:10,flexWrap:'wrap',marginBottom:12}},
-      React.createElement('div',{style:{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap'}},
-        React.createElement('div',{style:{display:'flex',gap:4,background:'#F1F5F9',borderRadius:8,padding:3}},
-          [['anio','Año'],['mes','Mes'],['semana','Semana'],['dia','Día']].map(function(v){ var act=view===v[0]; return React.createElement('button',{key:v[0],type:'button',onClick:function(){setView(v[0]);},style:{border:'none',borderRadius:6,padding:'6px 14px',fontSize:12,fontWeight:700,cursor:'pointer',background:act?'#fff':'transparent',color:act?NAVY:'#64748B',boxShadow:act?'0 1px 2px rgba(0,0,0,0.08)':'none'}}, v[1]); })
-        ),
-        React.createElement('label',{style:{display:'inline-flex',alignItems:'center',gap:5,fontSize:11,color:'#64748B',fontWeight:600},title:'Hora en que arranca la jornada laboral (para calcular horarios)'},
-          'Jornada desde',
-          React.createElement('select',{value:inicioJornada,onChange:function(e){ setInicio(parseInt(e.target.value)); },style:{border:'1px solid #E2E8F0',borderRadius:6,padding:'5px 7px',fontSize:12,background:'#fff'}},
-            [6,7,8,9,10,11,12,13].map(function(h){ return React.createElement('option',{key:h,value:h}, String(h).padStart(2,'0')+':00'); })
-          )
-        )
+      React.createElement('div',{style:{display:'flex',gap:4,background:'#F1F5F9',borderRadius:8,padding:3}},
+        [['anio','Año'],['mes','Mes'],['semana','Semana'],['dia','Día']].map(function(v){ var act=view===v[0]; return React.createElement('button',{key:v[0],type:'button',onClick:function(){setView(v[0]);},style:{border:'none',borderRadius:6,padding:'6px 14px',fontSize:12,fontWeight:700,cursor:'pointer',background:act?'#fff':'transparent',color:act?NAVY:'#64748B',boxShadow:act?'0 1px 2px rgba(0,0,0,0.08)':'none'}}, v[1]); })
       ),
       React.createElement('div',{style:{display:'flex',alignItems:'center',gap:8}},
         React.createElement('button',{type:'button',onClick:function(){navega(-1);},style:{border:'1px solid #E2E8F0',background:'#fff',borderRadius:6,width:30,height:30,cursor:'pointer',fontWeight:800}},'‹'),
