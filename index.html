@@ -6272,6 +6272,7 @@ function PlanificacionView({ actividades, onSave, quotes, personas }){
     if(falta.length){ alert('Para guardar la actividad completá:\n\n• '+falta.join('\n• ')); return; }
     var _hoyY2=(function(){ var d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); })();
     if(a.estado==='hecho' && a.fecha && String(a.fecha).slice(0,10)>_hoyY2){ alert('No se puede marcar "Hecho": la fecha de inicio todavía no llegó.'); return; }
+    if(a.estado==='materiales'){ var _q=a.quoteId?quoteById(a.quoteId):null; var _nm=_q?(_q.mat||[]).filter(function(m){return (m.desc&&m.desc.trim())||m.pu;}):[]; if(_nm.length===0){ alert('No se puede marcar "Materiales comprados": el presupuesto no tiene materiales.'); return; } }
     // Aviso si se superponen personas con otra actividad en los mismos días
     var diasA = diasCubiertosAct(a);
     if((a.equipo&&a.equipo.length) && diasA.length){
@@ -6603,6 +6604,7 @@ function ActividadEditor({ act, onChange, onSave, onDelete, onClose, quotesAcept
   const mats = q ? (q.mat||[]).filter(function(m){return (m.desc&&m.desc.trim())||m.pu;}) : [];
   const _hoyY = (function(){ var d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); })();
   const _futuro = !!(act.fecha && String(act.fecha).slice(0,10) > _hoyY); // fecha de inicio todavía no llegó
+  const _sinMats = !mats || mats.length === 0; // el presupuesto no tiene materiales (o es suelta)
   const toggleP = function(id){ var e=(act.equipo||[]).slice(); var i=e.indexOf(id); if(i>=0) e.splice(i,1); else e.push(id); upd('equipo',e); };
   const activas = (personas||[]).filter(function(p){return p.activo!==false;});
   return React.createElement('div',{onMouseDown:onClose,style:{position:'fixed',inset:0,zIndex:10000,background:'rgba(0,0,0,0.5)',display:'flex',alignItems:'flex-start',justifyContent:'center',padding:'40px 16px',overflowY:'auto'}},
@@ -6614,7 +6616,7 @@ function ActividadEditor({ act, onChange, onSave, onDelete, onClose, quotesAcept
       // Presupuesto vinculado
       React.createElement('div',{style:{marginBottom:12}},
         lbl('Presupuesto (opcional)'),
-        React.createElement('select',{value:act.quoteId||'',onChange:function(e){ var qid=e.target.value||null; var patch={quoteId:qid}; if(qid && !act.colorManual){ var qq=(quotesAceptados||[]).find(function(x){return x.id===qid;}); var tp=qq&&qq.cliente&&qq.cliente.tipo; if(COLOR_POR_TIPO[tp]) patch.color=COLOR_POR_TIPO[tp]; } upd(patch); },style:inp},
+        React.createElement('select',{value:act.quoteId||'',onChange:function(e){ var qid=e.target.value||null; var patch={quoteId:qid}; var qq=qid?(quotesAceptados||[]).find(function(x){return x.id===qid;}):null; if(qid && !act.colorManual){ var tp=qq&&qq.cliente&&qq.cliente.tipo; if(COLOR_POR_TIPO[tp]) patch.color=COLOR_POR_TIPO[tp]; } var nm=qq?(qq.mat||[]).filter(function(m){return (m.desc&&m.desc.trim())||m.pu;}):[]; if(nm.length===0 && act.estado==='materiales') patch.estado='programado'; upd(patch); },style:inp},
           React.createElement('option',{value:''},'— Actividad suelta (sin presupuesto) —'),
           (quotesAceptados||[]).map(function(qq){ var dir=[qq.cliente&&qq.cliente.calle,qq.cliente&&qq.cliente.numero].filter(Boolean).join(' '); return React.createElement('option',{key:qq.id,value:qq.id}, '#'+(qq.numero||'')+' · '+((qq.cliente&&qq.cliente.nombre)||'')+(dir?(' · '+dir):'')); })
         )
@@ -6642,8 +6644,8 @@ function ActividadEditor({ act, onChange, onSave, onDelete, onClose, quotesAcept
       // Estado (4 en fila)
       React.createElement('div',{style:{marginBottom:12}},
         lbl('Estado'),
-        React.createElement('div',{style:{display:'flex',gap:4,flexWrap:'wrap'}}, EST_ORDER.map(function(k){ var e=EST_ACT[k]; var on=act.estado===k; var bloq=(k==='hecho' && _futuro); return React.createElement('button',{key:k,type:'button',disabled:bloq,title:bloq?'La fecha de inicio todavía no llegó':'',onClick:function(){ if(bloq) return; upd('estado',k); },style:{padding:'6px 10px',borderRadius:7,fontSize:11.5,fontWeight:700,cursor:bloq?'not-allowed':'pointer',border:'1.5px solid '+(on?e.color:'#E2E8F0'),background:on?e.bg:'#fff',color:bloq?'#CBD5E1':(on?e.color:'#94A3B8'),opacity:bloq?0.6:1,display:'inline-flex',alignItems:'center',gap:5}}, React.createElement('span',{style:{width:8,height:8,borderRadius:'50%',background:bloq?'#CBD5E1':e.dot}}), e.label); })),
-        _futuro? React.createElement('div',{style:{fontSize:10,color:'#94A3B8',marginTop:4}},'"Hecho" se habilita cuando llega la fecha de inicio.'):null
+        React.createElement('div',{style:{display:'flex',gap:4,flexWrap:'wrap'}}, EST_ORDER.map(function(k){ var e=EST_ACT[k]; var on=act.estado===k; var motivo=(k==='hecho'&&_futuro)?'La fecha de inicio todavía no llegó':((k==='materiales'&&_sinMats)?'El presupuesto no tiene materiales cargados':''); var bloq=!!motivo; return React.createElement('button',{key:k,type:'button',disabled:bloq,title:motivo,onClick:function(){ if(bloq) return; upd('estado',k); },style:{padding:'6px 10px',borderRadius:7,fontSize:11.5,fontWeight:700,cursor:bloq?'not-allowed':'pointer',border:'1.5px solid '+(on?e.color:'#E2E8F0'),background:on?e.bg:'#fff',color:bloq?'#CBD5E1':(on?e.color:'#94A3B8'),opacity:bloq?0.6:1,display:'inline-flex',alignItems:'center',gap:5}}, React.createElement('span',{style:{width:8,height:8,borderRadius:'50%',background:bloq?'#CBD5E1':e.dot}}), e.label); })),
+        (_futuro||_sinMats)? React.createElement('div',{style:{fontSize:10,color:'#94A3B8',marginTop:4}}, [_futuro?'"Hecho" se habilita cuando llega la fecha de inicio.':null, _sinMats?'"Materiales comprados" se habilita si el presupuesto tiene materiales.':null].filter(Boolean).join(' ')):null
       ),
       // Materiales vinculados
       q ? React.createElement('div',{style:{marginBottom:12,background:'#F8FAFC',border:'1px solid #E2E8F0',borderRadius:8,padding:'10px 12px'}},
