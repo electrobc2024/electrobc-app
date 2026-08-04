@@ -6231,6 +6231,8 @@ function PlanificacionView({ actividades, onSave, quotes, personas }){
   const [ref, setRef] = React.useState(function(){ var d=new Date(); d.setHours(0,0,0,0); return d; });
   const [editing, setEditing] = React.useState(null);   // objeto actividad en edición (o null)
   const [showProd, setShowProd] = React.useState(false);
+  const [inicioJornada, setInicioJornada] = React.useState(function(){ var v=parseInt(localStorage.getItem('ebc-jornada-inicio')); return (v>=0&&v<=23)?v:WORK_START_H; });
+  function setInicio(h){ setInicioJornada(h); try{ localStorage.setItem('ebc-jornada-inicio', String(h)); }catch(e){} }
 
   const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
   const DOW = ['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
@@ -6270,7 +6272,7 @@ function PlanificacionView({ actividades, onSave, quotes, personas }){
     });
     _schedCache[s] = res; return res;
   }
-  function fmtHM(hFromStart){ var t = WORK_START_H + hFromStart; var hh = Math.floor(t); var mm = Math.round((t-hh)*60); if(mm===60){hh++;mm=0;} return String(hh).padStart(2,'0')+':'+String(mm).padStart(2,'0'); }
+  function fmtHM(hFromStart){ var t = inicioJornada + hFromStart; var hh = Math.floor(t); var mm = Math.round((t-hh)*60); if(mm===60){hh++;mm=0;} return String(hh).padStart(2,'0')+':'+String(mm).padStart(2,'0'); }
   function horaRango(a, s){ if(!s) return ''; var sc = scheduleForDay(s)[a.id]; if(!sc || !(sc.hours>0)) return ''; return fmtHM(sc.start)+'–'+fmtHM(sc.end); }
   // Carga horaria de una persona en un día (excluyendo una actividad)
   function cargaPersonaDia(pid, s, exceptId){ var t=0; list.forEach(function(o){ if(o.id===exceptId) return; if((o.equipo||[]).indexOf(pid)<0) return; if(diasDe(o).indexOf(s)<0) return; t += horasDelDiaAct(o, s); }); return t; }
@@ -6464,7 +6466,7 @@ function PlanificacionView({ actividades, onSave, quotes, personas }){
     var s = ymd(ref);
     var acts = actsDelDia(ref);
     var sched = scheduleForDay(s);
-    var H0 = 7, H1 = 20, pxH = 46;               // 07:00 a 20:00
+    var H0 = Math.max(0, inicioJornada-1), H1 = Math.min(23, inicioJornada+13), pxH = 46;  // enmarca la jornada
     var alto = (H1-H0)*pxH;
     var horas=[]; for(var h=H0; h<=H1; h++) horas.push(h);
     var now=new Date(), nowOff=null;
@@ -6476,7 +6478,7 @@ function PlanificacionView({ actividades, onSave, quotes, personas }){
           React.createElement('span',{style:{position:'absolute',left:-52,top:-7,fontSize:10,color:'#94A3B8',fontWeight:600,width:46,textAlign:'right'}}, String(h).padStart(2,'0')+':00')
         ); }),
         // actividades posicionadas
-        acts.map(function(a){ var sc=sched[a.id]||{start:0,hours:1}; var top=(WORK_START_H+sc.start-H0)*pxH; var hgt=Math.max(26, (sc.hours||1)*pxH-3); var est=EST_ACT[a.estado]||EST_ACT.por_planificar;
+        acts.map(function(a){ var sc=sched[a.id]||{start:0,hours:1}; var top=(inicioJornada+sc.start-H0)*pxH; var hgt=Math.max(26, (sc.hours||1)*pxH-3); var est=EST_ACT[a.estado]||EST_ACT.por_planificar;
           return React.createElement('div',{key:a.id,title:resumenDe(a),onClick:function(){ setEditing(Object.assign({},a)); },
             style:{position:'absolute',top:Math.max(0,top),left:0,right:6,height:hgt,background:a.color||'#F26B1D',color:'#fff',borderRadius:7,padding:'5px 9px',cursor:'pointer',overflow:'hidden',boxShadow:'0 1px 3px rgba(0,0,0,0.15)'}},
             React.createElement('div',{style:{fontSize:11,fontWeight:700,display:'flex',alignItems:'center',gap:5}}, React.createElement('span',{style:{width:7,height:7,borderRadius:'50%',background:est.dot,boxShadow:'0 0 0 1.5px rgba(255,255,255,0.7)'}}), horaRango(a,s)||'', ' ', tituloDe(a)),
@@ -6525,8 +6527,16 @@ function PlanificacionView({ actividades, onSave, quotes, personas }){
     }),
     // Barra: toggle de vista + navegación
     React.createElement('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',gap:10,flexWrap:'wrap',marginBottom:12}},
-      React.createElement('div',{style:{display:'flex',gap:4,background:'#F1F5F9',borderRadius:8,padding:3}},
-        [['anio','Año'],['mes','Mes'],['semana','Semana'],['dia','Día']].map(function(v){ var act=view===v[0]; return React.createElement('button',{key:v[0],type:'button',onClick:function(){setView(v[0]);},style:{border:'none',borderRadius:6,padding:'6px 14px',fontSize:12,fontWeight:700,cursor:'pointer',background:act?'#fff':'transparent',color:act?NAVY:'#64748B',boxShadow:act?'0 1px 2px rgba(0,0,0,0.08)':'none'}}, v[1]); })
+      React.createElement('div',{style:{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap'}},
+        React.createElement('div',{style:{display:'flex',gap:4,background:'#F1F5F9',borderRadius:8,padding:3}},
+          [['anio','Año'],['mes','Mes'],['semana','Semana'],['dia','Día']].map(function(v){ var act=view===v[0]; return React.createElement('button',{key:v[0],type:'button',onClick:function(){setView(v[0]);},style:{border:'none',borderRadius:6,padding:'6px 14px',fontSize:12,fontWeight:700,cursor:'pointer',background:act?'#fff':'transparent',color:act?NAVY:'#64748B',boxShadow:act?'0 1px 2px rgba(0,0,0,0.08)':'none'}}, v[1]); })
+        ),
+        React.createElement('label',{style:{display:'inline-flex',alignItems:'center',gap:5,fontSize:11,color:'#64748B',fontWeight:600},title:'Hora en que arranca la jornada laboral (para calcular horarios)'},
+          'Jornada desde',
+          React.createElement('select',{value:inicioJornada,onChange:function(e){ setInicio(parseInt(e.target.value)); },style:{border:'1px solid #E2E8F0',borderRadius:6,padding:'5px 7px',fontSize:12,background:'#fff'}},
+            [6,7,8,9,10,11,12,13].map(function(h){ return React.createElement('option',{key:h,value:h}, String(h).padStart(2,'0')+':00'); })
+          )
+        )
       ),
       React.createElement('div',{style:{display:'flex',alignItems:'center',gap:8}},
         React.createElement('button',{type:'button',onClick:function(){navega(-1);},style:{border:'1px solid #E2E8F0',background:'#fff',borderRadius:6,width:30,height:30,cursor:'pointer',fontWeight:800}},'‹'),
