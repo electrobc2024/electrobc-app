@@ -6277,6 +6277,12 @@ function PlanificacionView({ actividades, onSave, quotes, personas, planForQuote
     if(!(parseFloat(a.horasEst)>0)) falta.push('Horas estimadas');
     if(falta.length){ alert('Para guardar la actividad completá:\n\n• '+falta.join('\n• ')); return; }
     if(a.estado==='por_planificar') a.estado='programado';
+    // Personas dadas de baja no pueden quedar en actividades de hoy o futuras
+    var _hoyStr = ymd(new Date());
+    if(a.fecha && String(a.fecha).slice(0,10) >= _hoyStr){
+      var bajas = (a.equipo||[]).map(function(pid){ var p=pers.find(function(x){return x.id===pid;}); return (p&&p.activo===false)?(p.nombre||'—'):null; }).filter(Boolean);
+      if(bajas.length){ alert('No se puede: '+bajas.join(', ')+' está(n) dado(s) de baja y la actividad es de hoy o futura. Quitá esa(s) persona(s) del equipo.'); return; }
+    }
     var _hoyY2=(function(){ var d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); })();
     if(a.estado==='hecho' && a.fecha && String(a.fecha).slice(0,10)>_hoyY2){ alert('No se puede marcar "Hecho": la fecha de inicio todavía no llegó.'); return; }
     if(a.estado==='materiales'){ var _q=a.quoteId?quoteById(a.quoteId):null; var _nm=_q?(_q.mat||[]).filter(function(m){return (m.desc&&m.desc.trim())||m.pu;}):[]; if(_nm.length===0){ alert('No se puede marcar "Materiales comprados": el presupuesto no tiene materiales.'); return; } }
@@ -6338,6 +6344,7 @@ function PlanificacionView({ actividades, onSave, quotes, personas, planForQuote
     var rango = dias.length ? (dias.length>1 ? ('Del '+fmtFecha(dias[0])+' al '+fmtFecha(dias[dias.length-1])+' · '+dias.length+' días') : fmtFecha(dias[0])) : 'Sin fecha';
     var q = a.quoteId ? quoteById(a.quoteId) : null;
     var s = tituloDe(a) + '\n• Estado: '+est.label + (per?('\n• Equipo: '+per):'') + '\n• '+rango;
+    if(q && q.status!=='aceptado') s += '\n⚠ Presupuesto #'+(q.numero||'')+' ya NO está aceptado ('+(STATUS_MAP[q.status]?STATUS_MAP[q.status].label:q.status)+')';
     if(parseFloat(a.horasEst)>0) s += '\n• Estimadas: '+a.horasEst+' h'+(parseFloat(a.horasReal)>0?(' · Reales: '+a.horasReal+' h'):'');
     if(q) s += '\n• Presup. #'+(q.numero||'')+' · '+((q.mat||[]).filter(function(m){return m.desc&&m.desc.trim();}).length)+' materiales';
     if(a.notas && a.notas.trim()) s += '\n• '+a.notas.trim();
@@ -6349,9 +6356,11 @@ function PlanificacionView({ actividades, onSave, quotes, personas, planForQuote
     opts = opts||{};
     var est = EST_ACT[a.estado]||EST_ACT.por_planificar;
     var hr = horasLabel(a, s);
+    var alerta = a.quoteId && (function(){ var qq=quoteById(a.quoteId); return qq && qq.status!=='aceptado'; })();
     return React.createElement('div',{key:a.id, title: resumenDe(a), onClick:function(e){ e.stopPropagation(); setEditing(Object.assign({},a)); },
-      style:{background:a.color||'#F26B1D', color:'#fff', borderRadius:6, padding:opts.big?'6px 9px':'3px 7px', fontSize:opts.big?12:11, cursor:'pointer', marginBottom:3, display:'flex', alignItems:'center', gap:5, overflow:'hidden', whiteSpace:'nowrap', textOverflow:'ellipsis'}},
+      style:{background:a.color||'#F26B1D', color:'#fff', borderRadius:6, padding:opts.big?'6px 9px':'3px 7px', fontSize:opts.big?12:11, cursor:'pointer', marginBottom:3, display:'flex', alignItems:'center', gap:5, overflow:'hidden', whiteSpace:'nowrap', textOverflow:'ellipsis', boxShadow: alerta?'0 0 0 2px #DC2626':'none'}},
       React.createElement('span',{style:{width:7,height:7,borderRadius:'50%',background:est.dot,flexShrink:0,boxShadow:'0 0 0 1.5px rgba(255,255,255,0.7)'}}),
+      alerta? React.createElement('span',{style:{flexShrink:0}},'⚠'):null,
       hr? React.createElement('span',{style:{fontWeight:700,opacity:0.95,flexShrink:0}}, hr):null,
       React.createElement('span',{style:{overflow:'hidden',textOverflow:'ellipsis'}}, tituloDe(a))
     );
@@ -6624,6 +6633,7 @@ function ActividadEditor({ act, onChange, onSave, onDelete, onClose, quotesAcept
   const _hoyY = (function(){ var d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); })();
   const _futuro = !!(act.fecha && String(act.fecha).slice(0,10) > _hoyY); // fecha de inicio todavía no llegó
   const _sinMats = !mats || mats.length === 0; // el presupuesto no tiene materiales (o es suelta)
+  const _quoteNoAceptado = !!(q && q.status !== 'aceptado'); // el presupuesto vinculado dejó de estar aceptado
   const toggleP = function(id){ var e=(act.equipo||[]).slice(); var i=e.indexOf(id); if(i>=0) e.splice(i,1); else e.push(id); upd('equipo',e); };
   const activas = (personas||[]).filter(function(p){return p.activo!==false;});
   return React.createElement('div',{onMouseDown:onClose,style:{position:'fixed',inset:0,zIndex:10000,background:'rgba(0,0,0,0.5)',display:'flex',alignItems:'flex-start',justifyContent:'center',padding:'40px 16px',overflowY:'auto'}},
@@ -6632,11 +6642,14 @@ function ActividadEditor({ act, onChange, onSave, onDelete, onClose, quotesAcept
         React.createElement('div',{style:{fontFamily:"'Oswald',system-ui",fontSize:18,fontWeight:700,color:NAVY}}, act.id&&false?'Editar actividad':'Actividad'),
         React.createElement('button',{type:'button',onClick:onClose,style:{background:'none',border:'none',fontSize:18,color:'#94A3B8',cursor:'pointer'}},'✕')
       ),
+      // Aviso: presupuesto vinculado ya no aceptado
+      _quoteNoAceptado ? React.createElement('div',{style:{background:'#FEF2F2',border:'1px solid #FCA5A5',borderRadius:8,padding:'8px 10px',marginBottom:12,fontSize:12,color:'#B91C1C',fontWeight:600}}, '⚠ El presupuesto #'+(q.numero||'')+' ya no está aceptado (estado: '+(STATUS_MAP[q.status]?STATUS_MAP[q.status].label:q.status)+'). Conviene cancelar o revisar esta actividad.') : null,
       // Presupuesto vinculado
       React.createElement('div',{style:{marginBottom:12}},
         lbl('Presupuesto (opcional)'),
         React.createElement('select',{value:act.quoteId||'',onChange:function(e){ var qid=e.target.value||null; var patch={quoteId:qid}; var qq=qid?(quotesAceptados||[]).find(function(x){return x.id===qid;}):null; if(qid && !act.colorManual){ var tp=qq&&qq.cliente&&qq.cliente.tipo; if(COLOR_POR_TIPO[tp]) patch.color=COLOR_POR_TIPO[tp]; } var nm=qq?(qq.mat||[]).filter(function(m){return (m.desc&&m.desc.trim())||m.pu;}):[]; if(nm.length===0 && act.estado==='materiales') patch.estado='programado'; upd(patch); },style:inp},
           React.createElement('option',{value:''},'— Actividad suelta (sin presupuesto) —'),
+          _quoteNoAceptado ? React.createElement('option',{value:act.quoteId}, '#'+(q.numero||'')+' · '+((q.cliente&&q.cliente.nombre)||'')+' (⚠ '+(STATUS_MAP[q.status]?STATUS_MAP[q.status].label:q.status)+')') : null,
           (quotesAceptados||[]).map(function(qq){ var dir=[qq.cliente&&qq.cliente.calle,qq.cliente&&qq.cliente.numero].filter(Boolean).join(' '); return React.createElement('option',{key:qq.id,value:qq.id}, '#'+(qq.numero||'')+' · '+((qq.cliente&&qq.cliente.nombre)||'')+(dir?(' · '+dir):'')); })
         )
       ),
@@ -6650,11 +6663,16 @@ function ActividadEditor({ act, onChange, onSave, onDelete, onClose, quotesAcept
         lbl('Fecha de inicio', true), React.createElement('input',{type:'date',value:act.fecha||'',onChange:function(e){ var v=e.target.value; var esFut=v && String(v).slice(0,10)>_hoyY; upd({fecha:v, estado:(esFut && act.estado==='hecho')?'programado':act.estado}); },style:inp})
       ),
       // Equipo
-      React.createElement('div',{style:{marginBottom:12}},
-        lbl('Quién lo hace', true),
-        activas.length===0? React.createElement('div',{style:{fontSize:11,color:'#B45309'}},'No hay personas activas. Cargalas en "Personal".') :
-        React.createElement('div',{style:{display:'flex',gap:6,flexWrap:'wrap'}}, activas.map(function(p){ var on=(act.equipo||[]).indexOf(p.id)>=0; return React.createElement('button',{key:p.id,type:'button',onClick:function(){toggleP(p.id);},style:{padding:'6px 11px',borderRadius:20,fontSize:12,fontWeight:on?700:500,cursor:'pointer',border:'1.5px solid '+(on?NAVY:'#E2E8F0'),background:on?NAVY:'#fff',color:on?'#fff':'#475569'}}, (on?'✓ ':'')+(p.nombre||'—')); }))
-      ),
+      (function(){
+        var inactAsign = (personas||[]).filter(function(p){ return p.activo===false && (act.equipo||[]).indexOf(p.id)>=0; });
+        var opts = activas.concat(inactAsign);
+        return React.createElement('div',{style:{marginBottom:12}},
+          lbl('Quién lo hace', true),
+          opts.length===0? React.createElement('div',{style:{fontSize:11,color:'#B45309'}},'No hay personas activas. Cargalas en "Personal".') :
+          React.createElement('div',{style:{display:'flex',gap:6,flexWrap:'wrap'}}, opts.map(function(p){ var on=(act.equipo||[]).indexOf(p.id)>=0; var baja=p.activo===false; return React.createElement('button',{key:p.id,type:'button',title:baja?'Dado de baja — quitalo de las actividades de hoy/futuro':'',onClick:function(){toggleP(p.id);},style:{padding:'6px 11px',borderRadius:20,fontSize:12,fontWeight:on?700:500,cursor:'pointer',border:'1.5px solid '+(baja?'#FCA5A5':(on?NAVY:'#E2E8F0')),background:on?(baja?'#B91C1C':NAVY):'#fff',color:on?'#fff':(baja?'#B91C1C':'#475569')}}, (on?'✓ ':'')+(p.nombre||'—')+(baja?' (baja)':'')); })),
+          inactAsign.length? React.createElement('div',{style:{fontSize:10,color:'#B91C1C',marginTop:4}},'Hay personas dadas de baja asignadas. No pueden quedar en actividades de hoy o futuras.'):null
+        );
+      })(),
       // Color
       React.createElement('div',{style:{marginBottom:12}},
         lbl('Color'),
