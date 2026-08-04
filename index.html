@@ -4054,6 +4054,7 @@ function EsperaCountdown({
 function Tracker({
   quotes,
   actividades,
+  onGoToPlan,
   onEdit,
   onSaveInline,
   onDelete,
@@ -4585,8 +4586,13 @@ function Tracker({
       var cobrado = cobradoARS + cobradoUSD;
       var pct = total > 0 ? Math.min(100, Math.round((cobrado/total)*100)) : 0;
       var color = pct >= 100 ? "#059669" : pct >= 50 ? "#2563EB" : "#F59E0B";
-      var actQ = (actividades||[]).find(function(a){ return a.quoteId===q.id; });
-      var ed = actQ ? (EST_ACT[actQ.estado]||EST_ACT.por_planificar) : null;
+      var actsQ = (actividades||[]).filter(function(a){ return a.quoteId===q.id; });
+      var ed, aLabel;
+      if(actsQ.length===0){ ed=null; aLabel="⚠ Sin planificar"; }
+      else { var totA=actsQ.length, hechA=actsQ.filter(function(x){return x.estado==='hecho';}).length;
+        if(hechA===totA){ ed=EST_ACT.hecho; aLabel="🗓 Hecho"; }
+        else { var nonH=actsQ.filter(function(x){return x.estado!=='hecho';}); var minK=nonH.reduce(function(m,x){ return EST_ORDER.indexOf(x.estado)<EST_ORDER.indexOf(m)?x.estado:m; },'hecho'); ed=EST_ACT[minK]||EST_ACT.por_planificar; aLabel="🗓 "+ed.label+(hechA>0?(" ("+hechA+"/"+totA+")"):""); }
+      }
       return /*#__PURE__*/React.createElement("div", {style:{display:"flex",flexDirection:"column",gap:4}},
         /*#__PURE__*/React.createElement("div", {style:{display:"flex",flexDirection:"column",gap:3}},
           /*#__PURE__*/React.createElement("div", {style:{height:6,backgroundColor:"#E2E8F0",borderRadius:3,overflow:"hidden"}},
@@ -4597,7 +4603,7 @@ function Tracker({
             /*#__PURE__*/React.createElement("span", {style:{fontSize:9,color:"#94A3B8",whiteSpace:"nowrap"}}, "Resta $"+Math.max(0,total-cobrado).toLocaleString("es-AR",{maximumFractionDigits:0}))
           )
         ),
-        /*#__PURE__*/React.createElement("span", {style:{fontSize:9,fontWeight:700,padding:"3px 8px",borderRadius:6,whiteSpace:"nowrap",textAlign:"center",color: ed?ed.color:"#B91C1C", backgroundColor: ed?ed.bg:"#FEF2F2", border:"1px solid "+(ed?ed.dot:"#FCA5A5")}}, ed?("🗓 "+ed.label):"⚠ Sin planificar")
+        /*#__PURE__*/React.createElement("button", {type:"button",onClick:function(){ if(onGoToPlan) onGoToPlan(q.id); },title: ed?"Ver/editar en Planificación":"Planificar este presupuesto",style:{fontSize:9,fontWeight:700,padding:"3px 8px",borderRadius:6,whiteSpace:"nowrap",textAlign:"center",cursor:"pointer",color: ed?ed.color:"#B91C1C", backgroundColor: ed?ed.bg:"#FEF2F2", border:"1px solid "+(ed?ed.dot:"#FCA5A5")}}, aLabel)
       );
     })()), /*#__PURE__*/React.createElement("td", {style:{padding:"10px 10px",textAlign:"center"}}, /*#__PURE__*/React.createElement("span",{style:{fontSize:10,fontWeight:700,color:"#475569",backgroundColor:"#F1F5F9",padding:"2px 8px",borderRadius:20,whiteSpace:"nowrap"}}, ebcUserLabel(q.autor||"guille"))), /*#__PURE__*/React.createElement("td", {
       style: {
@@ -6223,7 +6229,7 @@ function BackupView({ quotes, catalog, clients, egresos, personas, onRestore }){
   ));
 }
 
-function PlanificacionView({ actividades, onSave, quotes, personas }){
+function PlanificacionView({ actividades, onSave, quotes, personas, planForQuote, onConsumePlan }){
   const list = actividades || [];
   const qs = quotes || [];
   const pers = personas || [];
@@ -6305,11 +6311,23 @@ function PlanificacionView({ actividades, onSave, quotes, personas }){
     }
     var exists = list.some(function(x){return x.id===a.id;});
     var nl = exists ? list.map(function(x){return x.id===a.id?a:x;}) : list.concat([a]);
+    // Bloque: si el presupuesto es el mismo, los estados (menos "Hecho") se comparten
+    if(a.quoteId && a.estado!=='hecho'){
+      nl = nl.map(function(x){ return (x.id!==a.id && x.quoteId===a.quoteId && x.estado!=='hecho') ? Object.assign({}, x, {estado:a.estado}) : x; });
+    }
     onSave(nl);
     setEditing(null);
   }
   function delAct(id){ if(!confirm('¿Eliminar esta actividad?')) return; onSave(list.filter(function(x){return x.id!==id;})); setEditing(null); }
   function nueva(fecha){ var a=mkActividad(); a.fecha = fecha || ymd(new Date()); a.color = COLORS_ACT[list.length % COLORS_ACT.length]; setEditing(a); }
+  // Al entrar desde Seguimiento con un presupuesto: abrir su actividad (o una nueva vinculada)
+  React.useEffect(function(){
+    if(!planForQuote) return;
+    var ex = list.find(function(a){ return a.quoteId===planForQuote; });
+    if(ex){ setEditing(Object.assign({}, ex)); }
+    else { var a=mkActividad(); a.fecha=ymd(new Date()); a.color=COLORS_ACT[list.length % COLORS_ACT.length]; a.quoteId=planForQuote; var qq=quoteById(planForQuote); var tp=qq&&qq.cliente&&qq.cliente.tipo; if(COLOR_POR_TIPO[tp]) a.color=COLOR_POR_TIPO[tp]; setEditing(a); }
+    if(onConsumePlan) onConsumePlan();
+  }, [planForQuote]);
 
   // ── Chip de actividad ──
   function resumenDe(a){
@@ -6644,8 +6662,14 @@ function ActividadEditor({ act, onChange, onSave, onDelete, onClose, quotesAcept
       // Estado (4 en fila)
       React.createElement('div',{style:{marginBottom:12}},
         lbl('Estado'),
-        React.createElement('div',{style:{display:'flex',gap:4,flexWrap:'wrap'}}, EST_ORDER.map(function(k){ var e=EST_ACT[k]; var on=act.estado===k; var motivo=(k==='hecho'&&_futuro)?'La fecha de inicio todavía no llegó':((k==='materiales'&&_sinMats)?'El presupuesto no tiene materiales cargados':''); var bloq=!!motivo; return React.createElement('button',{key:k,type:'button',disabled:bloq,title:motivo,onClick:function(){ if(bloq) return; upd('estado',k); },style:{padding:'6px 10px',borderRadius:7,fontSize:11.5,fontWeight:700,cursor:bloq?'not-allowed':'pointer',border:'1.5px solid '+(on?e.color:'#E2E8F0'),background:on?e.bg:'#fff',color:bloq?'#CBD5E1':(on?e.color:'#94A3B8'),opacity:bloq?0.6:1,display:'inline-flex',alignItems:'center',gap:5}}, React.createElement('span',{style:{width:8,height:8,borderRadius:'50%',background:bloq?'#CBD5E1':e.dot}}), e.label); })),
-        (_futuro||_sinMats)? React.createElement('div',{style:{fontSize:10,color:'#94A3B8',marginTop:4}}, [_futuro?'"Hecho" se habilita cuando llega la fecha de inicio.':null, _sinMats?'"Materiales comprados" se habilita si el presupuesto tiene materiales.':null].filter(Boolean).join(' ')):null
+        React.createElement('div',{style:{display:'flex',gap:4,flexWrap:'wrap'}}, EST_ORDER.map(function(k){ var e=EST_ACT[k]; var on=act.estado===k;
+          var motivo='';
+          if(k==='hecho' && _futuro) motivo='La fecha de inicio todavía no llegó';
+          else if(k==='hecho' && !_sinMats && act.estado!=='materiales' && act.estado!=='hecho') motivo='Primero marcá "Materiales comprados"';
+          else if(k==='materiales' && _sinMats) motivo='El presupuesto no tiene materiales cargados';
+          var bloq=!!motivo;
+          return React.createElement('button',{key:k,type:'button',disabled:bloq,title:motivo,onClick:function(){ if(bloq) return; upd('estado',k); },style:{padding:'6px 10px',borderRadius:7,fontSize:11.5,fontWeight:700,cursor:bloq?'not-allowed':'pointer',border:'1.5px solid '+(on?e.color:'#E2E8F0'),background:on?e.bg:'#fff',color:bloq?'#CBD5E1':(on?e.color:'#94A3B8'),opacity:bloq?0.6:1,display:'inline-flex',alignItems:'center',gap:5}}, React.createElement('span',{style:{width:8,height:8,borderRadius:'50%',background:bloq?'#CBD5E1':e.dot}}), e.label); })),
+        React.createElement('div',{style:{fontSize:10,color:'#94A3B8',marginTop:4}}, [_futuro?'"Hecho" se habilita al llegar la fecha de inicio.':null, (!_sinMats)?'Con materiales, el orden es Materiales comprados → Hecho.':null, _sinMats?'"Materiales comprados" se habilita si el presupuesto tiene materiales.':null].filter(Boolean).join(' '))
       ),
       // Materiales vinculados
       q ? React.createElement('div',{style:{marginBottom:12,background:'#F8FAFC',border:'1px solid #E2E8F0',borderRadius:8,padding:'10px 12px'}},
@@ -6778,6 +6802,8 @@ function App() {
     setActividades(list);
     saveActividades(list).catch(()=>{});
   };
+  const [planForQuote, setPlanForQuote] = useState(null);
+  const goToPlan = (qid) => { setPlanForQuote(qid); setView('planificacion'); };
   const handleRestore = (data) => {
     if(Array.isArray(data.quotes)){ setQuotes(data.quotes); try{localStorage.setItem(SKEY,JSON.stringify(data.quotes));}catch(e){} db.set(SKEY,JSON.stringify(data.quotes)).catch(()=>{}); }
     if(data.catalog&&(Array.isArray(data.catalog.mdo)||Array.isArray(data.catalog.mat))){ var cat=Object.assign({},data.catalog,{mdo:assignNums(data.catalog.mdo||[]),mat:assignNums(data.catalog.mat||[])}); setCatalog(cat); try{localStorage.setItem(CKEY,JSON.stringify(cat));}catch(e){} db.set(CKEY,JSON.stringify(cat)).catch(()=>{}); }
@@ -7190,6 +7216,7 @@ function App() {
   }), view === "tracker" && /*#__PURE__*/React.createElement(Tracker, {
     quotes: quotes,
     actividades: actividades,
+    onGoToPlan: goToPlan,
     onEdit: handleEdit,
     onSaveInline: handleSaveInline,
     onDelete: handleDelete,
@@ -7218,7 +7245,9 @@ function App() {
     actividades: actividades,
     onSave: handleActividades,
     quotes: quotes,
-    personas: personas
+    personas: personas,
+    planForQuote: planForQuote,
+    onConsumePlan: function(){ setPlanForQuote(null); }
   }), (view==="dashboard"||view==="movimientos") && /*#__PURE__*/React.createElement(IngresosView, {
     quotes: quotes,
     egresos: egresos,
