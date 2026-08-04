@@ -831,6 +831,19 @@ function diasCubiertosAct(a){
   }
   return out;
 }
+const WORK_START_H = 8; // la jornada arranca 08:00
+// Horas que una actividad ocupa en un día puntual (el último día puede ser parcial; sábado media jornada)
+function horasDelDiaAct(a, s){
+  var dias = diasCubiertosAct(a);
+  var idx = dias.indexOf(s);
+  if(idx<0) return 0;
+  var hEst = parseFloat(a.horasEst)||0;
+  var hDia = parseFloat(a.horasPorDia)||8; if(hDia<=0) hDia=8;
+  var hSab = (a.horasSab!==undefined && a.horasSab!=='' && !isNaN(parseFloat(a.horasSab))) ? parseFloat(a.horasSab) : Math.round(hDia/2*10)/10;
+  var capDe = function(f){ var p=f.split('-'); return (new Date(+p[0],+p[1]-1,+p[2]).getDay()===6)?hSab:hDia; };
+  var acc = 0; for(var i=0;i<idx;i++) acc += capDe(dias[i]);
+  return Math.max(0, Math.min(capDe(s), hEst-acc));
+}
 const loadActividades = async () => {
   try {
     const r = await db.get(AKEY);
@@ -6241,7 +6254,26 @@ function PlanificacionView({ actividades, onSave, quotes, personas }){
   };
   const diasCache = {};
   const diasDe = function(a){ if(!diasCache[a.id]) diasCache[a.id]=diasCubiertosAct(a); return diasCache[a.id]; };
-  const actsDelDia = function(d){ var s=ymd(d); return list.filter(function(a){ return diasDe(a).indexOf(s)>=0; }).sort(function(x,y){ return tituloDe(x).localeCompare(tituloDe(y)); }); };
+  const actsDelDia = function(d){ var s=ymd(d); return list.filter(function(a){ return diasDe(a).indexOf(s)>=0; }).sort(function(x,y){ return (x.createdAt||'').localeCompare(y.createdAt||''); }); };
+  // Horario del día: apila las actividades por persona (arranca cuando todo el equipo está libre).
+  const _schedCache = {};
+  function scheduleForDay(s){
+    if(_schedCache[s]) return _schedCache[s];
+    var acts = list.filter(function(a){ return diasDe(a).indexOf(s)>=0; }).sort(function(x,y){ return (x.createdAt||'').localeCompare(y.createdAt||''); });
+    var load = {}, res = {};
+    acts.forEach(function(a){
+      var h = horasDelDiaAct(a, s);
+      var eq = (a.equipo&&a.equipo.length) ? a.equipo : ['_'];
+      var startLoad = 0; eq.forEach(function(pid){ if((load[pid]||0) > startLoad) startLoad = load[pid]; });
+      res[a.id] = { start: startLoad, hours: h, end: startLoad + h };
+      eq.forEach(function(pid){ load[pid] = startLoad + h; });
+    });
+    _schedCache[s] = res; return res;
+  }
+  function fmtHM(hFromStart){ var t = WORK_START_H + hFromStart; var hh = Math.floor(t); var mm = Math.round((t-hh)*60); if(mm===60){hh++;mm=0;} return String(hh).padStart(2,'0')+':'+String(mm).padStart(2,'0'); }
+  function horaRango(a, s){ if(!s) return ''; var sc = scheduleForDay(s)[a.id]; if(!sc || !(sc.hours>0)) return ''; return fmtHM(sc.start)+'–'+fmtHM(sc.end); }
+  // Carga horaria de una persona en un día (excluyendo una actividad)
+  function cargaPersonaDia(pid, s, exceptId){ var t=0; list.forEach(function(o){ if(o.id===exceptId) return; if((o.equipo||[]).indexOf(pid)<0) return; if(diasDe(o).indexOf(s)<0) return; t += horasDelDiaAct(o, s); }); return t; }
   const sinFecha = list.filter(function(a){ return !a.fecha; });
 
   function saveAct(a){
@@ -6271,6 +6303,19 @@ function PlanificacionView({ actividades, onSave, quotes, personas }){
         var uniq = conf.filter(function(v,i,arr){return arr.indexOf(v)===i;});
         if(!confirm('⚠️ Se superponen personas con otra(s) actividad(es):\n\n'+uniq.slice(0,8).join('\n')+(uniq.length>8?'\n…y más':'')+'\n\n¿Guardar igual?')) return;
       }
+      // Tope de 8 h por persona por día
+      var cap=[];
+      diasA.forEach(function(s){
+        var hA=horasDelDiaAct(a, s);
+        (a.equipo||[]).forEach(function(pid){
+          var prev=cargaPersonaDia(pid, s, a.id);
+          if(prev+hA > 8.001) cap.push(persLabel(pid)+' · '+fmtFecha(s)+': '+(Math.round(prev*10)/10)+'h + '+(Math.round(hA*10)/10)+'h = '+(Math.round((prev+hA)*10)/10)+'h');
+        });
+      });
+      if(cap.length){
+        var uc=cap.filter(function(v,i,arr){return arr.indexOf(v)===i;});
+        if(!confirm('⚠️ Se supera el tope de 8 h por día de alguna persona:\n\n'+uc.slice(0,8).join('\n')+(uc.length>8?'\n…y más':'')+'\n\n¿Guardar igual?')) return;
+      }
     }
     var exists = list.some(function(x){return x.id===a.id;});
     var nl = exists ? list.map(function(x){return x.id===a.id?a:x;}) : list.concat([a]);
@@ -6294,12 +6339,15 @@ function PlanificacionView({ actividades, onSave, quotes, personas }){
     s += '\n(clic para ver / editar)';
     return s;
   }
-  function chip(a, opts){
+  function chip(a, s, opts){
+    if(s && typeof s==='object'){ opts=s; s=null; }
     opts = opts||{};
     var est = EST_ACT[a.estado]||EST_ACT.por_planificar;
+    var hr = horaRango(a, s);
     return React.createElement('div',{key:a.id, title: resumenDe(a), onClick:function(e){ e.stopPropagation(); setEditing(Object.assign({},a)); },
       style:{background:a.color||'#F26B1D', color:'#fff', borderRadius:6, padding:opts.big?'6px 9px':'3px 7px', fontSize:opts.big?12:11, cursor:'pointer', marginBottom:3, display:'flex', alignItems:'center', gap:5, overflow:'hidden', whiteSpace:'nowrap', textOverflow:'ellipsis'}},
       React.createElement('span',{style:{width:7,height:7,borderRadius:'50%',background:est.dot,flexShrink:0,boxShadow:'0 0 0 1.5px rgba(255,255,255,0.7)'}}),
+      hr? React.createElement('span',{style:{fontWeight:700,opacity:0.95,flexShrink:0}}, hr):null,
       React.createElement('span',{style:{overflow:'hidden',textOverflow:'ellipsis'}}, tituloDe(a))
     );
   }
@@ -6336,7 +6384,7 @@ function PlanificacionView({ actividades, onSave, quotes, personas }){
           return React.createElement('div',{key:i,onClick:function(){ nueva(ymd(d)); },
             style:{minHeight:96,borderRight:(i%7!==6)?'1px solid #F1F5F9':'none',borderBottom:i<35?'1px solid #F1F5F9':'none',padding:5,background:inMonth?'#fff':'#FBFCFE',cursor:'pointer',opacity:inMonth?1:0.55}},
             React.createElement('div',{style:{fontSize:11,fontWeight:sameDay(d,hoy)?800:600,color:sameDay(d,hoy)?'#fff':'#64748B',marginBottom:3, background:sameDay(d,hoy)?ORANGE:'transparent', width:sameDay(d,hoy)?20:'auto', height:sameDay(d,hoy)?20:'auto', borderRadius:'50%', display:'inline-flex',alignItems:'center',justifyContent:'center'}}, d.getDate()),
-            acts.slice(0,3).map(function(a){ return chip(a); }),
+            acts.slice(0,3).map(function(a){ return chip(a, ymd(d)); }),
             acts.length>3? React.createElement('div',{style:{fontSize:10,color:'#94A3B8',fontWeight:600}}, '+'+(acts.length-3)+' más'):null
           );
         })
@@ -6352,7 +6400,7 @@ function PlanificacionView({ actividades, onSave, quotes, personas }){
         return React.createElement('div',{key:i,onClick:function(){ nueva(ymd(d)); },
           style:{background:'#fff',border:'1px solid '+(sameDay(d,hoy)?ORANGE:'#E2E8F0'),borderRadius:10,padding:8,minHeight:200,cursor:'pointer'}},
           React.createElement('div',{style:{fontSize:11,fontWeight:700,color:sameDay(d,hoy)?ORANGE:'#64748B',marginBottom:6,textAlign:'center'}}, DOW[i]+' '+d.getDate()),
-          acts.map(function(a){ return chip(a,{big:true}); }),
+          acts.map(function(a){ return chip(a, ymd(d), {big:true}); }),
           acts.length===0? React.createElement('div',{style:{fontSize:10,color:'#CBD5E1',textAlign:'center',marginTop:8}}, '+'):null
         );
       })
@@ -6382,7 +6430,8 @@ function PlanificacionView({ actividades, onSave, quotes, personas }){
         var dur=diasDe(a).length;
         var q=a.quoteId?quoteById(a.quoteId):null;
         var dir=q?[q.cliente&&q.cliente.calle,q.cliente&&q.cliente.numero,q.cliente&&q.cliente.depto].filter(Boolean).join(' '):'';
-        t+='\n  '+colorEmoji(a.color)+' '+tituloDe(a)+' — '+est.label;
+        var hr=horaRango(a, ymd(g.d));
+        t+='\n  '+colorEmoji(a.color)+' '+(hr?(hr+' · '):'')+tituloDe(a)+' — '+est.label;
         var l2=[]; if(per) l2.push('👥 '+per); if(parseFloat(a.horasEst)>0) l2.push('⏱ '+a.horasEst+'h est.'); l2.push('📆 '+(dur===1?'1 día':dur+' días'));
         t+='\n     '+l2.join(' · ');
         var l3=[]; if(q) l3.push('🧾 Presup. #'+(q.numero||'')); if(dir) l3.push('📍 '+dir);
@@ -6410,13 +6459,37 @@ function PlanificacionView({ actividades, onSave, quotes, personas }){
     if(typeof html2pdf!=='undefined'){ html2pdf().set({margin:10,filename:fname,html2canvas:{scale:2},jsPDF:{unit:'mm',format:'a4',orientation:'portrait'}}).from(el).save(); }
     else { alert('No se pudo generar el PDF.'); }
   }
-  // ── Vista DÍA ──
+  // ── Vista DÍA (línea de tiempo por horas) ──
   function renderDia(){
-    var acts=actsDelDia(ref);
-    return React.createElement('div',{style:{background:'#fff',border:'1px solid '+(sameDay(ref,hoy)?ORANGE:'#E2E8F0'),borderRadius:10,padding:14,minHeight:240}},
-      acts.length===0
-        ? React.createElement('div',{style:{textAlign:'center',color:'#94A3B8',fontSize:13,padding:'30px 0'}}, 'Sin actividades este día. Tocá "Nueva actividad" para agregar.')
-        : React.createElement('div',{style:{display:'flex',flexDirection:'column',gap:6}}, acts.map(function(a){ return chip(a,{big:true}); }))
+    var s = ymd(ref);
+    var acts = actsDelDia(ref);
+    var sched = scheduleForDay(s);
+    var H0 = 7, H1 = 20, pxH = 46;               // 07:00 a 20:00
+    var alto = (H1-H0)*pxH;
+    var horas=[]; for(var h=H0; h<=H1; h++) horas.push(h);
+    var now=new Date(), nowOff=null;
+    if(sameDay(ref,hoy)){ var nh=now.getHours()+now.getMinutes()/60; if(nh>=H0 && nh<=H1) nowOff=(nh-H0)*pxH; }
+    return React.createElement('div',{style:{background:'#fff',border:'1px solid '+(sameDay(ref,hoy)?ORANGE:'#E2E8F0'),borderRadius:10,padding:'12px 12px 12px 0'}},
+      React.createElement('div',{style:{position:'relative',height:alto,marginLeft:56}},
+        // líneas y etiquetas de hora
+        horas.map(function(h){ var top=(h-H0)*pxH; return React.createElement('div',{key:h,style:{position:'absolute',top:top,left:0,right:0,borderTop:'1px solid #F1F5F9'}},
+          React.createElement('span',{style:{position:'absolute',left:-52,top:-7,fontSize:10,color:'#94A3B8',fontWeight:600,width:46,textAlign:'right'}}, String(h).padStart(2,'0')+':00')
+        ); }),
+        // actividades posicionadas
+        acts.map(function(a){ var sc=sched[a.id]||{start:0,hours:1}; var top=(WORK_START_H+sc.start-H0)*pxH; var hgt=Math.max(26, (sc.hours||1)*pxH-3); var est=EST_ACT[a.estado]||EST_ACT.por_planificar;
+          return React.createElement('div',{key:a.id,title:resumenDe(a),onClick:function(){ setEditing(Object.assign({},a)); },
+            style:{position:'absolute',top:Math.max(0,top),left:0,right:6,height:hgt,background:a.color||'#F26B1D',color:'#fff',borderRadius:7,padding:'5px 9px',cursor:'pointer',overflow:'hidden',boxShadow:'0 1px 3px rgba(0,0,0,0.15)'}},
+            React.createElement('div',{style:{fontSize:11,fontWeight:700,display:'flex',alignItems:'center',gap:5}}, React.createElement('span',{style:{width:7,height:7,borderRadius:'50%',background:est.dot,boxShadow:'0 0 0 1.5px rgba(255,255,255,0.7)'}}), horaRango(a,s)||'', ' ', tituloDe(a)),
+            (a.equipo&&a.equipo.length)? React.createElement('div',{style:{fontSize:10,opacity:0.9,marginTop:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}, (a.equipo||[]).map(persLabel).join(', ')):null
+          );
+        }),
+        // línea de "ahora"
+        nowOff!=null? React.createElement('div',{style:{position:'absolute',top:nowOff,left:-4,right:0,height:2,background:'#DC2626',zIndex:5}},
+          React.createElement('span',{style:{position:'absolute',left:-52,top:-7,fontSize:10,fontWeight:700,color:'#DC2626',width:46,textAlign:'right'}}, String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0')),
+          React.createElement('span',{style:{position:'absolute',left:-6,top:-3,width:8,height:8,borderRadius:'50%',background:'#DC2626'}})
+        ):null,
+        acts.length===0? React.createElement('div',{style:{position:'absolute',top:alto/2-10,left:0,right:0,textAlign:'center',color:'#94A3B8',fontSize:13}}, 'Sin actividades este día.'):null
+      )
     );
   }
 
