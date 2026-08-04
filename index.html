@@ -805,7 +805,7 @@ function colorEmoji(c){
 }
 const mkActividad = () => ({
   id: uid(), quoteId: null, titulo: '', fecha: '',
-  equipo: [], color: COLORS_ACT[0], estado: 'por_planificar',
+  equipo: [], color: COLORS_ACT[0], estado: 'programado',
   horasEst: '', horasReal: '', horasPorDia: '8', trabajaSab: false, trabajaDom: false, notas: '',
   createdAt: new Date().toISOString(), autor: ebcUser()
 });
@@ -6276,6 +6276,7 @@ function PlanificacionView({ actividades, onSave, quotes, personas, planForQuote
     if(!(a.equipo&&a.equipo.length)) falta.push('Quién lo hace (al menos una persona)');
     if(!(parseFloat(a.horasEst)>0)) falta.push('Horas estimadas');
     if(falta.length){ alert('Para guardar la actividad completá:\n\n• '+falta.join('\n• ')); return; }
+    if(a.estado==='por_planificar') a.estado='programado';
     var _hoyY2=(function(){ var d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); })();
     if(a.estado==='hecho' && a.fecha && String(a.fecha).slice(0,10)>_hoyY2){ alert('No se puede marcar "Hecho": la fecha de inicio todavía no llegó.'); return; }
     if(a.estado==='materiales'){ var _q=a.quoteId?quoteById(a.quoteId):null; var _nm=_q?(_q.mat||[]).filter(function(m){return (m.desc&&m.desc.trim())||m.pu;}):[]; if(_nm.length===0){ alert('No se puede marcar "Materiales comprados": el presupuesto no tiene materiales.'); return; } }
@@ -6662,7 +6663,7 @@ function ActividadEditor({ act, onChange, onSave, onDelete, onClose, quotesAcept
       // Estado (4 en fila)
       React.createElement('div',{style:{marginBottom:12}},
         lbl('Estado'),
-        React.createElement('div',{style:{display:'flex',gap:4,flexWrap:'wrap'}}, EST_ORDER.map(function(k){ var e=EST_ACT[k]; var on=act.estado===k;
+        React.createElement('div',{style:{display:'flex',gap:4,flexWrap:'wrap'}}, EST_ORDER.filter(function(k){return k!=='por_planificar';}).map(function(k){ var e=EST_ACT[k]; var on=act.estado===k;
           var motivo='';
           if(k==='hecho' && _futuro) motivo='La fecha de inicio todavía no llegó';
           else if(k==='hecho' && !_sinMats && act.estado!=='materiales' && act.estado!=='hecho') motivo='Primero marcá "Materiales comprados"';
