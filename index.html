@@ -6420,10 +6420,10 @@ function PlanificacionView({ actividades, onSave, quotes, personas }){
   }
   function agendaTexto(){
     var grupos=diasConActs();
-    var t='🗓 Agenda ('+periodoLabel()+') — ELECTRO BC\n';
+    var t='*Agenda ('+periodoLabel()+') — ELECTRO BC*\n';
     if(!grupos.length) return t+'\nSin actividades en el período.';
     grupos.forEach(function(g){
-      t+='\n📅 '+fmtFecha(ymd(g.d))+':';
+      t+='\n*'+fmtFecha(ymd(g.d))+'*';
       g.acts.forEach(function(a){
         var est=EST_ACT[a.estado]||EST_ACT.por_planificar;
         var per=(a.equipo||[]).map(persLabel).join(', ');
@@ -6431,11 +6431,11 @@ function PlanificacionView({ actividades, onSave, quotes, personas }){
         var q=a.quoteId?quoteById(a.quoteId):null;
         var dir=q?[q.cliente&&q.cliente.calle,q.cliente&&q.cliente.numero,q.cliente&&q.cliente.depto].filter(Boolean).join(' '):'';
         var hr=horaRango(a, ymd(g.d));
-        t+='\n  '+colorEmoji(a.color)+' '+(hr?(hr+' · '):'')+tituloDe(a)+' — '+est.label;
-        var l2=[]; if(per) l2.push('👥 '+per); if(parseFloat(a.horasEst)>0) l2.push('⏱ '+a.horasEst+'h est.'); l2.push('📆 '+(dur===1?'1 día':dur+' días'));
-        t+='\n     '+l2.join(' · ');
-        var l3=[]; if(q) l3.push('🧾 Presup. #'+(q.numero||'')); if(dir) l3.push('📍 '+dir);
-        if(l3.length) t+='\n     '+l3.join(' · ');
+        t+='\n• '+(hr?(hr+' · '):'')+tituloDe(a)+' ['+est.label+']';
+        var l2=[]; if(per) l2.push(per); if(parseFloat(a.horasEst)>0) l2.push(a.horasEst+'h est.'); l2.push(dur===1?'1 día':dur+' días');
+        t+='\n   '+l2.join(' · ');
+        var l3=[]; if(q) l3.push('Presup. #'+(q.numero||'')); if(dir) l3.push(dir);
+        if(l3.length) t+='\n   '+l3.join(' · ');
       });
       t+='\n';
     });
@@ -6711,7 +6711,7 @@ function ActividadEditor({ act, onChange, onSave, onDelete, onClose, quotesAcept
         var per = (act.equipo||[]).map(function(id){ var p=(personas||[]).find(function(x){return x.id===id;}); return p?p.nombre:''; }).filter(Boolean).join(', ');
         var det = 'Estado: '+est.label+(per?('\nEquipo: '+per):'')+(parseFloat(act.horasEst)>0?('\nHoras estimadas: '+act.horasEst):'')+(q?('\nPresupuesto #'+(q.numero||'')):'')+(act.notas&&act.notas.trim()?('\n'+act.notas.trim()):'');
         var loc = q?[q.cliente&&q.cliente.calle,q.cliente&&q.cliente.numero,'La Plata'].filter(Boolean).join(' '):'';
-        var url = 'https://calendar.google.com/calendar/render?action=TEMPLATE&text='+encodeURIComponent(colorEmoji(act.color)+' '+titulo)+'&dates='+compact(dias[0])+'/'+compact(nextDay(dias[dias.length-1]))+'&details='+encodeURIComponent(det)+(loc?('&location='+encodeURIComponent(loc)):'');
+        var url = 'https://calendar.google.com/calendar/render?action=TEMPLATE&text='+encodeURIComponent(titulo)+'&dates='+compact(dias[0])+'/'+compact(nextDay(dias[dias.length-1]))+'&details='+encodeURIComponent(det)+(loc?('&location='+encodeURIComponent(loc)):'');
         return React.createElement('div',{style:{marginBottom:12}},
           React.createElement('a',{href:url,target:'_blank',rel:'noopener',style:{display:'inline-flex',alignItems:'center',gap:6,fontSize:12,fontWeight:600,color:'#1D4ED8',background:'#EFF6FF',border:'1px solid #BFDBFE',borderRadius:8,padding:'8px 12px',textDecoration:'none'}}, '📅 Agregar a Google Calendar')
         );
