@@ -796,6 +796,13 @@ const EST_ACT = {
   hecho:          { label: 'Hecho',          color: '#166534', bg: '#F0FDF4', dot: '#22C55E' }
 };
 const EST_ORDER = ['por_planificar','programado','materiales','hecho'];
+// Color por tipo de cliente (para actividades vinculadas a presupuesto)
+const COLOR_POR_TIPO = { particular:'#16A34A', admin:'#2563EB', empresa:'#9333EA', licitacion:'#CA8A04' };
+// Cuadradito de color para reflejar el color en Google Calendar / WhatsApp (que no soportan color real)
+function colorEmoji(c){
+  var m = {'#F26B1D':'🟧','#2563EB':'🟦','#16A34A':'🟩','#9333EA':'🟪','#DC2626':'🟥','#0891B2':'🟦','#CA8A04':'🟨','#DB2777':'🟪','#475569':'⬛'};
+  return m[c] || '🟧';
+}
 const mkActividad = () => ({
   id: uid(), quoteId: null, titulo: '', fecha: '',
   equipo: [], color: COLORS_ACT[0], estado: 'por_planificar',
@@ -4031,6 +4038,7 @@ function EsperaCountdown({
 // ── Tracker ───────────────────────────────────────────────────────────────────
 function Tracker({
   quotes,
+  actividades,
   onEdit,
   onSaveInline,
   onDelete,
@@ -4562,14 +4570,19 @@ function Tracker({
       var cobrado = cobradoARS + cobradoUSD;
       var pct = total > 0 ? Math.min(100, Math.round((cobrado/total)*100)) : 0;
       var color = pct >= 100 ? "#059669" : pct >= 50 ? "#2563EB" : "#F59E0B";
-      return /*#__PURE__*/React.createElement("div", {style:{display:"flex",flexDirection:"column",gap:3}},
-        /*#__PURE__*/React.createElement("div", {style:{height:6,backgroundColor:"#E2E8F0",borderRadius:3,overflow:"hidden"}},
-          /*#__PURE__*/React.createElement("div", {style:{width:pct+"%",height:"100%",backgroundColor:color,borderRadius:3,transition:"width 0.3s"}})
+      var actQ = (actividades||[]).find(function(a){ return a.quoteId===q.id; });
+      var ed = actQ ? (EST_ACT[actQ.estado]||EST_ACT.por_planificar) : null;
+      return /*#__PURE__*/React.createElement("div", {style:{display:"flex",flexDirection:"column",gap:4}},
+        /*#__PURE__*/React.createElement("div", {style:{display:"flex",flexDirection:"column",gap:3}},
+          /*#__PURE__*/React.createElement("div", {style:{height:6,backgroundColor:"#E2E8F0",borderRadius:3,overflow:"hidden"}},
+            /*#__PURE__*/React.createElement("div", {style:{width:pct+"%",height:"100%",backgroundColor:color,borderRadius:3,transition:"width 0.3s"}})
+          ),
+          /*#__PURE__*/React.createElement("div", {style:{display:"flex",justifyContent:"space-between",gap:6}},
+            /*#__PURE__*/React.createElement("span", {style:{fontSize:9,color:color,fontWeight:700,whiteSpace:"nowrap"}}, pct+"% cobrado"),
+            /*#__PURE__*/React.createElement("span", {style:{fontSize:9,color:"#94A3B8",whiteSpace:"nowrap"}}, "Resta $"+Math.max(0,total-cobrado).toLocaleString("es-AR",{maximumFractionDigits:0}))
+          )
         ),
-        /*#__PURE__*/React.createElement("div", {style:{display:"flex",justifyContent:"space-between",gap:6}},
-          /*#__PURE__*/React.createElement("span", {style:{fontSize:9,color:color,fontWeight:700,whiteSpace:"nowrap"}}, pct+"% cobrado"),
-          /*#__PURE__*/React.createElement("span", {style:{fontSize:9,color:"#94A3B8",whiteSpace:"nowrap"}}, "Resta $"+Math.max(0,total-cobrado).toLocaleString("es-AR",{maximumFractionDigits:0}))
-        )
+        /*#__PURE__*/React.createElement("span", {style:{fontSize:9,fontWeight:700,padding:"3px 8px",borderRadius:6,whiteSpace:"nowrap",textAlign:"center",color: ed?ed.color:"#B91C1C", backgroundColor: ed?ed.bg:"#FEF2F2", border:"1px solid "+(ed?ed.dot:"#FCA5A5")}}, ed?("🗓 "+ed.label):"⚠ Sin planificar")
       );
     })()), /*#__PURE__*/React.createElement("td", {style:{padding:"10px 10px",textAlign:"center"}}, /*#__PURE__*/React.createElement("span",{style:{fontSize:10,fontWeight:700,color:"#475569",backgroundColor:"#F1F5F9",padding:"2px 8px",borderRadius:20,whiteSpace:"nowrap"}}, ebcUserLabel(q.autor||"guille"))), /*#__PURE__*/React.createElement("td", {
       style: {
@@ -6260,7 +6273,7 @@ function PlanificacionView({ actividades, onSave, quotes, personas }){
     setEditing(null);
   }
   function delAct(id){ if(!confirm('¿Eliminar esta actividad?')) return; onSave(list.filter(function(x){return x.id!==id;})); setEditing(null); }
-  function nueva(fecha){ var a=mkActividad(); if(fecha) a.fecha=fecha; setEditing(a); }
+  function nueva(fecha){ var a=mkActividad(); a.fecha = fecha || ymd(new Date()); a.color = COLORS_ACT[list.length % COLORS_ACT.length]; setEditing(a); }
 
   // ── Chip de actividad ──
   function resumenDe(a){
@@ -6364,7 +6377,7 @@ function PlanificacionView({ actividades, onSave, quotes, personas }){
         var dur=diasDe(a).length;
         var q=a.quoteId?quoteById(a.quoteId):null;
         var dir=q?[q.cliente&&q.cliente.calle,q.cliente&&q.cliente.numero,q.cliente&&q.cliente.depto].filter(Boolean).join(' '):'';
-        t+='\n  • '+tituloDe(a)+' — '+est.label;
+        t+='\n  '+colorEmoji(a.color)+' '+tituloDe(a)+' — '+est.label;
         var l2=[]; if(per) l2.push('👥 '+per); if(parseFloat(a.horasEst)>0) l2.push('⏱ '+a.horasEst+'h est.'); l2.push('📆 '+(dur===1?'1 día':dur+' días'));
         t+='\n     '+l2.join(' · ');
         var l3=[]; if(q) l3.push('🧾 Presup. #'+(q.numero||'')); if(dir) l3.push('📍 '+dir);
@@ -6476,7 +6489,7 @@ function ActividadEditor({ act, onChange, onSave, onDelete, onClose, quotesAcept
       // Presupuesto vinculado
       React.createElement('div',{style:{marginBottom:12}},
         lbl('Presupuesto (opcional)'),
-        React.createElement('select',{value:act.quoteId||'',onChange:function(e){ upd('quoteId', e.target.value||null); },style:inp},
+        React.createElement('select',{value:act.quoteId||'',onChange:function(e){ var qid=e.target.value||null; var patch={quoteId:qid}; if(qid && !act.colorManual){ var qq=(quotesAceptados||[]).find(function(x){return x.id===qid;}); var tp=qq&&qq.cliente&&qq.cliente.tipo; if(COLOR_POR_TIPO[tp]) patch.color=COLOR_POR_TIPO[tp]; } upd(patch); },style:inp},
           React.createElement('option',{value:''},'— Actividad suelta (sin presupuesto) —'),
           (quotesAceptados||[]).map(function(qq){ var dir=[qq.cliente&&qq.cliente.calle,qq.cliente&&qq.cliente.numero].filter(Boolean).join(' '); return React.createElement('option',{key:qq.id,value:qq.id}, '#'+(qq.numero||'')+' · '+((qq.cliente&&qq.cliente.nombre)||'')+(dir?(' · '+dir):'')); })
         )
@@ -6499,7 +6512,7 @@ function ActividadEditor({ act, onChange, onSave, onDelete, onClose, quotesAcept
       // Color
       React.createElement('div',{style:{marginBottom:12}},
         lbl('Color'),
-        React.createElement('div',{style:{display:'flex',gap:7,flexWrap:'wrap'}}, COLORS_ACT.map(function(c){ var on=act.color===c; return React.createElement('button',{key:c,type:'button',onClick:function(){upd('color',c);},style:{width:26,height:26,borderRadius:'50%',background:c,cursor:'pointer',border:on?'3px solid '+NAVY:'2px solid #fff',boxShadow:'0 0 0 1px #E2E8F0'}}); }))
+        React.createElement('div',{style:{display:'flex',gap:7,flexWrap:'wrap'}}, COLORS_ACT.map(function(c){ var on=act.color===c; return React.createElement('button',{key:c,type:'button',onClick:function(){upd({color:c,colorManual:true});},style:{width:26,height:26,borderRadius:'50%',background:c,cursor:'pointer',border:on?'3px solid '+NAVY:'2px solid #fff',boxShadow:'0 0 0 1px #E2E8F0'}}); }))
       ),
       // Estado (4 en fila)
       React.createElement('div',{style:{marginBottom:12}},
@@ -6545,7 +6558,7 @@ function ActividadEditor({ act, onChange, onSave, onDelete, onClose, quotesAcept
         var per = (act.equipo||[]).map(function(id){ var p=(personas||[]).find(function(x){return x.id===id;}); return p?p.nombre:''; }).filter(Boolean).join(', ');
         var det = 'Estado: '+est.label+(per?('\nEquipo: '+per):'')+(parseFloat(act.horasEst)>0?('\nHoras estimadas: '+act.horasEst):'')+(q?('\nPresupuesto #'+(q.numero||'')):'')+(act.notas&&act.notas.trim()?('\n'+act.notas.trim()):'');
         var loc = q?[q.cliente&&q.cliente.calle,q.cliente&&q.cliente.numero,'La Plata'].filter(Boolean).join(' '):'';
-        var url = 'https://calendar.google.com/calendar/render?action=TEMPLATE&text='+encodeURIComponent(titulo)+'&dates='+compact(dias[0])+'/'+compact(nextDay(dias[dias.length-1]))+'&details='+encodeURIComponent(det)+(loc?('&location='+encodeURIComponent(loc)):'');
+        var url = 'https://calendar.google.com/calendar/render?action=TEMPLATE&text='+encodeURIComponent(colorEmoji(act.color)+' '+titulo)+'&dates='+compact(dias[0])+'/'+compact(nextDay(dias[dias.length-1]))+'&details='+encodeURIComponent(det)+(loc?('&location='+encodeURIComponent(loc)):'');
         return React.createElement('div',{style:{marginBottom:12}},
           React.createElement('a',{href:url,target:'_blank',rel:'noopener',style:{display:'inline-flex',alignItems:'center',gap:6,fontSize:12,fontWeight:600,color:'#1D4ED8',background:'#EFF6FF',border:'1px solid #BFDBFE',borderRadius:8,padding:'8px 12px',textDecoration:'none'}}, '📅 Agregar a Google Calendar')
         );
@@ -7042,6 +7055,7 @@ function App() {
     })
   }), view === "tracker" && /*#__PURE__*/React.createElement(Tracker, {
     quotes: quotes,
+    actividades: actividades,
     onEdit: handleEdit,
     onSaveInline: handleSaveInline,
     onDelete: handleDelete,
