@@ -6229,6 +6229,14 @@ function PlanificacionView({ actividades, onSave, quotes, personas }){
   const sinFecha = list.filter(function(a){ return !a.fecha; });
 
   function saveAct(a){
+    // Campos obligatorios
+    var falta=[];
+    var tieneTitulo = (a.titulo&&a.titulo.trim()) || a.quoteId;
+    if(!tieneTitulo) falta.push('Nombre de la tarea');
+    if(!a.fecha) falta.push('Fecha de inicio');
+    if(!(a.equipo&&a.equipo.length)) falta.push('Quién lo hace (al menos una persona)');
+    if(!(parseFloat(a.horasEst)>0)) falta.push('Horas estimadas');
+    if(falta.length){ alert('Para guardar la actividad completá:\n\n• '+falta.join('\n• ')); return; }
     // Aviso si se superponen personas con otra actividad en los mismos días
     var diasA = diasCubiertosAct(a);
     if((a.equipo&&a.equipo.length) && diasA.length){
@@ -6454,7 +6462,7 @@ function PlanificacionView({ actividades, onSave, quotes, personas }){
 function ActividadEditor({ act, onChange, onSave, onDelete, onClose, quotesAceptados, quoteById, personas }){
   const upd = function(f,v){ onChange(Object.assign({}, act, typeof f==='object'?f:{[f]:v})); };
   const inp = {border:'1px solid #E2E8F0',borderRadius:6,padding:'8px 10px',fontSize:13,width:'100%',boxSizing:'border-box',background:'#fff'};
-  const lbl = function(t){ return React.createElement('div',{style:{fontSize:10,color:'#94A3B8',fontWeight:700,marginBottom:4,textTransform:'uppercase'}}, t); };
+  const lbl = function(t, req){ return React.createElement('div',{style:{fontSize:10,color:'#94A3B8',fontWeight:700,marginBottom:4,textTransform:'uppercase'}}, t, req?React.createElement('span',{style:{color:'#DC2626'}},' *'):null); };
   const q = act.quoteId ? quoteById(act.quoteId) : null;
   const mats = q ? (q.mat||[]).filter(function(m){return (m.desc&&m.desc.trim())||m.pu;}) : [];
   const toggleP = function(id){ var e=(act.equipo||[]).slice(); var i=e.indexOf(id); if(i>=0) e.splice(i,1); else e.push(id); upd('equipo',e); };
@@ -6475,16 +6483,16 @@ function ActividadEditor({ act, onChange, onSave, onDelete, onClose, quotesAcept
       ),
       // Título (si suelta)
       React.createElement('div',{style:{marginBottom:12}},
-        lbl(q?'Título (opcional, si no querés el del presupuesto)':'Título de la tarea'),
+        lbl(q?'Título (opcional, si no querés el del presupuesto)':'Nombre de la tarea', !q),
         React.createElement('input',{type:'text',value:act.titulo||'',spellCheck:true,onChange:function(e){upd('titulo',e.target.value);},onBlur:function(e){var v=e.target.value;if(v){var c=capitalize(v);if(c!==v)upd('titulo',c);}},placeholder:q?((q.cliente&&q.cliente.nombre)||'Presupuesto'):'Ej: Emergencia cambio de térmica',style:inp})
       ),
       // Fecha / Hora
       React.createElement('div',{style:{marginBottom:12}},
-        lbl('Fecha de inicio (opcional)'), React.createElement('input',{type:'date',value:act.fecha||'',onChange:function(e){upd('fecha',e.target.value);},style:inp})
+        lbl('Fecha de inicio', true), React.createElement('input',{type:'date',value:act.fecha||'',onChange:function(e){upd('fecha',e.target.value);},style:inp})
       ),
       // Equipo
       React.createElement('div',{style:{marginBottom:12}},
-        lbl('Quién lo hace'),
+        lbl('Quién lo hace', true),
         activas.length===0? React.createElement('div',{style:{fontSize:11,color:'#B45309'}},'No hay personas activas. Cargalas en "Personal".') :
         React.createElement('div',{style:{display:'flex',gap:6,flexWrap:'wrap'}}, activas.map(function(p){ var on=(act.equipo||[]).indexOf(p.id)>=0; return React.createElement('button',{key:p.id,type:'button',onClick:function(){toggleP(p.id);},style:{padding:'6px 11px',borderRadius:20,fontSize:12,fontWeight:on?700:500,cursor:'pointer',border:'1.5px solid '+(on?NAVY:'#E2E8F0'),background:on?NAVY:'#fff',color:on?'#fff':'#475569'}}, (on?'✓ ':'')+(p.nombre||'—')); }))
       ),
@@ -6506,7 +6514,7 @@ function ActividadEditor({ act, onChange, onSave, onDelete, onClose, quotesAcept
       ) : null,
       // Horas + cronograma automático
       React.createElement('div',{style:{display:'flex',gap:10,marginBottom:8,flexWrap:'wrap'}},
-        React.createElement('div',{style:{flex:'1 1 110px'}}, lbl('Horas estimadas'), React.createElement('input',{type:'number',min:'0',step:'0.5',value:act.horasEst||'',placeholder:'—',onChange:function(e){upd('horasEst',e.target.value);},style:inp})),
+        React.createElement('div',{style:{flex:'1 1 110px'}}, lbl('Horas estimadas', true), React.createElement('input',{type:'number',min:'0',step:'0.5',value:act.horasEst||'',placeholder:'—',onChange:function(e){upd('horasEst',e.target.value);},style:inp})),
         React.createElement('div',{style:{flex:'1 1 100px'}}, lbl('Horas por día'), React.createElement('input',{type:'number',min:'1',step:'0.5',value:act.horasPorDia||'',placeholder:'8',onChange:function(e){upd('horasPorDia',e.target.value);},style:inp})),
         React.createElement('div',{style:{flex:'1 1 110px'}}, lbl('Horas reales (al finalizar)'), React.createElement('input',{type:'number',min:'0',step:'0.5',value:act.horasReal||'',disabled:act.estado!=='hecho',placeholder:act.estado==='hecho'?'—':'marcá "Hecho"',onChange:function(e){upd('horasReal',e.target.value);},style:Object.assign({},inp, act.estado!=='hecho'?{background:'#F1F5F9',color:'#94A3B8',cursor:'not-allowed'}:{})}))
       ),
