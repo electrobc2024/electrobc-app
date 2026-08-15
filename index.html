@@ -7061,14 +7061,14 @@ function App() {
     {id:"clients", label:"👤 Clientes"},
     {id:"catMdo",  label:"👷 Mano de Obra"},
     {id:"catMat",  label:"📦 Materiales"},
-    {id:"tracker", label:"📈 Seguimiento de Presupuestos"},
+    {id:"tracker", label:"📈 Seguimiento"},
     {id:"planificacion", label:"🗓 Planificación"},
   ];
   const navFin = [
     {id:"personal",    label:"🧑‍🔧 Personal"},
     {id:"movimientos", label:"💱 Ingresos / Egresos"},
     {id:"dashboard",   label:"📊 Dashboard"},
-    {id:"backups",     label:"💾 Copias de Seguridad"},
+    {id:"backups",     label:"💾 Copias"},
   ];
   const nav = [...navMain, ...navFin];
   return /*#__PURE__*/React.createElement("div", {
@@ -7133,7 +7133,7 @@ function App() {
         key:item.id,
         onClick:function(){setView(item.id);},
         style:{
-          display:"flex",alignItems:"center",padding:"0 9px",
+          display:"flex",alignItems:"center",padding:"0 8px",
           background:"none",border:"none",fontSize:12,
           fontWeight:a?700:400,
           color:a?"#fff":fin?"rgba(255,210,100,0.8)":"rgba(255,255,255,0.45)",
