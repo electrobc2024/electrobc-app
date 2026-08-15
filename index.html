@@ -8660,7 +8660,7 @@ function PortalView({ token }){
       [['Presupuestos aceptados', mine.filter(function(q){return q.status==='aceptado';}).length, NAVY],
        ['Total facturado','$ '+Math.round(totFact).toLocaleString('es-AR'),'#0369A1'],
        ['Cobrado','$ '+Math.round(totCob).toLocaleString('es-AR'),'#166534'],
-       ['Saldo / deuda','$ '+Math.round(deuda).toLocaleString('es-AR'), deuda>0?'#B91C1C':'#166534']
+       ['Pendiente de cobro','$ '+Math.round(deuda).toLocaleString('es-AR'), deuda>0?'#B91C1C':'#166534']
       ].map(function(k){ return React.createElement('div',{key:k[0],style:{background:'#fff',border:'1px solid #E2E8F0',borderRadius:10,padding:'10px 14px',flex:'1 1 160px'}}, React.createElement('div',{style:{fontSize:10,color:'#94A3B8',fontWeight:700,textTransform:'uppercase'}},k[0]), React.createElement('div',{style:{fontSize:19,fontWeight:700,color:k[2],fontFamily:"'Oswald',system-ui"}},k[1])); })
     ),
     // tabla
@@ -8674,8 +8674,7 @@ function PortalView({ token }){
               React.createElement('th',{style:thS},'Dirección'),
               React.createElement('th',{style:thS},'Estado'),
               React.createElement('th',{style:Object.assign({},thS,{textAlign:'right'})},'Total'),
-              React.createElement('th',{style:Object.assign({},thS,{textAlign:'right'})},'Cobrado'),
-              React.createElement('th',{style:Object.assign({},thS,{textAlign:'right'})},'Saldo'),
+              React.createElement('th',{style:Object.assign({},thS,{minWidth:150})},'Progreso de pago'),
               React.createElement('th',{style:thS},'Trabajo')
             )),
             React.createElement('tbody',null, visibles.map(function(q){
@@ -8687,8 +8686,7 @@ function PortalView({ token }){
                 React.createElement('td',{style:tdS}, [q.cliente&&q.cliente.calle,q.cliente&&q.cliente.numero,q.cliente&&q.cliente.depto?('Dto '+q.cliente.depto):''].filter(Boolean).join(' ')||'—'),
                 React.createElement('td',{style:tdS}, React.createElement('span',{style:{fontSize:10,fontWeight:700,padding:'2px 8px',borderRadius:20,color:st.fg,background:st.bg,border:'1px solid '+st.br}}, st.label)),
                 React.createElement('td',{style:Object.assign({},tdS,{textAlign:'right',fontWeight:700,color:NAVY})}, '$ '+Math.round(t).toLocaleString('es-AR')),
-                React.createElement('td',{style:Object.assign({},tdS,{textAlign:'right',color:'#166534'})}, '$ '+Math.round(c).toLocaleString('es-AR')),
-                React.createElement('td',{style:Object.assign({},tdS,{textAlign:'right',fontWeight:700,color:saldo>0?'#B91C1C':'#166534'})}, '$ '+Math.round(saldo).toLocaleString('es-AR')),
+                React.createElement('td',{style:tdS}, (function(){ if(q.status!=='aceptado' || t<=0) return React.createElement('span',{style:{color:'#CBD5E1'}},'—'); var pct=Math.min(100,Math.round(c/t*100)); var col=pct>=100?'#059669':pct>=50?'#2563EB':'#F59E0B'; return React.createElement('div',{style:{minWidth:140}}, React.createElement('div',{style:{height:6,background:'#E2E8F0',borderRadius:3,overflow:'hidden'}}, React.createElement('div',{style:{width:pct+'%',height:'100%',background:col,borderRadius:3}})), React.createElement('div',{style:{display:'flex',justifyContent:'space-between',gap:6,marginTop:2}}, React.createElement('span',{style:{fontSize:9,fontWeight:700,color:col}}, pct+'% cobrado'), React.createElement('span',{style:{fontSize:9,color:'#94A3B8'}}, 'Resta $'+Math.round(saldo).toLocaleString('es-AR')))); })()),
                 React.createElement('td',{style:tdS}, ea? React.createElement('span',{style:{fontSize:10,fontWeight:700,padding:'2px 8px',borderRadius:20,color:ea.color,background:ea.bg,border:'1px solid '+ea.dot}}, ea.label) : React.createElement('span',{style:{color:'#CBD5E1'}},'—'))
               );
             }))
