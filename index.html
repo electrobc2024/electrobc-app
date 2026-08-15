@@ -2417,6 +2417,14 @@ function ClientesView({
   const [inlineForm, setInlineForm] = useState({});
   const [errs, setErrs] = useState([]);
   const [expandCl, setExpandCl] = useState(null);
+  const [showLinks, setShowLinks] = useState(false);
+  const [portMap, setPortMap] = useState(null);
+  const abrirLinks = () => { setShowLinks(true); (async()=>{ try{ var r=await db.get('ebc-portales-v1'); setPortMap(r?JSON.parse(r.value):{}); }catch(e){ setPortMap({}); } })(); };
+  const guardarPortMap = async (m) => { setPortMap(m); try{ await db.set('ebc-portales-v1', JSON.stringify(m)); }catch(e){} };
+  const linkDeAdmin = (m, adm) => { for(var t in m){ if(m[t]===adm) return t; } return null; };
+  const genLink = (adm) => { var m=Object.assign({},portMap||{}); var tok=linkDeAdmin(m,adm); if(!tok){ tok=Math.random().toString(36).slice(2,8)+Math.random().toString(36).slice(2,6); m[tok]=adm; guardarPortMap(m); } return tok; };
+  const regenLink = (adm) => { var m=Object.assign({},portMap||{}); Object.keys(m).forEach(function(t){ if(m[t]===adm) delete m[t]; }); var tok=Math.random().toString(36).slice(2,8)+Math.random().toString(36).slice(2,6); m[tok]=adm; guardarPortMap(m); };
+  const portalUrl = (tok) => (typeof window!=='undefined'?window.location.origin:'')+'/?portal='+tok;
   const [sortCl, setSortCl] = useState("az");
   const [searchCl, setSearchCl] = useState(initialSearch);
   const [tipoFilter, setTipoFilter] = useState("todos");
@@ -2554,7 +2562,33 @@ function ClientesView({
       )
     );
   }
-  return /*#__PURE__*/React.createElement(Pane, null, /*#__PURE__*/React.createElement(PageHeader, { title: "👤 Clientes", subtitle: "Base de clientes con sus datos de contacto y administración." }), /*#__PURE__*/React.createElement("button", {
+  return /*#__PURE__*/React.createElement(Pane, null, /*#__PURE__*/React.createElement(PageHeader, { title: "👤 Clientes", subtitle: "Base de clientes con sus datos de contacto y administración.", right: /*#__PURE__*/React.createElement("button",{type:"button",onClick:abrirLinks,style:{background:"none",border:"1px solid #93C5FD",borderRadius:8,padding:"9px 14px",fontSize:12,fontWeight:600,cursor:"pointer",color:"#1D4ED8",whiteSpace:"nowrap",flexShrink:0}},"🔗 Links de administración") }),
+  showLinks && (function(){
+    var admins=[]; (clients||[]).forEach(function(c){ var a=(c.administracion||'').trim(); if(a && admins.indexOf(a)<0) admins.push(a); }); admins.sort(function(x,y){return x.localeCompare(y);});
+    return /*#__PURE__*/React.createElement("div",{onMouseDown:function(){setShowLinks(false);},style:{position:"fixed",inset:0,zIndex:10000,background:"rgba(0,0,0,0.5)",display:"flex",alignItems:"flex-start",justifyContent:"center",padding:"40px 16px",overflowY:"auto"}},
+      /*#__PURE__*/React.createElement("div",{onMouseDown:function(e){e.stopPropagation();},style:{background:"#fff",borderRadius:14,width:640,maxWidth:"100%",padding:20,boxShadow:"0 10px 40px rgba(0,0,0,0.25)"}},
+        /*#__PURE__*/React.createElement("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}},
+          /*#__PURE__*/React.createElement("div",{style:{fontFamily:"'Oswald',system-ui",fontSize:18,fontWeight:700,color:NAVY}},"🔗 Links de seguimiento por administración"),
+          /*#__PURE__*/React.createElement("button",{type:"button",onClick:function(){setShowLinks(false);},style:{background:"none",border:"none",fontSize:18,color:"#94A3B8",cursor:"pointer"}},"✕")
+        ),
+        /*#__PURE__*/React.createElement("div",{style:{fontSize:11,color:"#94A3B8",marginBottom:14}},"Cada link muestra, en modo solo lectura, todos los presupuestos de esa administración con su estado, total, cobrado, saldo y el PDF de cada uno. Se actualiza en tiempo real. Podés regenerarlo para dar de baja el anterior."),
+        portMap===null ? /*#__PURE__*/React.createElement("div",{style:{color:"#94A3B8",fontSize:13,padding:"20px 0",textAlign:"center"}},"Cargando…") :
+        admins.length===0 ? /*#__PURE__*/React.createElement("div",{style:{color:"#94A3B8",fontSize:13,padding:"20px 0",textAlign:"center"}},"No hay administraciones cargadas en los clientes.") :
+        /*#__PURE__*/React.createElement("div",{style:{display:"flex",flexDirection:"column",gap:8}}, admins.map(function(adm){
+          var tok=linkDeAdmin(portMap,adm); var url=tok?portalUrl(tok):null;
+          return /*#__PURE__*/React.createElement("div",{key:adm,style:{border:"1px solid #E2E8F0",borderRadius:10,padding:"10px 12px"}},
+            /*#__PURE__*/React.createElement("div",{style:{fontWeight:700,color:NAVY,fontSize:13,marginBottom:6}}, adm),
+            url ? /*#__PURE__*/React.createElement("div",{style:{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}},
+              /*#__PURE__*/React.createElement("input",{readOnly:true,value:url,onFocus:function(e){e.target.select();},style:{flex:"1 1 240px",border:"1px solid #E2E8F0",borderRadius:6,padding:"6px 9px",fontSize:11,color:"#475569",background:"#F8FAFC"}}),
+              /*#__PURE__*/React.createElement("button",{type:"button",onClick:function(){ try{ navigator.clipboard.writeText(url); alert("Link copiado."); }catch(e){ prompt("Copiá el link:",url); } },style:{background:ORANGE,border:"none",borderRadius:6,padding:"6px 12px",fontSize:12,fontWeight:700,color:"#fff",cursor:"pointer"}},"📋 Copiar"),
+              /*#__PURE__*/React.createElement("button",{type:"button",onClick:function(){ window.open(url,"_blank"); },style:{background:"none",border:"1px solid #E2E8F0",borderRadius:6,padding:"6px 12px",fontSize:12,color:"#475569",cursor:"pointer"}},"Abrir"),
+              /*#__PURE__*/React.createElement("button",{type:"button",onClick:function(){ if(confirm("¿Regenerar el link de "+adm+"? El link anterior dejará de funcionar.")) regenLink(adm); },style:{background:"none",border:"1px solid #E2E8F0",borderRadius:6,padding:"6px 12px",fontSize:12,color:"#B45309",cursor:"pointer"}},"↻ Regenerar")
+            ) : /*#__PURE__*/React.createElement("button",{type:"button",onClick:function(){ genLink(adm); },style:{background:"none",border:"1px dashed "+ORANGE,borderRadius:6,padding:"6px 12px",fontSize:12,color:ORANGE,fontWeight:600,cursor:"pointer"}},"Generar link")
+          );
+        }))
+      )
+    );
+  })(), /*#__PURE__*/React.createElement("button", {
     onClick: function(){ setShowForm(function(v){return !v;}); },
     onMouseDown: function(e){ e.preventDefault(); },
     style: {
@@ -8556,7 +8590,97 @@ function LoginScreen({onLogin}){
     )
   );
 }
+const PORTKEY = 'ebc-portales-v1';
+function PortalView({ token }){
+  const [ld,setLd]=React.useState(true);
+  const [admin,setAdmin]=React.useState(null);
+  const [quotes,setQuotes]=React.useState([]);
+  const [acts,setActs]=React.useState([]);
+  const [err,setErr]=React.useState(null);
+  const [pdfQuote,setPdfQuote]=React.useState(null);
+  React.useEffect(function(){
+    (async function(){
+      try{
+        var r=await db.get(PORTKEY); var map=r?JSON.parse(r.value):{};
+        var adm=map[token];
+        if(!adm){ setErr('Este link no es válido o fue dado de baja.'); setLd(false); return; }
+        var qs=await loadQ().catch(function(){return [];});
+        var ac=await loadActividades().catch(function(){return [];});
+        setAdmin(adm); setQuotes(Array.isArray(qs)?qs:[]); setActs(Array.isArray(ac)?ac:[]); setLd(false);
+      }catch(e){ setErr('No se pudo cargar la información.'); setLd(false); }
+    })();
+  },[token]);
+  const wrap = function(children){ return React.createElement('div',{style:{minHeight:'100vh',background:'#EEF0F5'}},
+    React.createElement('div',{style:{background:NAVY,borderBottom:'3px solid '+ORANGE,padding:'14px 20px',display:'flex',alignItems:'center',gap:12}},
+      React.createElement(LogoIcon,{size:30}),
+      React.createElement('div',null,
+        React.createElement('div',{style:{fontFamily:"'Oswald',system-ui",fontSize:18,fontWeight:700,color:'#fff',lineHeight:1}},'ELECTRO BC'),
+        React.createElement('div',{style:{fontSize:9,color:'#fff',letterSpacing:'0.2em',opacity:0.85}},'SERVICIOS INTEGRALES')
+      ),
+      React.createElement('div',{style:{marginLeft:'auto',fontSize:11,color:'rgba(255,255,255,0.6)'}},'Seguimiento · solo lectura')
+    ),
+    React.createElement('div',{style:{maxWidth:1000,margin:'0 auto',padding:'20px 16px'}}, children)
+  ); };
+  if(ld) return wrap(React.createElement('div',{style:{textAlign:'center',color:'#94A3B8',padding:'60px 0',fontSize:14}},'Cargando…'));
+  if(err) return wrap(React.createElement('div',{style:{background:'#fff',border:'1px solid #FECACA',borderRadius:12,padding:'40px',textAlign:'center',color:'#B91C1C',fontSize:15,fontWeight:600}}, '⚠ '+err));
+
+  var mine=quotes.filter(function(q){ return (q.cliente&&q.cliente.administracion)===admin; }).sort(function(a,b){ return String(b.numero||'').localeCompare(String(a.numero||'')); });
+  function cobradoDe(q){ return (q.pagos||[]).reduce(function(s,p){ var m=parseFloat(p.monto||0); if(p.moneda==='USD') m=m*(parseFloat(p.tcambio)||0); return s+m; },0); }
+  var totFact=0, totCob=0, deuda=0;
+  mine.forEach(function(q){ if(q.status==='aceptado'){ var t=calcSub(q.mdo)+calcSub(q.mat); var c=cobradoDe(q); totFact+=t; totCob+=c; deuda+=Math.max(0,t-c); } });
+  var estAct=function(q){ var a=(acts||[]).filter(function(x){return x.quoteId===q.id;}); if(!a.length) return null; var allH=a.every(function(x){return x.estado==='hecho';}); if(allH) return EST_ACT.hecho; var nh=a.filter(function(x){return x.estado!=='hecho';}); var mk=nh.reduce(function(m,x){return EST_ORDER.indexOf(x.estado)<EST_ORDER.indexOf(m)?x.estado:m;},'hecho'); return EST_ACT[mk]||EST_ACT.programado; };
+  var thS={padding:'8px 10px',fontSize:10,fontWeight:700,color:'#94A3B8',textTransform:'uppercase',textAlign:'left',borderBottom:'1px solid #E2E8F0',whiteSpace:'nowrap'};
+  var tdS={padding:'9px 10px',fontSize:12,color:'#475569',borderBottom:'1px solid #F1F5F9',whiteSpace:'nowrap'};
+
+  return wrap(React.createElement('div',null,
+    React.createElement('div',{style:{fontFamily:"'Oswald',system-ui",fontSize:22,fontWeight:700,color:NAVY,marginBottom:2}}, admin),
+    React.createElement('div',{style:{fontSize:13,color:'#64748B',marginBottom:16}},'Seguimiento de presupuestos y estado de cuenta en tiempo real.'),
+    // resumen
+    React.createElement('div',{style:{display:'flex',gap:10,flexWrap:'wrap',marginBottom:16}},
+      [['Presupuestos aceptados', mine.filter(function(q){return q.status==='aceptado';}).length, NAVY],
+       ['Total facturado','$ '+Math.round(totFact).toLocaleString('es-AR'),'#0369A1'],
+       ['Cobrado','$ '+Math.round(totCob).toLocaleString('es-AR'),'#166534'],
+       ['Saldo / deuda','$ '+Math.round(deuda).toLocaleString('es-AR'), deuda>0?'#B91C1C':'#166534']
+      ].map(function(k){ return React.createElement('div',{key:k[0],style:{background:'#fff',border:'1px solid #E2E8F0',borderRadius:10,padding:'10px 14px',flex:'1 1 160px'}}, React.createElement('div',{style:{fontSize:10,color:'#94A3B8',fontWeight:700,textTransform:'uppercase'}},k[0]), React.createElement('div',{style:{fontSize:19,fontWeight:700,color:k[2],fontFamily:"'Oswald',system-ui"}},k[1])); })
+    ),
+    // tabla
+    mine.length===0
+      ? React.createElement('div',{style:{background:'#fff',border:'1px solid #E2E8F0',borderRadius:12,padding:'40px',textAlign:'center',color:'#94A3B8'}},'Todavía no hay presupuestos para esta administración.')
+      : React.createElement('div',{style:{background:'#fff',border:'1px solid #E2E8F0',borderRadius:12,overflow:'hidden'}},
+          React.createElement('div',{style:{overflowX:'auto'}}, React.createElement('table',{style:{width:'100%',borderCollapse:'collapse',minWidth:720}},
+            React.createElement('thead',null,React.createElement('tr',{style:{background:'#F8FAFC'}},
+              React.createElement('th',{style:thS},'N°'),
+              React.createElement('th',{style:thS},'Fecha'),
+              React.createElement('th',{style:thS},'Dirección'),
+              React.createElement('th',{style:thS},'Estado'),
+              React.createElement('th',{style:Object.assign({},thS,{textAlign:'right'})},'Total'),
+              React.createElement('th',{style:Object.assign({},thS,{textAlign:'right'})},'Cobrado'),
+              React.createElement('th',{style:Object.assign({},thS,{textAlign:'right'})},'Saldo'),
+              React.createElement('th',{style:thS},'Trabajo')
+            )),
+            React.createElement('tbody',null, mine.map(function(q){
+              var t=calcSub(q.mdo)+calcSub(q.mat); var c=cobradoDe(q); var saldo=Math.max(0,t-c);
+              var st=STATUS_MAP[q.status]||STATUS_MAP.generado; var ea=estAct(q);
+              return React.createElement('tr',{key:q.id},
+                React.createElement('td',{style:tdS}, React.createElement('button',{type:'button',onClick:function(){setPdfQuote(q);},title:'Ver / descargar PDF',style:{background:'none',border:'none',color:ORANGE,fontWeight:700,cursor:'pointer',textDecoration:'underline',fontSize:12,padding:0}}, '#'+(q.numero||''))),
+                React.createElement('td',{style:tdS}, fmtFecha(q.fecha)),
+                React.createElement('td',{style:tdS}, [q.cliente&&q.cliente.calle,q.cliente&&q.cliente.numero,q.cliente&&q.cliente.depto?('Dto '+q.cliente.depto):''].filter(Boolean).join(' ')||'—'),
+                React.createElement('td',{style:tdS}, React.createElement('span',{style:{fontSize:10,fontWeight:700,padding:'2px 8px',borderRadius:20,color:st.fg,background:st.bg,border:'1px solid '+st.br}}, st.label)),
+                React.createElement('td',{style:Object.assign({},tdS,{textAlign:'right',fontWeight:700,color:NAVY})}, '$ '+Math.round(t).toLocaleString('es-AR')),
+                React.createElement('td',{style:Object.assign({},tdS,{textAlign:'right',color:'#166534'})}, '$ '+Math.round(c).toLocaleString('es-AR')),
+                React.createElement('td',{style:Object.assign({},tdS,{textAlign:'right',fontWeight:700,color:saldo>0?'#B91C1C':'#166534'})}, '$ '+Math.round(saldo).toLocaleString('es-AR')),
+                React.createElement('td',{style:tdS}, ea? React.createElement('span',{style:{fontSize:10,fontWeight:700,padding:'2px 8px',borderRadius:20,color:ea.color,background:ea.bg,border:'1px solid '+ea.dot}}, ea.label) : React.createElement('span',{style:{color:'#CBD5E1'}},'—'))
+              );
+            }))
+          ))
+        ),
+    React.createElement('div',{style:{fontSize:11,color:'#94A3B8',marginTop:14,textAlign:'center'}},'Este tablero es de solo lectura y se actualiza automáticamente. Tocá el N° de cada presupuesto para ver o descargar el PDF.'),
+    pdfQuote ? React.createElement(PdfOverlay,{ quote: pdfQuote, onClose:function(){ setPdfQuote(null); }, onMarkSent:function(){} }) : null
+  ));
+}
 function Root(){
+  var _portal = (function(){ try{ return new URLSearchParams(window.location.search).get('portal'); }catch(e){ return null; } })();
+  if(_portal) return React.createElement(PortalView,{ token: _portal });
   const [authed,setAuthed]=React.useState(!!sessionStorage.getItem('ebc-auth'));
   if(!authed) return React.createElement(LoginScreen,{onLogin:function(){setAuthed(true);}});
   return React.createElement(App,null);
