@@ -2564,16 +2564,16 @@ function ClientesView({
   }
   return /*#__PURE__*/React.createElement(Pane, null, /*#__PURE__*/React.createElement(PageHeader, { title: "👤 Clientes", subtitle: "Base de clientes con sus datos de contacto y administración.", right: /*#__PURE__*/React.createElement("button",{type:"button",onClick:abrirLinks,style:{background:"none",border:"1px solid #93C5FD",borderRadius:8,padding:"9px 14px",fontSize:12,fontWeight:600,cursor:"pointer",color:"#1D4ED8",whiteSpace:"nowrap",flexShrink:0}},"🔗 Links de administración") }),
   showLinks && (function(){
-    var admins=[]; (clients||[]).forEach(function(c){ var a=(c.administracion||'').trim(); if(a && admins.indexOf(a)<0) admins.push(a); }); admins.sort(function(x,y){return x.localeCompare(y);});
+    var admins=[]; (clients||[]).forEach(function(c){ var a=(c.administracion||'').trim() || (c.nombre||'').trim(); if(a && admins.indexOf(a)<0) admins.push(a); }); (quotes||[]).forEach(function(q){ var a=(q.cliente&&(q.cliente.administracion||q.cliente.nombre)||'').trim(); if(a && admins.indexOf(a)<0) admins.push(a); }); admins.sort(function(x,y){return x.localeCompare(y);});
     return /*#__PURE__*/React.createElement("div",{onMouseDown:function(){setShowLinks(false);},style:{position:"fixed",inset:0,zIndex:10000,background:"rgba(0,0,0,0.5)",display:"flex",alignItems:"flex-start",justifyContent:"center",padding:"40px 16px",overflowY:"auto"}},
       /*#__PURE__*/React.createElement("div",{onMouseDown:function(e){e.stopPropagation();},style:{background:"#fff",borderRadius:14,width:640,maxWidth:"100%",padding:20,boxShadow:"0 10px 40px rgba(0,0,0,0.25)"}},
         /*#__PURE__*/React.createElement("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}},
           /*#__PURE__*/React.createElement("div",{style:{fontFamily:"'Oswald',system-ui",fontSize:18,fontWeight:700,color:NAVY}},"🔗 Links de seguimiento por administración"),
           /*#__PURE__*/React.createElement("button",{type:"button",onClick:function(){setShowLinks(false);},style:{background:"none",border:"none",fontSize:18,color:"#94A3B8",cursor:"pointer"}},"✕")
         ),
-        /*#__PURE__*/React.createElement("div",{style:{fontSize:11,color:"#94A3B8",marginBottom:14}},"Cada link muestra, en modo solo lectura, todos los presupuestos de esa administración con su estado, total, cobrado, saldo y el PDF de cada uno. Se actualiza en tiempo real. Podés regenerarlo para dar de baja el anterior."),
+        /*#__PURE__*/React.createElement("div",{style:{fontSize:11,color:"#94A3B8",marginBottom:14}},"Cada link muestra, en modo solo lectura, todos los presupuestos de esa administración (o cliente) con su estado, total, cobrado, saldo y el PDF de cada uno. Se actualiza en tiempo real. Podés regenerarlo para dar de baja el anterior."),
         portMap===null ? /*#__PURE__*/React.createElement("div",{style:{color:"#94A3B8",fontSize:13,padding:"20px 0",textAlign:"center"}},"Cargando…") :
-        admins.length===0 ? /*#__PURE__*/React.createElement("div",{style:{color:"#94A3B8",fontSize:13,padding:"20px 0",textAlign:"center"}},"No hay administraciones cargadas en los clientes.") :
+        admins.length===0 ? /*#__PURE__*/React.createElement("div",{style:{color:"#94A3B8",fontSize:13,padding:"20px 0",textAlign:"center"}},"No hay clientes ni administraciones cargados.") :
         /*#__PURE__*/React.createElement("div",{style:{display:"flex",flexDirection:"column",gap:8}}, admins.map(function(adm){
           var tok=linkDeAdmin(portMap,adm); var url=tok?portalUrl(tok):null;
           return /*#__PURE__*/React.createElement("div",{key:adm,style:{border:"1px solid #E2E8F0",borderRadius:10,padding:"10px 12px"}},
@@ -8620,7 +8620,7 @@ function PortalView({ token }){
   if(ld) return wrap(React.createElement('div',{style:{textAlign:'center',color:'#94A3B8',padding:'60px 0',fontSize:14}},'Cargando…'));
   if(err) return wrap(React.createElement('div',{style:{background:'#fff',border:'1px solid #FECACA',borderRadius:12,padding:'40px',textAlign:'center',color:'#B91C1C',fontSize:15,fontWeight:600}}, '⚠ '+err));
 
-  var mine=quotes.filter(function(q){ return (q.cliente&&q.cliente.administracion)===admin; }).sort(function(a,b){ return String(b.numero||'').localeCompare(String(a.numero||'')); });
+  var mine=quotes.filter(function(q){ return (q.cliente&&(q.cliente.administracion||q.cliente.nombre)||'')===admin; }).sort(function(a,b){ return String(b.numero||'').localeCompare(String(a.numero||'')); });
   function cobradoDe(q){ return (q.pagos||[]).reduce(function(s,p){ var m=parseFloat(p.monto||0); if(p.moneda==='USD') m=m*(parseFloat(p.tcambio)||0); return s+m; },0); }
   var totFact=0, totCob=0, deuda=0;
   mine.forEach(function(q){ if(q.status==='aceptado'){ var t=calcSub(q.mdo)+calcSub(q.mat); var c=cobradoDe(q); totFact+=t; totCob+=c; deuda+=Math.max(0,t-c); } });
