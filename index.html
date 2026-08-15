@@ -6327,6 +6327,14 @@ function PlanificacionView({ actividades, onSave, quotes, personas, planForQuote
   }
   function delAct(id){ if(!confirm('¿Eliminar esta actividad?')) return; onSave(list.filter(function(x){return x.id!==id;})); setEditing(null); }
   function nueva(fecha){ var a=mkActividad(); a.fecha = fecha || ymd(new Date()); a.color = COLORS_ACT[list.length % COLORS_ACT.length]; setEditing(a); }
+  function borrarTodas(){
+    if(!list.length) return;
+    if(!confirm('⚠️ Vas a BORRAR DEFINITIVAMENTE las '+list.length+' actividad(es) cargadas. Esto NO se puede deshacer.\n\n¿Continuar?')) return;
+    var t=prompt('Para confirmar, escribí: BORRAR');
+    if(t===null) return;
+    if(t.trim().toUpperCase()!=='BORRAR'){ alert('No se borró nada (texto incorrecto).'); return; }
+    onSave([]); alert('Listo, se borraron todas las actividades.');
+  }
   // Al entrar desde Seguimiento con un presupuesto: abrir su actividad (o una nueva vinculada)
   React.useEffect(function(){
     if(!planForQuote) return;
@@ -6529,7 +6537,10 @@ function PlanificacionView({ actividades, onSave, quotes, personas, planForQuote
 
   return React.createElement(IngresosPane, null,
     React.createElement(PageHeader, { title: '🗓 Planificación de actividades', subtitle: 'Programá los trabajos aceptados y las tareas del equipo: fijales día, asignales quién los hace, colores y estado. Vista de calendario mensual, semanal y diaria.', right:
-      React.createElement('button',{type:'button',onClick:function(){ nueva(''); },style:{backgroundColor:ORANGE,color:'#fff',border:'none',borderRadius:8,padding:'9px 16px',fontSize:13,fontWeight:700,cursor:'pointer',whiteSpace:'nowrap',flexShrink:0}}, '➕ Nueva actividad')
+      React.createElement('div',{style:{display:'flex',gap:8,alignItems:'center',flexShrink:0}},
+        list.length? React.createElement('button',{type:'button',onClick:borrarTodas,title:'Borrar todas las actividades',style:{background:'none',border:'1px solid #FECACA',borderRadius:8,padding:'9px 12px',fontSize:12,fontWeight:600,cursor:'pointer',color:'#DC2626',whiteSpace:'nowrap'}}, '🗑 Borrar todas'):null,
+        React.createElement('button',{type:'button',onClick:function(){ nueva(''); },style:{backgroundColor:ORANGE,color:'#fff',border:'none',borderRadius:8,padding:'9px 16px',fontSize:13,fontWeight:700,cursor:'pointer',whiteSpace:'nowrap'}}, '➕ Nueva actividad')
+      )
     }),
     // Barra: toggle de vista + navegación
     React.createElement('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',gap:10,flexWrap:'wrap',marginBottom:12}},
