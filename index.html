@@ -3726,7 +3726,8 @@ function PrintDoc({
 function PdfOverlay({
   quote,
   onClose,
-  onMarkSent
+  onMarkSent,
+  soloPdf
 }) {
   if (!quote || !quote.cliente) return null;
   const filename = pdfName(quote);
@@ -3819,7 +3820,7 @@ function PdfOverlay({
       color: "#fff"
     }
   }, status === "loading" ? "Generando PDF…" : "💾 Descargar PDF"),
-  /*#__PURE__*/React.createElement("button", {
+  !soloPdf && /*#__PURE__*/React.createElement("button", {
     onClick: function() { window.open("https://drive.google.com/drive/folders/1w-3BdcWpq88DcIpMudaDTr-Npkva6PV3?usp=drive_link", "_blank"); },
     style: {...btn, backgroundColor: "#1a73e8", color: "#fff", marginLeft: 8}
   }, "📂 Abrir Drive"),
@@ -8687,7 +8688,7 @@ function PortalView({ token }){
           ))
         ),
     React.createElement('div',{style:{fontSize:11,color:'#94A3B8',marginTop:14,textAlign:'center'}},'Este tablero es de solo lectura y se actualiza automáticamente. Tocá el N° de cada presupuesto para ver o descargar el PDF.'),
-    pdfQuote ? React.createElement(PdfOverlay,{ quote: pdfQuote, onClose:function(){ setPdfQuote(null); }, onMarkSent:function(){} }) : null
+    pdfQuote ? React.createElement(PdfOverlay,{ quote: pdfQuote, onClose:function(){ setPdfQuote(null); }, onMarkSent:function(){}, soloPdf:true }) : null
   ));
 }
 function Root(){
