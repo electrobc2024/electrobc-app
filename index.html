@@ -844,6 +844,86 @@ function horasDelDiaAct(a, s){
   var acc = 0; for(var i=0;i<idx;i++) acc += capDe(dias[i]);
   return Math.max(0, Math.min(capDe(s), hEst-acc));
 }
+// ── Cronograma / Gantt (compartido entre Planificación y Portal) ──
+function _gYmd(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function _gParse(s){ if(!s) return null; var p=String(s).slice(0,10).split('-'); return new Date(parseInt(p[0]),parseInt(p[1])-1,parseInt(p[2])); }
+function _gAdd(d,n){ var x=new Date(d); x.setDate(x.getDate()+n); return x; }
+function _gSOW(d){ var x=new Date(d); var wd=(x.getDay()+6)%7; x.setDate(x.getDate()-wd); x.setHours(0,0,0,0); return x; }
+function _gTitulo(a, q){
+  if(a.titulo && a.titulo.trim()) return a.titulo.trim();
+  if(q){ var dir=[q.cliente&&q.cliente.calle, q.cliente&&q.cliente.numero].filter(Boolean).join(' '); return (q.cliente&&q.cliente.nombre||'Presupuesto')+(dir?(' · '+dir):''); }
+  return '(sin título)';
+}
+function ganttModelG(q, acts){
+  var av=(acts||[]).filter(function(a){ return a.quoteId===q.id; });
+  var rows=av.map(function(a){ var dias=diasCubiertosAct(a); return {a:a, start:dias[0], end:dias[dias.length-1], nd:dias.length}; })
+    .filter(function(r){ return r.start; })
+    .sort(function(x,y){ return String(x.start||'').localeCompare(String(y.start||'')) || String(x.a.createdAt||'').localeCompare(String(y.a.createdAt||'')); });
+  if(!rows.length) return null;
+  var minS=rows[0].start, maxS=rows[0].end;
+  rows.forEach(function(r){ if(r.start<minS)minS=r.start; if(r.end>maxS)maxS=r.end; });
+  var d0=_gParse(minS), d1=_gParse(maxS);
+  var spanDays=Math.round((d1-d0)/86400000)+1;
+  var mode = spanDays<=45 ? 'day' : 'week';
+  var cols=[];
+  if(mode==='day'){
+    for(var i=0;i<spanDays;i++){ var d=_gAdd(d0,i); cols.push({key:_gYmd(d), label:String(d.getDate()), sub:d.getMonth()+1, d:d, dow:d.getDay(), we:(d.getDay()===0||d.getDay()===6)}); }
+  } else {
+    var ws=_gSOW(d0);
+    while(_gYmd(ws)<=maxS){ var we=_gAdd(ws,6); cols.push({start:_gYmd(ws), end:_gYmd(we), label:ws.getDate()+'–'+we.getDate(), sub:(we.getMonth()+1), we:false}); ws=_gAdd(ws,7); }
+  }
+  var bands=[];
+  if(mode==='day'){ var cur=null; cols.forEach(function(c){ var mk=c.d.getFullYear()+'-'+c.d.getMonth(); if(!cur||cur.mk!==mk){ cur={mk:mk, label:MESES[c.d.getMonth()]+' '+c.d.getFullYear(), n:0}; bands.push(cur); } cur.n++; }); }
+  return {rows:rows, cols:cols, mode:mode, minS:minS, maxS:maxS, bands:bands};
+}
+function ganttCoveredG(r, c, mode){ return mode==='day' ? (c.key>=r.start && c.key<=r.end) : (r.start<=c.end && r.end>=c.start); }
+function ganttHTMLG(q, acts, personas){
+  function persLbl(id){ var p=(personas||[]).find(function(x){return x.id===id;}); return p?(p.nombre||'—'):'—'; }
+  var m=ganttModelG(q, acts); if(!m) return '<div style="color:#94A3B8;padding:20px;font-family:system-ui,sans-serif">Sin programar — este presupuesto todavía no tiene actividades planificadas.</div>';
+  var dir=[q.cliente&&q.cliente.calle,q.cliente&&q.cliente.numero,q.cliente&&q.cliente.depto?('Dto '+q.cliente.depto):''].filter(Boolean).join(' ');
+  var nameW=210, colW=(m.mode==='day'? (m.cols.length>28?22:30) : 54);
+  var css='border-collapse:collapse;table-layout:fixed;font-family:system-ui,\'Segoe UI\',sans-serif';
+  var thBase='padding:2px 0;font-size:9px;font-weight:700;color:#64748B;text-align:center;border-left:1px solid #EDF1F6;border-bottom:1px solid #E2E8F0;';
+  var html='<div style="border-bottom:3px solid #F26B1D;padding-bottom:8px;margin-bottom:12px">'
+    +'<div style="font-size:19px;font-weight:800;color:#0A0F1E;font-family:Oswald,system-ui">ELECTRO BC — Cronograma</div>'
+    +'<div style="color:#64748B;font-size:12px;margin-top:2px">Presupuesto #'+(q.numero||'')+(dir?(' · '+dir):'')+(q.cliente&&q.cliente.nombre?(' · '+q.cliente.nombre):'')+'</div>'
+    +'</div>';
+  html+='<table style="width:100%;'+css+'">';
+  html+='<colgroup><col style="width:'+nameW+'px"/>'+m.cols.map(function(){return '<col style="width:'+colW+'px"/>';}).join('')+'</colgroup>';
+  if(m.mode==='day' && m.bands.length){
+    html+='<tr><th style="border:none"></th>';
+    m.bands.forEach(function(b){ html+='<th colspan="'+b.n+'" style="font-size:10px;font-weight:800;color:#0A0F1E;text-align:left;padding:2px 4px;border-bottom:1px solid #E2E8F0;background:#F8FAFC">'+b.label+'</th>'; });
+    html+='</tr>';
+  }
+  html+='<tr><th style="'+thBase+'text-align:left;padding-left:6px;border-left:none;background:#F8FAFC">Actividad</th>';
+  m.cols.forEach(function(c){ html+='<th style="'+thBase+(c.we?'background:#F1F5F9;color:#CBD5E1;':'')+'">'+c.label+'</th>'; });
+  html+='</tr>';
+  m.rows.forEach(function(r){
+    var eq=(r.a.equipo||[]).map(persLbl).filter(function(x){return x&&x!=='—';}).join(', ');
+    var tit=_gTitulo(r.a, q);
+    var sub=[]; if(parseFloat(r.a.horasEst)>0) sub.push(r.a.horasEst+'h'); if(eq) sub.push(eq);
+    html+='<tr>';
+    html+='<td style="padding:4px 6px;border-bottom:1px solid #F1F5F9;vertical-align:top">'
+      +'<div style="font-size:11px;font-weight:700;color:#0A0F1E;line-height:1.2">'+tit+'</div>'
+      +(sub.length?('<div style="font-size:9px;color:#94A3B8;margin-top:1px">'+sub.join(' · ')+'</div>'):'')
+      +'</td>';
+    var firstC=true;
+    m.cols.forEach(function(c){
+      var on=ganttCoveredG(r,c,m.mode);
+      var bg=on?(r.a.color||'#F26B1D'):(c.we?'#F8FAFC':'#fff');
+      var lbl='';
+      if(on && firstC){ lbl='<span style="color:#fff;font-size:8px;font-weight:800">'+r.nd+'d</span>'; firstC=false; }
+      html+='<td style="height:20px;border-left:1px solid #F1F5F9;border-bottom:1px solid #F1F5F9;text-align:center;background:'+bg+'">'+lbl+'</td>';
+    });
+    html+='</tr>';
+  });
+  html+='</table>';
+  html+='<div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:10px">';
+  ['programado','materiales','hecho'].forEach(function(k){ var e=EST_ACT[k]; if(e) html+='<span style="font-size:10px;color:#475569;font-family:system-ui,sans-serif"><span style="display:inline-block;width:9px;height:9px;border-radius:2px;background:'+e.dot+';margin-right:3px;vertical-align:middle"></span>'+e.label+'</span>'; });
+  html+='</div>';
+  html+='<div style="margin-top:8px;color:#94A3B8;font-size:9px;font-family:system-ui,sans-serif">Cronograma orientativo por rango de días · sujeto a cambios.</div>';
+  return html;
+}
 const loadActividades = async () => {
   try {
     const r = await db.get(AKEY);
@@ -6579,82 +6659,9 @@ function PlanificacionView({ actividades, onSave, quotes, personas, planForQuote
     list.forEach(function(a){ if(a.quoteId && !seen[a.quoteId]){ var q=quoteById(a.quoteId); if(q){ seen[a.quoteId]=1; out.push(q); } } });
     return out.sort(function(x,y){ return String(y.numero||'').localeCompare(String(x.numero||'')); });
   }
-  function ganttModel(q){
-    var av=list.filter(function(a){ return a.quoteId===q.id; });
-    var rows=av.map(function(a){ var dias=diasDe(a); return {a:a, start:dias[0], end:dias[dias.length-1], nd:dias.length}; })
-      .filter(function(r){ return r.start; })
-      .sort(function(x,y){ return String(x.start||'').localeCompare(String(y.start||'')) || String(x.a.createdAt||'').localeCompare(String(y.a.createdAt||'')); });
-    if(!rows.length) return null;
-    var minS=rows[0].start, maxS=rows[0].end;
-    rows.forEach(function(r){ if(r.start<minS)minS=r.start; if(r.end>maxS)maxS=r.end; });
-    var d0=parseYmd(minS), d1=parseYmd(maxS);
-    var spanDays=Math.round((d1-d0)/86400000)+1;
-    var mode = spanDays<=45 ? 'day' : 'week';
-    var cols=[];
-    if(mode==='day'){
-      for(var i=0;i<spanDays;i++){ var d=addDays(d0,i); cols.push({key:ymd(d), label:String(d.getDate()), sub:d.getMonth()+1, d:d, dow:d.getDay(), we:(d.getDay()===0||d.getDay()===6)}); }
-    } else {
-      var ws=startOfWeek(d0);
-      while(ymd(ws)<=maxS){ var we=addDays(ws,6); cols.push({start:ymd(ws), end:ymd(we), label:ws.getDate()+'–'+we.getDate(), sub:(we.getMonth()+1), we:false}); ws=addDays(ws,7); }
-    }
-    // bandas de mes (para modo día)
-    var bands=[];
-    if(mode==='day'){ var cur=null; cols.forEach(function(c){ var mk=c.d.getFullYear()+'-'+c.d.getMonth(); if(!cur||cur.mk!==mk){ cur={mk:mk, label:MESES[c.d.getMonth()]+' '+c.d.getFullYear(), n:0}; bands.push(cur); } cur.n++; }); }
-    return {rows:rows, cols:cols, mode:mode, minS:minS, maxS:maxS, bands:bands};
-  }
-  function covered(r, c, mode){ return mode==='day' ? (c.key>=r.start && c.key<=r.end) : (r.start<=c.end && r.end>=c.start); }
-  function ganttHTML(q){
-    var m=ganttModel(q); if(!m) return '<div style="color:#94A3B8;padding:20px">Este presupuesto no tiene actividades planificadas.</div>';
-    var dir=[q.cliente&&q.cliente.calle,q.cliente&&q.cliente.numero,q.cliente&&q.cliente.depto?('Dto '+q.cliente.depto):''].filter(Boolean).join(' ');
-    var nameW=210, colW=(m.mode==='day'? (m.cols.length>28?22:30) : 54);
-    var css='border-collapse:collapse;table-layout:fixed;font-family:system-ui,\'Segoe UI\',sans-serif';
-    var thBase='padding:2px 0;font-size:9px;font-weight:700;color:#64748B;text-align:center;border-left:1px solid #EDF1F6;border-bottom:1px solid #E2E8F0;';
-    var html='<div style="border-bottom:3px solid #F26B1D;padding-bottom:8px;margin-bottom:12px">'
-      +'<div style="font-size:19px;font-weight:800;color:#0A0F1E;font-family:Oswald,system-ui">ELECTRO BC — Cronograma</div>'
-      +'<div style="color:#64748B;font-size:12px;margin-top:2px">Presupuesto #'+(q.numero||'')+(dir?(' · '+dir):'')+(q.cliente&&q.cliente.nombre?(' · '+q.cliente.nombre):'')+'</div>'
-      +'</div>';
-    html+='<table style="width:100%;'+css+'">';
-    // colgroup
-    html+='<colgroup><col style="width:'+nameW+'px"/>'+m.cols.map(function(){return '<col style="width:'+colW+'px"/>';}).join('')+'</colgroup>';
-    // banda de mes
-    if(m.mode==='day' && m.bands.length){
-      html+='<tr><th style="border:none"></th>';
-      m.bands.forEach(function(b){ html+='<th colspan="'+b.n+'" style="font-size:10px;font-weight:800;color:#0A0F1E;text-align:left;padding:2px 4px;border-bottom:1px solid #E2E8F0;background:#F8FAFC">'+b.label+'</th>'; });
-      html+='</tr>';
-    }
-    // header de columnas
-    html+='<tr><th style="'+thBase+'text-align:left;padding-left:6px;border-left:none;background:#F8FAFC">Actividad</th>';
-    m.cols.forEach(function(c){ html+='<th style="'+thBase+(c.we?'background:#F1F5F9;color:#CBD5E1;':'')+'">'+c.label+'</th>'; });
-    html+='</tr>';
-    // filas
-    m.rows.forEach(function(r){
-      var est=EST_ACT[r.a.estado]||EST_ACT.programado;
-      var eq=(r.a.equipo||[]).map(persLabel).filter(function(x){return x&&x!=='—';}).join(', ');
-      var tit=tituloDe(r.a);
-      var sub=[]; if(parseFloat(r.a.horasEst)>0) sub.push(r.a.horasEst+'h'); if(eq) sub.push(eq);
-      html+='<tr>';
-      html+='<td style="padding:4px 6px;border-bottom:1px solid #F1F5F9;vertical-align:top">'
-        +'<div style="font-size:11px;font-weight:700;color:#0A0F1E;line-height:1.2">'+tit+'</div>'
-        +(sub.length?('<div style="font-size:9px;color:#94A3B8;margin-top:1px">'+sub.join(' · ')+'</div>'):'')
-        +'</td>';
-      var firstC=true;
-      m.cols.forEach(function(c){
-        var on=covered(r,c,m.mode);
-        var bg=on?(r.a.color||'#F26B1D'):(c.we?'#F8FAFC':'#fff');
-        var lbl='';
-        if(on && firstC){ lbl='<span style="color:#fff;font-size:8px;font-weight:800">'+r.nd+'d</span>'; firstC=false; }
-        html+='<td style="height:20px;border-left:1px solid #F1F5F9;border-bottom:1px solid #F1F5F9;text-align:center;background:'+bg+'">'+lbl+'</td>';
-      });
-      html+='</tr>';
-    });
-    html+='</table>';
-    // leyenda de estados
-    html+='<div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:10px">';
-    ['programado','materiales','hecho'].forEach(function(k){ var e=EST_ACT[k]; if(e) html+='<span style="font-size:10px;color:#475569"><span style="display:inline-block;width:9px;height:9px;border-radius:2px;background:'+e.dot+';margin-right:3px;vertical-align:middle"></span>'+e.label+'</span>'; });
-    html+='</div>';
-    html+='<div style="margin-top:8px;color:#94A3B8;font-size:9px">Cronograma orientativo por rango de días · sujeto a cambios · las barras muestran el color de cada actividad.</div>';
-    return html;
-  }
+  function ganttModel(q){ return ganttModelG(q, list); }
+  function ganttHTML(q){ return ganttHTMLG(q, list, pers); }
+  function covered(r, c, mode){ return ganttCoveredG(r, c, mode); }
   function ganttPDF(q){
     var el=document.createElement('div'); el.style.padding='6px'; el.innerHTML=ganttHTML(q);
     var m=ganttModel(q); var land = m && m.cols.length>10;
@@ -8737,6 +8744,7 @@ function PortalView({ token }){
   const [pf,setPf]=React.useState('todos');
   const [pt,setPt]=React.useState([]);
   const [personas,setPersonas]=React.useState([]);
+  const [cronQ,setCronQ]=React.useState(null);
   React.useEffect(function(){
     (async function(){
       try{
@@ -8775,49 +8783,6 @@ function PortalView({ token }){
   var persLbl=function(id){ var p=persById(id); return p?(p.nombre||'—'):'—'; };
   function tipoMeta(t){ return t==="electricidad"?{i:"⚡",l:"Electricidad",fg:"#B45309",bg:"#FFF7ED"}:t==="pintura"?{i:"🎨",l:"Pintura",fg:"#065F46",bg:"#ECFDF5"}:{i:"🔧",l:"Plomería",fg:"#1D4ED8",bg:"#EFF6FF"}; }
   function coincideTipo(q){ if(!pt.length) return true; var tt=q.tipoTrabajo||[]; return pt.some(function(x){ return tt.indexOf(x)>=0; }); }
-  // ── Cronograma (PDF) de un presupuesto ──
-  function descargarCronograma(q){
-    var av=(acts||[]).filter(function(x){return x.quoteId===q.id;});
-    if(!av.length){ alert('Este presupuesto todavía no tiene actividades planificadas.'); return; }
-    // ordenar por fecha de inicio
-    av=av.slice().sort(function(a,b){ return String(a.fecha||'').localeCompare(String(b.fecha||'')); });
-    var dir=[q.cliente&&q.cliente.calle,q.cliente&&q.cliente.numero,q.cliente&&q.cliente.depto?('Dto '+q.cliente.depto):''].filter(Boolean).join(' ');
-    var rows=av.map(function(a){
-      var dias=diasCubiertosAct(a); var d1=dias[0], d2=dias[dias.length-1];
-      var rango = dias.length<=1 ? fmtFecha(d1) : (fmtFecha(d1)+' → '+fmtFecha(d2));
-      var est=EST_ACT[a.estado]||EST_ACT.programado;
-      var eq=(a.equipo||[]).map(persLbl).filter(function(x){return x&&x!=='—';}).join(', ');
-      var tit=(a.titulo&&a.titulo.trim())?a.titulo.trim():('Trabajo '+(q.cliente&&q.cliente.nombre||''));
-      var horas=parseFloat(a.horasEst)>0?(a.horasEst+' h'):'—';
-      return '<tr>'
-        +'<td style="padding:7px 9px;border-bottom:1px solid #EDF1F6;font-size:12px;font-weight:600;color:#0A0F1E">'+tit+'</td>'
-        +'<td style="padding:7px 9px;border-bottom:1px solid #EDF1F6;font-size:12px;color:#334155;white-space:nowrap">'+rango+'</td>'
-        +'<td style="padding:7px 9px;border-bottom:1px solid #EDF1F6;font-size:12px;color:#334155">'+(dias.length)+(dias.length===1?' día':' días')+'</td>'
-        +'<td style="padding:7px 9px;border-bottom:1px solid #EDF1F6;font-size:12px;color:#334155">'+horas+'</td>'
-        +'<td style="padding:7px 9px;border-bottom:1px solid #EDF1F6;font-size:12px;color:#334155">'+(eq||'—')+'</td>'
-        +'<td style="padding:7px 9px;border-bottom:1px solid #EDF1F6;font-size:12px"><span style="display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700;color:'+est.color+';background:'+est.bg+';border:1px solid '+est.dot+'">'+est.label+'</span></td>'
-        +'</tr>';
-    }).join('');
-    var el=document.createElement('div');
-    el.style.padding='4px'; el.style.fontFamily="system-ui,'Segoe UI',sans-serif"; el.style.color='#1E293B';
-    el.innerHTML='<div style="border-bottom:3px solid #F26B1D;padding-bottom:8px;margin-bottom:14px">'
-      +'<div style="font-size:20px;font-weight:800;color:#0A0F1E;font-family:Oswald,system-ui">ELECTRO BC — Cronograma de trabajo</div>'
-      +'<div style="color:#64748B;font-size:13px;margin-top:2px">Presupuesto #'+(q.numero||'')+(dir?(' · '+dir):'')+(q.cliente&&q.cliente.nombre?(' · '+q.cliente.nombre):'')+'</div>'
-      +'</div>'
-      +'<table style="width:100%;border-collapse:collapse">'
-      +'<thead><tr style="background:#F8FAFC">'
-      +'<th style="padding:7px 9px;text-align:left;font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;border-bottom:1px solid #E2E8F0">Trabajo</th>'
-      +'<th style="padding:7px 9px;text-align:left;font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;border-bottom:1px solid #E2E8F0">Fechas</th>'
-      +'<th style="padding:7px 9px;text-align:left;font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;border-bottom:1px solid #E2E8F0">Duración</th>'
-      +'<th style="padding:7px 9px;text-align:left;font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;border-bottom:1px solid #E2E8F0">Horas est.</th>'
-      +'<th style="padding:7px 9px;text-align:left;font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;border-bottom:1px solid #E2E8F0">Equipo</th>'
-      +'<th style="padding:7px 9px;text-align:left;font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;border-bottom:1px solid #E2E8F0">Estado</th>'
-      +'</tr></thead><tbody>'+rows+'</tbody></table>'
-      +'<div style="margin-top:14px;color:#94A3B8;font-size:10px">Generado el '+fmtFecha((function(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})())+' · Cronograma orientativo, sujeto a cambios.</div>';
-    var fname='ELECTRO BC - Cronograma Presupuesto '+(q.numero||'')+'.pdf';
-    if(typeof html2pdf!=='undefined'){ html2pdf().set({margin:10,filename:fname,html2canvas:{scale:2},jsPDF:{unit:'mm',format:'a4',orientation:'landscape'}}).from(el).save(); }
-    else { alert('No se pudo generar el PDF.'); }
-  }
 
   function coincide(q, f){
     if(f==='todos') return true;
@@ -8871,7 +8836,7 @@ function PortalView({ token }){
             )),
             React.createElement('tbody',null, visibles.map(function(q){
               var t=calcSub(q.mdo)+calcSub(q.mat); var c=cobradoDe(q); var saldo=Math.max(0,t-c);
-              var st=STATUS_MAP[q.status]||STATUS_MAP.generado; var ea=estAct(q);
+              var st=STATUS_MAP[effectiveStatus(q)]||STATUS_MAP[q.status]||STATUS_MAP.generado; var ea=estAct(q);
               return React.createElement('tr',{key:q.id},
                 React.createElement('td',{style:tdS}, React.createElement('button',{type:'button',onClick:function(){setPdfQuote(q);},title:'Ver / descargar PDF',style:{background:'none',border:'none',color:ORANGE,fontWeight:700,cursor:'pointer',textDecoration:'underline',fontSize:12,padding:0}}, '#'+(q.numero||''))),
                 React.createElement('td',{style:tdS}, fmtFecha(q.fecha)),
@@ -8880,13 +8845,24 @@ function PortalView({ token }){
                 React.createElement('td',{style:Object.assign({},tdS,{textAlign:'right',fontWeight:700,color:NAVY})}, '$ '+Math.round(t).toLocaleString('es-AR')),
                 React.createElement('td',{style:tdS}, (function(){ if(q.status!=='aceptado' || t<=0) return React.createElement('span',{style:{color:'#CBD5E1'}},'—'); var pct=Math.min(100,Math.round(c/t*100)); var col=pct>=100?'#059669':pct>=50?'#2563EB':'#F59E0B'; return React.createElement('div',{style:{minWidth:140}}, React.createElement('div',{style:{height:6,background:'#E2E8F0',borderRadius:3,overflow:'hidden'}}, React.createElement('div',{style:{width:pct+'%',height:'100%',background:col,borderRadius:3}})), React.createElement('div',{style:{display:'flex',justifyContent:'space-between',gap:6,marginTop:2}}, React.createElement('span',{style:{fontSize:9,fontWeight:700,color:col}}, pct+'% cobrado'), React.createElement('span',{style:{fontSize:9,color:'#94A3B8'}}, 'Resta $'+Math.round(saldo).toLocaleString('es-AR')))); })()),
                 React.createElement('td',{style:tdS}, ea? React.createElement('span',{style:{fontSize:10,fontWeight:700,padding:'2px 8px',borderRadius:20,color:ea.color,background:ea.bg,border:'1px solid '+ea.dot}}, ea.label) : React.createElement('span',{style:{color:'#CBD5E1'}},'—')),
-                React.createElement('td',{style:Object.assign({},tdS,{textAlign:'center'})}, (acts||[]).some(function(x){return x.quoteId===q.id;}) ? React.createElement('button',{type:'button',onClick:function(){descargarCronograma(q);},title:'Descargar cronograma de este presupuesto',style:{background:'#fff',border:'1px solid #E2E8F0',borderRadius:7,padding:'5px 10px',fontSize:11,fontWeight:700,cursor:'pointer',color:'#475569',whiteSpace:'nowrap'}}, '📅 Descargar') : React.createElement('span',{style:{color:'#CBD5E1'}},'—'))
+                React.createElement('td',{style:Object.assign({},tdS,{textAlign:'center'})}, (acts||[]).some(function(x){return x.quoteId===q.id;}) ? React.createElement('button',{type:'button',onClick:function(){setCronQ(q);},title:'Ver el cronograma de este presupuesto',style:{background:'none',border:'none',color:ORANGE,fontWeight:700,cursor:'pointer',textDecoration:'underline',fontSize:12,padding:0,whiteSpace:'nowrap'}}, '📅 Ver cronograma') : React.createElement('span',{style:{fontSize:11,color:'#94A3B8',fontStyle:'italic'}},'Sin programar'))
               );
             }))
           ))
         ),
     React.createElement('div',{style:{fontSize:11,color:'#94A3B8',marginTop:14,textAlign:'center'}},'Este tablero es de solo lectura y se actualiza automáticamente. Tocá el N° de cada presupuesto para ver o descargar el PDF.'),
-    pdfQuote ? React.createElement(PdfOverlay,{ quote: pdfQuote, onClose:function(){ setPdfQuote(null); }, onMarkSent:function(){}, soloPdf:true }) : null
+    pdfQuote ? React.createElement(PdfOverlay,{ quote: pdfQuote, onClose:function(){ setPdfQuote(null); }, onMarkSent:function(){}, soloPdf:true }) : null,
+    cronQ ? React.createElement('div',{onMouseDown:function(){setCronQ(null);},style:{position:'fixed',inset:0,zIndex:10000,background:'rgba(0,0,0,0.55)',display:'flex',alignItems:'flex-start',justifyContent:'center',padding:'32px 16px',overflow:'auto'}},
+      React.createElement('div',{onMouseDown:function(e){e.stopPropagation();},style:{background:'#fff',borderRadius:14,width:1040,maxWidth:'100%',padding:20,boxShadow:'0 10px 40px rgba(0,0,0,0.3)'}},
+        React.createElement('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}},
+          React.createElement('div',{style:{fontFamily:"'Oswald',system-ui",fontSize:18,fontWeight:700,color:NAVY}},'📅 Cronograma — Presupuesto #'+(cronQ.numero||'')),
+          React.createElement('button',{type:'button',onClick:function(){setCronQ(null);},style:{background:'none',border:'none',fontSize:18,color:'#94A3B8',cursor:'pointer'}},'✕')
+        ),
+        React.createElement('div',{style:{overflowX:'auto',border:'1px solid #E2E8F0',borderRadius:10,padding:14}},
+          React.createElement('div',{style:{minWidth:640},dangerouslySetInnerHTML:{__html: ganttHTMLG(cronQ, acts, personas)}})
+        )
+      )
+    ) : null
   ));
 }
 function Root(){
