@@ -7061,14 +7061,14 @@ function App() {
     {id:"clients", label:"👤 Clientes"},
     {id:"catMdo",  label:"👷 Mano de Obra"},
     {id:"catMat",  label:"📦 Materiales"},
-    {id:"tracker", label:"📈 Seguimiento"},
+    {id:"tracker", label:"📈 Seguimiento de Presupuestos"},
     {id:"planificacion", label:"🗓 Planificación"},
   ];
   const navFin = [
     {id:"personal",    label:"🧑‍🔧 Personal"},
     {id:"movimientos", label:"💱 Ingresos / Egresos"},
     {id:"dashboard",   label:"📊 Dashboard"},
-    {id:"backups",     label:"💾 Copias"},
+    {id:"backups",     label:"💾 Copias de Seguridad"},
   ];
   const nav = [...navMain, ...navFin];
   return /*#__PURE__*/React.createElement("div", {
@@ -7124,7 +7124,10 @@ function App() {
     style: {
       display: "flex",
       alignItems: "stretch",
-      flex: 1
+      flex: 1,
+      minWidth: 0,
+      overflowX: "auto",
+      scrollbarWidth: "thin"
     }
   }, (function(){
     function nbtn(item,fin){
@@ -7148,15 +7151,15 @@ function App() {
         width:1,height:18,backgroundColor:"rgba(255,255,255,0.25)",
         alignSelf:"center",margin:"0 6px",flexShrink:0
       }})])
-      .concat(navFin.map(function(i){return nbtn(i,true);}))
-      .concat([React.createElement("button",{key:"consolidado",title:"Descargar Excel consolidado por rango de fechas",
-        onClick:function(){ setShowConsol(true); },
-        style:{display:"flex",alignItems:"center",gap:5,padding:"0 12px",marginLeft:8,background:ORANGE,border:"none",borderRadius:6,fontSize:12,fontWeight:700,color:"#fff",whiteSpace:"nowrap",cursor:"pointer",alignSelf:"center",height:32}
-      },"📚 Descargar Consolidado")]);
-  })()), /*#__PURE__*/React.createElement("div", {
+      .concat(navFin.map(function(i){return nbtn(i,true);}));
+  })()), /*#__PURE__*/React.createElement("button",{key:"consolidado",title:"Descargar Excel consolidado por rango de fechas",
+    onClick:function(){ setShowConsol(true); },
+    style:{display:"flex",alignItems:"center",gap:5,padding:"0 12px",margin:"0 8px",background:ORANGE,border:"none",borderRadius:6,fontSize:12,fontWeight:700,color:"#fff",whiteSpace:"nowrap",cursor:"pointer",alignSelf:"center",height:32,flexShrink:0}
+  },"📚 Descargar Consolidado"), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
-      alignItems: "center"
+      alignItems: "center",
+      flexShrink: 0
     }
   }, /*#__PURE__*/React.createElement("span", {
     style: {
