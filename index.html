@@ -8598,6 +8598,7 @@ function PortalView({ token }){
   const [acts,setActs]=React.useState([]);
   const [err,setErr]=React.useState(null);
   const [pdfQuote,setPdfQuote]=React.useState(null);
+  const [pf,setPf]=React.useState('todos');
   React.useEffect(function(){
     (async function(){
       try{
@@ -8632,9 +8633,28 @@ function PortalView({ token }){
   var thS={padding:'8px 10px',fontSize:10,fontWeight:700,color:'#94A3B8',textTransform:'uppercase',textAlign:'left',borderBottom:'1px solid #E2E8F0',whiteSpace:'nowrap'};
   var tdS={padding:'9px 10px',fontSize:12,color:'#475569',borderBottom:'1px solid #F1F5F9',whiteSpace:'nowrap'};
 
+  function coincide(q, f){
+    if(f==='todos') return true;
+    if(f==='espera') return q.status==='espera' && !isVencido(q);
+    if(f==='recotizar') return effectiveStatus(q)==='recotizar' || q.status==='recotizado';
+    if(f==='aceptado') return q.status==='aceptado';
+    if(f==='rechazado') return q.status==='rechazado';
+    return true;
+  }
+  var cardsDef=[
+    ['todos','Todos',NAVY,'#F8FAFC','#E2E8F0'],
+    ['espera','En espera','#B45309','#FFFBEB','#FDE68A'],
+    ['recotizar','Para recotizar','#C2410C','#FFF7ED','#FED7AA'],
+    ['aceptado','Aceptado','#166534','#F0FDF4','#BBF7D0'],
+    ['rechazado','Rechazado','#B91C1C','#FEF2F2','#FECACA']
+  ];
+  var visibles=mine.filter(function(q){ return coincide(q, pf); });
+
   return wrap(React.createElement('div',null,
     React.createElement('div',{style:{fontFamily:"'Oswald',system-ui",fontSize:22,fontWeight:700,color:NAVY,marginBottom:2}}, admin),
-    React.createElement('div',{style:{fontSize:13,color:'#64748B',marginBottom:16}},'Seguimiento de presupuestos y estado de cuenta en tiempo real.'),
+    React.createElement('div',{style:{fontSize:13,color:'#64748B',marginBottom:14}},'Seguimiento de presupuestos y estado de cuenta en tiempo real.'),
+    // tarjetas de estado (filtro)
+    React.createElement('div',{style:{display:'flex',gap:8,flexWrap:'wrap',marginBottom:14}}, cardsDef.map(function(cd){ var n=mine.filter(function(q){return coincide(q,cd[0]);}).length; var on=pf===cd[0]; return React.createElement('button',{key:cd[0],type:'button',onClick:function(){setPf(cd[0]);},style:{flex:'1 1 130px',textAlign:'left',cursor:'pointer',background:on?cd[3]:'#fff',border:'2px solid '+(on?cd[4]:'#E2E8F0'),borderRadius:10,padding:'8px 12px'}}, React.createElement('div',{style:{fontSize:10,fontWeight:700,color:cd[2],textTransform:'uppercase'}},cd[1]), React.createElement('div',{style:{fontSize:20,fontWeight:700,color:cd[2],fontFamily:"'Oswald',system-ui"}}, n)); })),
     // resumen
     React.createElement('div',{style:{display:'flex',gap:10,flexWrap:'wrap',marginBottom:16}},
       [['Presupuestos aceptados', mine.filter(function(q){return q.status==='aceptado';}).length, NAVY],
@@ -8644,8 +8664,8 @@ function PortalView({ token }){
       ].map(function(k){ return React.createElement('div',{key:k[0],style:{background:'#fff',border:'1px solid #E2E8F0',borderRadius:10,padding:'10px 14px',flex:'1 1 160px'}}, React.createElement('div',{style:{fontSize:10,color:'#94A3B8',fontWeight:700,textTransform:'uppercase'}},k[0]), React.createElement('div',{style:{fontSize:19,fontWeight:700,color:k[2],fontFamily:"'Oswald',system-ui"}},k[1])); })
     ),
     // tabla
-    mine.length===0
-      ? React.createElement('div',{style:{background:'#fff',border:'1px solid #E2E8F0',borderRadius:12,padding:'40px',textAlign:'center',color:'#94A3B8'}},'Todavía no hay presupuestos para esta administración.')
+    visibles.length===0
+      ? React.createElement('div',{style:{background:'#fff',border:'1px solid #E2E8F0',borderRadius:12,padding:'40px',textAlign:'center',color:'#94A3B8'}}, mine.length===0?'Todavía no hay presupuestos para esta administración.':'No hay presupuestos con este estado.')
       : React.createElement('div',{style:{background:'#fff',border:'1px solid #E2E8F0',borderRadius:12,overflow:'hidden'}},
           React.createElement('div',{style:{overflowX:'auto'}}, React.createElement('table',{style:{width:'100%',borderCollapse:'collapse',minWidth:720}},
             React.createElement('thead',null,React.createElement('tr',{style:{background:'#F8FAFC'}},
@@ -8658,7 +8678,7 @@ function PortalView({ token }){
               React.createElement('th',{style:Object.assign({},thS,{textAlign:'right'})},'Saldo'),
               React.createElement('th',{style:thS},'Trabajo')
             )),
-            React.createElement('tbody',null, mine.map(function(q){
+            React.createElement('tbody',null, visibles.map(function(q){
               var t=calcSub(q.mdo)+calcSub(q.mat); var c=cobradoDe(q); var saldo=Math.max(0,t-c);
               var st=STATUS_MAP[q.status]||STATUS_MAP.generado; var ea=estAct(q);
               return React.createElement('tr',{key:q.id},
