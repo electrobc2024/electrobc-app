@@ -3151,8 +3151,7 @@ function ClientesView({
           window.open(base+'?text='+encodeURIComponent(msg),'_blank');
         },style:{background:"#25D366",border:"none",borderRadius:6,padding:"5px 9px",fontSize:11,fontWeight:700,color:"#fff",cursor:"pointer"}},"WhatsApp"),
         /*#__PURE__*/React.createElement("button",{type:"button",title:url,onMouseDown:function(e){e.preventDefault();},onClick:function(){ try{ navigator.clipboard.writeText(url); alert("Link copiado."); }catch(e){ prompt("Copiá el link:",url); } },style:{background:ORANGE,border:"none",borderRadius:6,padding:"5px 9px",fontSize:11,fontWeight:700,color:"#fff",cursor:"pointer"}},"📋 Copiar"),
-        /*#__PURE__*/React.createElement("button",{type:"button",title:"Abrir el portal",onMouseDown:function(e){e.preventDefault();},onClick:function(){ window.open(url,"_blank"); },style:{background:"none",border:"1px solid #E2E8F0",borderRadius:6,padding:"5px 9px",fontSize:11,color:"#475569",cursor:"pointer"}},"Abrir"),
-        /*#__PURE__*/React.createElement("button",{type:"button",title:"Regenerar (el link anterior deja de funcionar)",onMouseDown:function(e){e.preventDefault();},onClick:function(){ if(confirm("¿Regenerar el link de "+adm+"? El anterior dejará de funcionar.")) regenLink(adm); },style:{background:"none",border:"none",color:"#B45309",cursor:"pointer",fontSize:14}},"↻")
+        /*#__PURE__*/React.createElement("button",{type:"button",title:"Abrir el portal",onMouseDown:function(e){e.preventDefault();},onClick:function(){ window.open(url,"_blank"); },style:{background:"none",border:"1px solid #E2E8F0",borderRadius:6,padding:"5px 9px",fontSize:11,color:"#475569",cursor:"pointer"}},"Abrir")
       );
     })()), /*#__PURE__*/React.createElement("td", {
       style: {
