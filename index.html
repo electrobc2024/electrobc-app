@@ -6610,6 +6610,7 @@ function PlanificacionView({ actividades, onSave, quotes, personas, planForQuote
   const [editing, setEditing] = React.useState(null);   // objeto actividad en edición (o null)
   const [showProd, setShowProd] = React.useState(false);
   const [ganttSel, setGanttSel] = React.useState([]); // presupuestos elegidos en el Gantt (vacío = todos)
+  const [ganttPickOpen, setGanttPickOpen] = React.useState(false);
   const [bulkQ, setBulkQ] = React.useState(null);
   const [editListQ, setEditListQ] = React.useState(null);
   const [editAll, setEditAll] = React.useState(false);
@@ -6991,12 +6992,27 @@ function PlanificacionView({ actividades, onSave, quotes, personas, planForQuote
     var single = sel.length===1 ? (buds.find(function(b){return b.id===sel[0];})||null) : null;
     var btnS={border:'1px solid #E2E8F0',background:'#fff',borderRadius:8,padding:'7px 11px',fontSize:12,fontWeight:600,cursor:'pointer',whiteSpace:'nowrap'};
     function toggle(id){ setGanttSel(sel.indexOf(id)>=0 ? sel.filter(function(x){return x!==id;}) : sel.concat([id])); }
-    var chip=function(label,on,onClick,key){ return React.createElement('button',{key:key,type:'button',onClick:onClick,style:{padding:'5px 11px',borderRadius:20,fontSize:12,fontWeight:on?700:500,cursor:'pointer',border:'1.5px solid '+(on?'#6D28D9':'#E2E8F0'),backgroundColor:on?'#F5F3FF':'#fff',color:on?'#6D28D9':'#64748B',whiteSpace:'nowrap'}}, label); };
+    var labelDe=function(b){ return '#'+(b.numero||'')+' · '+(b.cliente&&b.cliente.nombre||''); };
+    var selLabel = sel.length===0 ? 'Todos los presupuestos' : (sel.length===1 ? (single?labelDe(single):'1 presupuesto') : (sel.length+' presupuestos'));
+    var opt=function(label,on,onClick,key){ return React.createElement('div',{key:key,onClick:onClick,style:{display:'flex',alignItems:'center',gap:8,padding:'7px 9px',borderRadius:8,cursor:'pointer',fontSize:13,color:on?'#6D28D9':'#334155',background:on?'#F5F3FF':'transparent',fontWeight:on?700:500}},
+      React.createElement('span',{style:{width:16,height:16,borderRadius:4,flexShrink:0,border:'1.5px solid '+(on?'#6D28D9':'#CBD5E1'),background:on?'#6D28D9':'#fff',color:'#fff',fontSize:11,fontWeight:800,display:'inline-flex',alignItems:'center',justifyContent:'center'}}, on?'✓':''),
+      React.createElement('span',{style:{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}, label)
+    ); };
     return React.createElement('div',null,
-      React.createElement('div',{style:{display:'flex',gap:6,alignItems:'center',flexWrap:'wrap',marginBottom:10}},
+      React.createElement('div',{style:{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap',marginBottom:10}},
         React.createElement('span',{style:{fontSize:10,fontWeight:700,color:'#94A3B8',textTransform:'uppercase',marginRight:2}},'Ver'),
-        chip('Todos', sel.length===0, function(){ setGanttSel([]); }, '_todos'),
-        buds.map(function(b){ return chip('#'+(b.numero||'')+' · '+(b.cliente&&b.cliente.nombre||''), sel.indexOf(b.id)>=0, function(){ toggle(b.id); }, b.id); }),
+        React.createElement('div',{style:{position:'relative'}},
+          React.createElement('button',{type:'button',onClick:function(){ setGanttPickOpen(!ganttPickOpen); },style:Object.assign({},btnS,{minWidth:220,textAlign:'left',display:'flex',alignItems:'center',justifyContent:'space-between',gap:8,color:NAVY})}, React.createElement('span',{style:{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}, selLabel), React.createElement('span',{style:{color:'#94A3B8'}}, ganttPickOpen?'▲':'▾')),
+          ganttPickOpen? React.createElement(React.Fragment,null,
+            React.createElement('div',{onClick:function(){ setGanttPickOpen(false); },style:{position:'fixed',inset:0,zIndex:40}}),
+            React.createElement('div',{style:{position:'absolute',top:'112%',left:0,zIndex:41,background:'#fff',border:'1px solid #E2E8F0',borderRadius:10,boxShadow:'0 12px 30px rgba(0,0,0,0.16)',padding:6,minWidth:300,maxWidth:420,maxHeight:340,overflowY:'auto'}},
+              opt('Todos los presupuestos', sel.length===0, function(){ setGanttSel([]); }, '_todos'),
+              React.createElement('div',{style:{height:1,background:'#EDF1F6',margin:'4px 6px'}}),
+              buds.map(function(b){ return opt(labelDe(b), sel.indexOf(b.id)>=0, function(){ toggle(b.id); }, b.id); })
+            )
+          ):null
+        ),
+        sel.length? React.createElement('button',{type:'button',onClick:function(){ setGanttSel([]); },title:'Ver todos',style:{background:'none',border:'none',color:'#94A3B8',cursor:'pointer',fontSize:12,fontWeight:600}},'Limpiar'):null,
         React.createElement('div',{style:{marginLeft:'auto',display:'flex',gap:8,flexWrap:'wrap'}},
           (single? React.createElement('button',{type:'button',onClick:function(){ ganttPDF(single); },title:'Descargar el cronograma en PDF',style:btnS},'📄 PDF cronograma'):null),
           (single? React.createElement('button',{type:'button',onClick:function(){ ganttExcel(single); },style:Object.assign({},btnS,{border:'1px solid #86EFAC',color:'#16A34A'})},'📊 Excel'):null)
