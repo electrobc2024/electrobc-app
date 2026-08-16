@@ -2596,10 +2596,18 @@ function ClientesView({
   const [expandCl, setExpandCl] = useState(null);
   const [showLinks, setShowLinks] = useState(false);
   const [portMap, setPortMap] = useState(null);
-  useEffect(function(){ (async()=>{ try{ var r=await db.get('ebc-portales-v1'); setPortMap(r?JSON.parse(r.value):{}); }catch(e){ setPortMap({}); } })(); }, []);
+  useEffect(function(){ (async()=>{ try{
+    var r=await db.get('ebc-portales-v1'); var map=r?JSON.parse(r.value):{};
+    // Migración: garantizar un token LIMPIO (slug del nombre) para cada cliente/administración; los viejos quedan como alias (siguen funcionando)
+    var adms={}; Object.keys(map).forEach(function(t){ if(map[t]) adms[map[t]]=true; });
+    var changed=false;
+    Object.keys(adms).forEach(function(a){ var base=slugAdm(a), t=base, i=2; while(map[t] && map[t]!==a){ t=base+'-'+i; i++; } if(!map[t]){ map[t]=a; changed=true; } });
+    setPortMap(map);
+    if(changed){ try{ await db.set('ebc-portales-v1', JSON.stringify(map)); }catch(e){} }
+  }catch(e){ setPortMap({}); } })(); }, []);
   const abrirLinks = () => { setShowLinks(true); (async()=>{ try{ var r=await db.get('ebc-portales-v1'); setPortMap(r?JSON.parse(r.value):{}); }catch(e){ setPortMap({}); } })(); };
   const guardarPortMap = async (m) => { setPortMap(m); try{ await db.set('ebc-portales-v1', JSON.stringify(m)); }catch(e){} };
-  const linkDeAdmin = (m, adm) => { for(var t in m){ if(m[t]===adm) return t; } return null; };
+  const linkDeAdmin = (m, adm) => { var toks=[]; for(var t in m){ if(m[t]===adm) toks.push(t); } if(!toks.length) return null; toks.sort(function(a,b){ return (a.length-b.length) || a.localeCompare(b); }); return toks[0]; };
   const slugAdm = (s) => String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,42) || 'cliente';
   const numDeAdm = (adm) => { var cl=(clients||[]).find(function(c){ return ((c.administracion||'').trim()||(c.nombre||'').trim())===adm; }); return (cl && typeof cl.num==='number') ? cl.num : null; };
   const tokenLegible = (m, adm, sufijo) => { var base=slugAdm(adm)+(sufijo?('-'+sufijo):''); var t=base, i=2; while(m[t] && m[t]!==adm){ t=base+'-'+i; i++; } return t; };
