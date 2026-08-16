@@ -9071,6 +9071,8 @@ function PortalView({ token }){
     if(f==='recotizar') return effectiveStatus(q)==='recotizar' || q.status==='recotizado';
     if(f==='aceptado') return q.status==='aceptado';
     if(f==='rechazado') return q.status==='rechazado';
+    if(f==='cobrado'){ if(q.status!=='aceptado') return false; var tc=calcSub(q.mdo)+calcSub(q.mat); return tc>0 && cobradoDe(q)>=tc; }
+    if(f==='pendiente'){ if(q.status!=='aceptado') return false; var tp=calcSub(q.mdo)+calcSub(q.mat); return tp>0 && cobradoDe(q)<tp; }
     return true;
   }
   var cardsDef=[
@@ -9078,7 +9080,9 @@ function PortalView({ token }){
     ['espera','En espera','#B45309','#FFFBEB','#FDE68A'],
     ['recotizar','Para recotizar','#C2410C','#FFF7ED','#FED7AA'],
     ['aceptado','Aceptado','#166534','#F0FDF4','#BBF7D0'],
-    ['rechazado','Rechazado','#B91C1C','#FEF2F2','#FECACA']
+    ['rechazado','Rechazado','#B91C1C','#FEF2F2','#FECACA'],
+    ['cobrado','Cobrado','#166534','#ECFDF5','#A7F3D0'],
+    ['pendiente','Pendiente de cobro','#B91C1C','#FEF2F2','#FECACA']
   ];
   var visibles=mine.filter(function(q){ return coincide(q, pf) && coincideTipo(q); });
   var _estOrd={espera:1,recotizar:2,recotizado:3,generado:4,revision:5,aceptado:6,rechazado:7};
