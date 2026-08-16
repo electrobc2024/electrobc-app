@@ -6998,8 +6998,7 @@ function PlanificacionView({ actividades, onSave, quotes, personas, planForQuote
         chip('Todos', sel.length===0, function(){ setGanttSel([]); }, '_todos'),
         buds.map(function(b){ return chip('#'+(b.numero||'')+' · '+(b.cliente&&b.cliente.nombre||''), sel.indexOf(b.id)>=0, function(){ toggle(b.id); }, b.id); }),
         React.createElement('div',{style:{marginLeft:'auto',display:'flex',gap:8,flexWrap:'wrap'}},
-          (actsShown.length? React.createElement('button',{type:'button',onClick:function(){ setEditSel({acts:actsShown}); },title:'Editar en lista las actividades que estás viendo',style:Object.assign({},btnS,{border:'1px solid #C4B5FD',color:'#6D28D9'})},'✏️ Editar en lista'):null),
-          (single? React.createElement('button',{type:'button',onClick:function(){ ganttPDF(single); },style:btnS},'📄 PDF'):null),
+          (single? React.createElement('button',{type:'button',onClick:function(){ ganttPDF(single); },title:'Descargar el cronograma en PDF',style:btnS},'📄 PDF cronograma'):null),
           (single? React.createElement('button',{type:'button',onClick:function(){ ganttExcel(single); },style:Object.assign({},btnS,{border:'1px solid #86EFAC',color:'#16A34A'})},'📊 Excel'):null)
         )
       ),
@@ -7015,7 +7014,7 @@ function PlanificacionView({ actividades, onSave, quotes, personas, planForQuote
   return React.createElement(IngresosPane, null,
     React.createElement(PageHeader, { title: '🗓 Planificación de actividades', subtitle: 'Programá los trabajos aceptados y las tareas del equipo: fijales día, asignales quién los hace, colores y estado. Vista de calendario mensual, semanal y diaria.', right:
       React.createElement('div',{style:{display:'flex',gap:8,alignItems:'center',flexShrink:0}},
-        (list.length && view!=='gantt')? React.createElement('button',{type:'button',onClick:function(){ setEditAll(true); },title:'Editar todas las actividades en una lista',style:{background:'#fff',border:'1px solid #C4B5FD',borderRadius:8,padding:'9px 12px',fontSize:12,fontWeight:600,cursor:'pointer',color:'#6D28D9',whiteSpace:'nowrap'}}, '✏️ Editar en lista'):null,
+        list.length? React.createElement('button',{type:'button',onClick:function(){ if(view==='gantt'){ var buds=ganttBudgets(); var sel=(ganttSel||[]).filter(function(id){return buds.some(function(b){return b.id===id;});}); var shown= sel.length? list.filter(function(a){return sel.indexOf(a.quoteId)>=0;}) : list; setEditSel({acts:shown}); } else { setEditAll(true); } },title:'Editar en lista las actividades que estás viendo',style:{background:'#fff',border:'1px solid #C4B5FD',borderRadius:8,padding:'9px 12px',fontSize:12,fontWeight:600,cursor:'pointer',color:'#6D28D9',whiteSpace:'nowrap'}}, '✏️ Editar en lista'):null,
         React.createElement('button',{type:'button',onClick:function(){ nueva(''); },style:{backgroundColor:ORANGE,color:'#fff',border:'none',borderRadius:8,padding:'9px 16px',fontSize:13,fontWeight:700,cursor:'pointer',whiteSpace:'nowrap'}}, '➕ Nueva actividad')
       )
     }),
@@ -7025,18 +7024,18 @@ function PlanificacionView({ actividades, onSave, quotes, personas, planForQuote
         React.createElement('div',{style:{display:'flex',gap:4,background:'#F1F5F9',borderRadius:8,padding:3}},
           [['anio','Año'],['mes','Mes'],['semana','Semana'],['dia','Día'],['gantt','📊 Gantt']].map(function(v){ var act=view===v[0]; return React.createElement('button',{key:v[0],type:'button',onClick:function(){setView(v[0]);},style:{border:'none',borderRadius:6,padding:'6px 14px',fontSize:12,fontWeight:700,cursor:'pointer',background:act?'#fff':'transparent',color:act?NAVY:'#64748B',boxShadow:act?'0 1px 2px rgba(0,0,0,0.08)':'none',whiteSpace:'nowrap'}}, v[1]); })
         ),
-        view!=='gantt'? React.createElement('div',{style:{display:'flex',alignItems:'center',gap:8}},
+        React.createElement('div',{style:{display:'flex',alignItems:'center',gap:8}},
           React.createElement('button',{type:'button',onClick:function(){navega(-1);},style:{border:'1px solid #E2E8F0',background:'#fff',borderRadius:6,width:30,height:30,cursor:'pointer',fontWeight:800}},'‹'),
           React.createElement('div',{style:{fontWeight:700,fontSize:14,color:NAVY,fontFamily:"'Oswald',system-ui",minWidth:150,textAlign:'center'}}, periodoLabel()),
           React.createElement('button',{type:'button',onClick:function(){navega(1);},style:{border:'1px solid #E2E8F0',background:'#fff',borderRadius:6,width:30,height:30,cursor:'pointer',fontWeight:800}},'›'),
           React.createElement('button',{type:'button',onClick:function(){ var d=new Date(); d.setHours(0,0,0,0); setRef(d); },style:{border:'1px solid #E2E8F0',background:'#fff',borderRadius:6,padding:'6px 12px',fontSize:12,cursor:'pointer',color:'#475569',fontWeight:600}},'Hoy')
-        ):null
+        )
       ),
-      view!=='gantt'? React.createElement('div',{style:{display:'flex',alignItems:'center',gap:8}},
+      React.createElement('div',{style:{display:'flex',alignItems:'center',gap:8}},
         React.createElement('button',{type:'button',title:'Compartir la agenda de este período por WhatsApp',onClick:compartirWA,style:{border:'1px solid #86EFAC',background:'#fff',borderRadius:6,padding:'6px 11px',fontSize:12,cursor:'pointer',color:'#16A34A',fontWeight:600,whiteSpace:'nowrap'}},'📲 WhatsApp'),
         React.createElement('button',{type:'button',title:'Descargar la agenda de este período en PDF',onClick:pdfPeriodo,style:{border:'1px solid #E2E8F0',background:'#fff',borderRadius:6,padding:'6px 11px',fontSize:12,cursor:'pointer',color:'#475569',fontWeight:600,whiteSpace:'nowrap'}},'📄 PDF'),
         React.createElement('button',{type:'button',title:'Productividad: horas estimadas vs reales',onClick:function(){setShowProd(true);},style:{border:'1px solid #C4B5FD',background:'#fff',borderRadius:6,padding:'6px 11px',fontSize:12,cursor:'pointer',color:'#6D28D9',fontWeight:600,whiteSpace:'nowrap'}},'📊 Productividad')
-      ):null
+      )
     ),
     // Franja de sin fecha / por planificar
     (sinFecha.length>0 && view!=='gantt') ? React.createElement('div',{style:{background:'#FEF2F2',border:'1px solid #FECACA',borderRadius:10,padding:'8px 12px',marginBottom:12}},
