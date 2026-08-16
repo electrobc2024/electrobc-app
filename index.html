@@ -8611,6 +8611,42 @@ function MovimientosPdfOverlay({onClose, data}){
             );
           }))
         ),
+        (data.rentData && data.rentData.filas && data.rentData.filas.length) ? React.createElement("div",{className:"dash-avoid",style:{...cardS, pageBreakBefore:"always", breakBefore:"page"}},
+          React.createElement("div",{style:{fontSize:12,fontWeight:700,color:NAVY,marginBottom:4}},"💰 Rentabilidad por presupuesto (histórico)"),
+          React.createElement("div",{style:{fontSize:9,color:"#94A3B8",marginBottom:8}},"Cobrado − costo real (materiales al "+(data.margenMat!=null?data.margenMat:30)+"% de margen + mano de obra real). Ordenado por rentabilidad."),
+          React.createElement("table",{style:{width:"100%",borderCollapse:"collapse"}},
+            React.createElement("thead",null,React.createElement("tr",null,
+              ["N°","Cliente","Cobrado","Costo mat.","Costo M.O.","Rentab.","Margen"].map(function(h,i){ return React.createElement("th",{key:i,style:{...thS,textAlign:i>=2?"right":"left"}},h); })
+            )),
+            React.createElement("tbody",null, data.rentData.filas.map(function(f,i){ var rc=f.rent>=0?"#166534":"#B91C1C"; return React.createElement("tr",{key:i,style:{borderBottom:"1px solid #F1F5F9"}},
+              React.createElement("td",{style:{padding:"5px 8px",fontSize:11,fontWeight:700,color:ORANGE}},"#"+f.numero),
+              React.createElement("td",{style:{padding:"5px 8px",fontSize:11,color:"#1E293B"}},f.cliente),
+              React.createElement("td",{style:{padding:"5px 8px",fontSize:11,textAlign:"right",color:"#475569"}},"$ "+fmt(f.cob)),
+              React.createElement("td",{style:{padding:"5px 8px",fontSize:11,textAlign:"right",color:"#475569"}},"$ "+fmt(f.cm)),
+              React.createElement("td",{style:{padding:"5px 8px",fontSize:11,textAlign:"right",color:"#475569"}},"$ "+fmt(f.cmo)),
+              React.createElement("td",{style:{padding:"5px 8px",fontSize:11,textAlign:"right",fontWeight:700,color:rc}},(f.rent<0?"- ":"")+"$ "+fmt(f.rent)),
+              React.createElement("td",{style:{padding:"5px 8px",fontSize:11,textAlign:"right",fontWeight:700,color:rc}},(f.cob>0?Math.round(f.pct)+"%":"—"))
+            ); }))
+          ),
+          React.createElement("div",{style:{display:"flex",justifyContent:"space-between",marginTop:8,paddingTop:8,borderTop:"2px solid #E2E8F0",fontSize:12}},
+            React.createElement("span",{style:{fontWeight:700,color:NAVY}},"Total"),
+            React.createElement("span",{style:{fontWeight:700,color:(data.rentData.tRent>=0?"#166534":"#B91C1C")}}, "Cobrado $ "+fmt(data.rentData.tCob)+"  ·  Rentab. "+(data.rentData.tRent<0?"- ":"")+"$ "+fmt(data.rentData.tRent))
+          )
+        ) : null,
+        (data.rentData) ? React.createElement("div",{className:"dash-avoid",style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginTop:12}},
+          React.createElement("div",{style:cardS},
+            React.createElement("div",{style:{fontSize:12,fontWeight:700,color:NAVY,marginBottom:8}},"⏱ Tiempo promedio de cobro"),
+            (data.rentData.promCobro!=null)
+              ? React.createElement("div",null, React.createElement("div",{style:{fontFamily:"'Oswald',system-ui",fontSize:22,fontWeight:700,color:NAVY}}, data.rentData.promCobro+" días"), React.createElement("div",{style:{fontSize:9,color:"#94A3B8"}},"Aceptación → cobro total ("+data.rentData.diasN+" presup.)"))
+              : React.createElement("div",{style:{fontSize:11,color:"#94A3B8"}},"Sin datos suficientes.")
+          ),
+          React.createElement("div",{style:cardS},
+            React.createElement("div",{style:{fontSize:12,fontWeight:700,color:NAVY,marginBottom:8}},"🏆 Ranking de clientes"),
+            (data.rentData.ranking && data.rentData.ranking.length)
+              ? data.rentData.ranking.map(function(r,i){ return React.createElement("div",{key:i,style:{display:"flex",justifyContent:"space-between",fontSize:11,padding:"3px 0",borderBottom:i<data.rentData.ranking.length-1?"1px solid #F1F5F9":"none"}}, React.createElement("span",{style:{color:"#475569"}},(i+1)+". "+r.nom), React.createElement("span",{style:{fontWeight:700,color:NAVY}},"$ "+fmt(r.cob))); })
+              : React.createElement("div",{style:{fontSize:11,color:"#94A3B8"}},"Sin cobros.")
+          )
+        ) : null,
         React.createElement("div",{style:{textAlign:"center",fontSize:9,color:"#CBD5E1",marginTop:16,paddingTop:12,borderTop:"1px solid #E2E8F0"}},"ELECTRO BC — Servicios Integrales — Generado el "+fechaHoy)
       )
     )
@@ -8813,6 +8849,23 @@ function IngresosView({quotes, egresos, onSaveEgresos, clients, catalog, persona
     return s+(parseFloat(e.monto)||0);
   },0);
   var ratioBorelloDash = matCotizadoAceptados>0 ? Math.round((pagadoBorelloDash/matCotizadoAceptados)*100) : 0;
+  // ── Rentabilidad por presupuesto + tiempo de cobro + ranking (histórico, para pantalla y PDF) ──
+  var rentData = (function(){
+    var arsPago=function(p){ var m=parseFloat(p.monto||0); return p.moneda==='USD'? m*(parseFloat(p.tcambio)||0) : m; };
+    var cobradoDe=function(q){ return (q.pagos||[]).reduce(function(s,p){ return s+arsPago(p); },0); };
+    var ultimoPago=function(q){ var ds=(q.pagos||[]).map(function(p){return p.fecha;}).filter(Boolean).sort(); return ds.length?ds[ds.length-1]:null; };
+    var precioHoraDe=function(pid){ var p=(personas||[]).find(function(x){return x.id===pid;}); return p?(parseFloat(p.precioHora)||0):0; };
+    var moDe=function(q){ var acts=(actividades||[]).filter(function(a){return a.quoteId===q.id;}); return acts.reduce(function(s,a){ var hr=parseFloat(a.horasReal)||0; if(hr<=0) return s; var vals=(a.equipo||[]).map(precioHoraDe).filter(function(v){return v>0;}); var avg=vals.length?(vals.reduce(function(x,y){return x+y;},0)/vals.length):0; return s+hr*avg; },0); };
+    var matDe=function(q){ return calcSub(q.mat)/(1+(margenMat/100)); };
+    var aceptados=(quotes||[]).filter(function(q){return q.status==='aceptado';});
+    var filas=aceptados.map(function(q){ var cob=cobradoDe(q); var cm=matDe(q); var cmo=moDe(q); var ct=cm+cmo; var rent=cob-ct; return {id:q.id,numero:q.numero||'',cliente:(q.cliente&&q.cliente.nombre)||'—',cob:cob,cm:cm,cmo:cmo,ct:ct,rent:rent,pct:cob>0?(rent/cob*100):0}; }).sort(function(a,b){return b.rent-a.rent;});
+    var tCob=filas.reduce(function(s,f){return s+f.cob;},0), tCT=filas.reduce(function(s,f){return s+f.ct;},0), tRent=tCob-tCT;
+    var dias=[]; aceptados.forEach(function(q){ var tot=calcSub(q.mdo)+calcSub(q.mat); var cob=cobradoDe(q); if(tot>0 && cob>=tot-1){ var ini=q.aceptadoDesde||q.createdAt; var fin=ultimoPago(q); if(ini&&fin){ var d=Math.round((new Date(fin)-new Date(ini))/86400000); if(d>=0) dias.push(d); } } });
+    var promCobro= dias.length? Math.round(dias.reduce(function(x,y){return x+y;},0)/dias.length) : null;
+    var byCli={}; (quotes||[]).forEach(function(q){ var nom=((q.cliente&&(q.cliente.administracion||q.cliente.nombre))||'—').trim()||'—'; var cob=cobradoDe(q); if(!byCli[nom]) byCli[nom]={nom:nom,cob:0}; byCli[nom].cob+=cob; });
+    var ranking=Object.keys(byCli).map(function(k){return byCli[k];}).filter(function(x){return x.cob>0;}).sort(function(a,b){return b.cob-a.cob;}).slice(0,10);
+    return {filas:filas, tCob:tCob, tCT:tCT, tRent:tRent, promCobro:promCobro, diasN:dias.length, ranking:ranking};
+  })();
 
   // ── Semáforo de salud (orientativo) ──
   var _cobTot = totalCobradoDash + cobradoUSDenARS;
@@ -8948,6 +9001,8 @@ function IngresosView({quotes, egresos, onSaveEgresos, clients, catalog, persona
           quotes: quotes,
           egresosArr: egresos,
           dashAnosVer: dashAnosVer,
+          rentData: rentData,
+          margenMat: margenMat,
           metricas: {
             tasaAprobacion: tasaAprobacionDash,
             aceptadosN: aceptadosDash.length,
@@ -9065,20 +9120,8 @@ function IngresosView({quotes, egresos, onSaveEgresos, clients, catalog, persona
             dashAnosVer:dashAnosVer
           }),
           (function(){
-            var arsPago=function(p){ var m=parseFloat(p.monto||0); return p.moneda==='USD'? m*(parseFloat(p.tcambio)||0) : m; };
-            var cobradoDe=function(q){ return (q.pagos||[]).reduce(function(s,p){ return s+arsPago(p); },0); };
-            var ultimoPago=function(q){ var ds=(q.pagos||[]).map(function(p){return p.fecha;}).filter(Boolean).sort(); return ds.length?ds[ds.length-1]:null; };
-            var precioHoraDe=function(pid){ var p=(personas||[]).find(function(x){return x.id===pid;}); return p?(parseFloat(p.precioHora)||0):0; };
-            var moDe=function(q){ var acts=(actividades||[]).filter(function(a){return a.quoteId===q.id;}); return acts.reduce(function(s,a){ var hr=parseFloat(a.horasReal)||0; if(hr<=0) return s; var vals=(a.equipo||[]).map(precioHoraDe).filter(function(v){return v>0;}); var avg=vals.length?(vals.reduce(function(x,y){return x+y;},0)/vals.length):0; return s+hr*avg; },0); };
-            var matDe=function(q){ return calcSub(q.mat)/(1+(margenMat/100)); };
-            var aceptados=(quotes||[]).filter(function(q){return q.status==='aceptado';});
-            var filas=aceptados.map(function(q){ var cob=cobradoDe(q); var cm=matDe(q); var cmo=moDe(q); var ct=cm+cmo; var rent=cob-ct; return {q:q,cob:cob,cm:cm,cmo:cmo,ct:ct,rent:rent,pct:cob>0?(rent/cob*100):0}; }).sort(function(a,b){return b.rent-a.rent;});
-            var tCob=filas.reduce(function(s,f){return s+f.cob;},0), tCT=filas.reduce(function(s,f){return s+f.ct;},0), tRent=tCob-tCT;
-            var dias=[]; aceptados.forEach(function(q){ var tot=calcSub(q.mdo)+calcSub(q.mat); var cob=cobradoDe(q); if(tot>0 && cob>=tot-1){ var ini=q.aceptadoDesde||q.createdAt; var fin=ultimoPago(q); if(ini&&fin){ var d=Math.round((new Date(fin)-new Date(ini))/86400000); if(d>=0) dias.push(d); } } });
-            var promCobro= dias.length? Math.round(dias.reduce(function(x,y){return x+y;},0)/dias.length) : null;
-            var byCli={}; (quotes||[]).forEach(function(q){ var nom=((q.cliente&&(q.cliente.administracion||q.cliente.nombre))||'—').trim()||'—'; var cob=cobradoDe(q); if(!byCli[nom]) byCli[nom]={nom:nom,cob:0}; byCli[nom].cob+=cob; });
-            var ranking=Object.keys(byCli).map(function(k){return byCli[k];}).filter(function(x){return x.cob>0;}).sort(function(a,b){return b.cob-a.cob;}).slice(0,10);
-            var th={padding:'7px 8px',fontSize:10,fontWeight:700,color:'#94A3B8',textTransform:'uppercase',textAlign:'left',borderBottom:'1px solid #E2E8F0',whiteSpace:'nowrap'};
+            var filas=rentData.filas, ranking=rentData.ranking;
+            var th={padding:'7px 8px',fontSize:10,fontWeight:700,color:'#94A3B8',textTransform:'uppercase',textAlign:'left',borderBottom:'1px solid #E2E8F0',whiteSpace:'nowrap',background:'#F8FAFC',position:'sticky',top:0};
             var td={padding:'7px 8px',fontSize:12,color:'#475569',borderBottom:'1px solid #F1F5F9',whiteSpace:'nowrap'};
             var rcol=function(v){ return v>=0?'#166534':'#B91C1C'; };
             return React.createElement('div',{style:{display:'grid',gridTemplateColumns:'1fr',gap:12,marginTop:12}},
@@ -9087,9 +9130,9 @@ function IngresosView({quotes, egresos, onSaveEgresos, clients, catalog, persona
                   React.createElement('div',{style:{fontSize:13,fontWeight:700,color:NAVY}},'\u{1F4B0} Rentabilidad por presupuesto (histórico)'),
                   React.createElement('label',{style:{display:'flex',alignItems:'center',gap:6,fontSize:12,color:'#64748B'}}, 'Margen materiales', React.createElement('input',{type:'number',min:'0',step:'1',value:margenMat,onChange:function(e){setMargen(e.target.value);},style:{width:64,border:'1px solid #E2E8F0',borderRadius:6,padding:'5px 7px',fontSize:12}}), '%')
                 ),
-                React.createElement('div',{style:{fontSize:10,color:'#94A3B8',marginBottom:8}},'Cobrado − costo real. Materiales: precio ÷ (1+margen). Mano de obra: horas reales de las actividades × valor hora promedio del equipo.'),
+                React.createElement('div',{style:{fontSize:10,color:'#94A3B8',marginBottom:8}},'Cobrado − costo real. Materiales: precio ÷ (1+margen). Mano de obra: horas reales × valor hora promedio del equipo. Ordenado por rentabilidad.'),
                 filas.length===0 ? React.createElement('div',{style:{color:'#94A3B8',fontSize:12,textAlign:'center',padding:'16px 0'}},'No hay presupuestos aceptados todavía.') :
-                React.createElement('div',{style:{overflowX:'auto'}}, React.createElement('table',{style:{width:'100%',borderCollapse:'collapse',minWidth:600}},
+                React.createElement('div',{style:{overflowX:'auto',overflowY:'auto',maxHeight:300,border:'1px solid #F1F5F9',borderRadius:8}}, React.createElement('table',{style:{width:'100%',borderCollapse:'collapse',minWidth:560}},
                   React.createElement('thead',null,React.createElement('tr',null,
                     React.createElement('th',{style:th},'N°'), React.createElement('th',{style:th},'Cliente'),
                     React.createElement('th',{style:Object.assign({},th,{textAlign:'right'})},'Cobrado'),
@@ -9098,30 +9141,26 @@ function IngresosView({quotes, egresos, onSaveEgresos, clients, catalog, persona
                     React.createElement('th',{style:Object.assign({},th,{textAlign:'right'})},'Rentab.'),
                     React.createElement('th',{style:Object.assign({},th,{textAlign:'right'})},'Margen')
                   )),
-                  React.createElement('tbody',null, filas.map(function(f){ return React.createElement('tr',{key:f.q.id},
-                    React.createElement('td',{style:Object.assign({},td,{fontWeight:700,color:ORANGE})}, '#'+(f.q.numero||'')),
-                    React.createElement('td',{style:td}, (f.q.cliente&&f.q.cliente.nombre)||'—'),
+                  React.createElement('tbody',null, filas.map(function(f){ return React.createElement('tr',{key:f.id},
+                    React.createElement('td',{style:Object.assign({},td,{fontWeight:700,color:ORANGE})}, '#'+(f.numero||'')),
+                    React.createElement('td',{style:td}, f.cliente),
                     React.createElement('td',{style:Object.assign({},td,{textAlign:'right'})}, fmt(f.cob)),
                     React.createElement('td',{style:Object.assign({},td,{textAlign:'right'})}, fmt(f.cm)),
                     React.createElement('td',{style:Object.assign({},td,{textAlign:'right'})}, fmt(f.cmo)),
                     React.createElement('td',{style:Object.assign({},td,{textAlign:'right',fontWeight:700,color:rcol(f.rent)})}, fmt(f.rent)),
                     React.createElement('td',{style:Object.assign({},td,{textAlign:'right',fontWeight:700,color:rcol(f.rent)})}, (f.cob>0?Math.round(f.pct)+'%':'—'))
-                  ); }).concat([ React.createElement('tr',{key:'_tot'},
-                    React.createElement('td',{style:Object.assign({},td,{fontWeight:700,color:NAVY,borderTop:'2px solid #E2E8F0'})},'Total'),
-                    React.createElement('td',{style:Object.assign({},td,{borderTop:'2px solid #E2E8F0'})},''),
-                    React.createElement('td',{style:Object.assign({},td,{textAlign:'right',fontWeight:700,borderTop:'2px solid #E2E8F0'})}, fmt(tCob)),
-                    React.createElement('td',{style:Object.assign({},td,{borderTop:'2px solid #E2E8F0'})},''),
-                    React.createElement('td',{style:Object.assign({},td,{borderTop:'2px solid #E2E8F0'})},''),
-                    React.createElement('td',{style:Object.assign({},td,{textAlign:'right',fontWeight:700,color:rcol(tRent),borderTop:'2px solid #E2E8F0'})}, fmt(tRent)),
-                    React.createElement('td',{style:Object.assign({},td,{textAlign:'right',fontWeight:700,color:rcol(tRent),borderTop:'2px solid #E2E8F0'})}, (tCob>0?Math.round(tRent/tCob*100)+'%':'—'))
-                  )]))
-                ))
+                  ); }))
+                )),
+                filas.length>0 ? React.createElement('div',{style:{display:'flex',justifyContent:'space-between',gap:10,marginTop:8,paddingTop:8,borderTop:'2px solid #E2E8F0',fontSize:12}},
+                  React.createElement('span',{style:{fontWeight:700,color:NAVY}},'Total'),
+                  React.createElement('span',null, React.createElement('span',{style:{color:'#94A3B8',marginRight:8}},'Cobrado '+fmt(rentData.tCob)), React.createElement('span',{style:{fontWeight:700,color:rcol(rentData.tRent)}}, 'Rentab. '+fmt(rentData.tRent)+(rentData.tCob>0?(' ('+Math.round(rentData.tRent/rentData.tCob*100)+'%)'):'')))
+                ) : null
               ),
               React.createElement('div',{style:{display:'grid',gridTemplateColumns:isMobile?'1fr':'1fr 1fr',gap:12}},
                 React.createElement('div',{style:Object.assign({},card)},
                   React.createElement('div',{style:{fontSize:13,fontWeight:700,color:NAVY,marginBottom:8}},'⏱ Tiempo promedio de cobro'),
-                  promCobro==null ? React.createElement('div',{style:{color:'#94A3B8',fontSize:12}},'Todavía no hay presupuestos aceptados y cobrados por completo.') :
-                  React.createElement('div',null, React.createElement('div',{style:{fontSize:30,fontWeight:800,color:NAVY,fontFamily:"'Oswald',system-ui"}}, promCobro+' días'), React.createElement('div',{style:{fontSize:11,color:'#94A3B8'}}, 'Desde la aceptación hasta el cobro total ('+dias.length+' presupuesto(s)).'))
+                  rentData.promCobro==null ? React.createElement('div',{style:{color:'#94A3B8',fontSize:12}},'Todavía no hay presupuestos aceptados y cobrados por completo.') :
+                  React.createElement('div',null, React.createElement('div',{style:{fontSize:30,fontWeight:800,color:NAVY,fontFamily:"'Oswald',system-ui"}}, rentData.promCobro+' días'), React.createElement('div',{style:{fontSize:11,color:'#94A3B8'}}, 'Desde la aceptación hasta el cobro total ('+rentData.diasN+' presupuesto(s)).'))
                 ),
                 React.createElement('div',{style:Object.assign({},card)},
                   React.createElement('div',{style:{fontSize:13,fontWeight:700,color:NAVY,marginBottom:8}},'\u{1F3C6} Ranking de clientes (por cobrado)'),
