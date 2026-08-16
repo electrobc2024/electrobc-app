@@ -8915,7 +8915,7 @@ function PortalView({ token }){
       }catch(e){ setErr('No se pudo cargar la información.'); setLd(false); }
     })();
   },[token]);
-  const wrap = function(children){ return React.createElement('div',{style:{minHeight:'100vh',background:'#EEF0F5'}},
+  const wrap = function(children){ return React.createElement('div',{style:{height:'100%',overflowY:'auto',background:'#EEF0F5'}},
     React.createElement('div',{style:{background:NAVY,borderBottom:'3px solid '+ORANGE,padding:'14px 20px',display:'flex',alignItems:'center',gap:12}},
       React.createElement(LogoIcon,{size:30}),
       React.createElement('div',null,
