@@ -6378,7 +6378,7 @@ function BackupView({ quotes, catalog, clients, egresos, personas, onRestore }){
 
 // ── Gantt interactivo (arrastrar barras: mover / estirar; editar nombre; fecha límite) ──
 function GanttEditor({ q, acts, personas, onPatchAct, onOpenAct, fechaLimite, onSetLimite, onNueva, avisos, onSetAvisos }){
-  var COLW=32, ROWH=36, NAMEW=250;
+  var COLW=42, ROWH=46, NAMEW=280;
   var _av = React.useState({fecha:'',tipo:'luz',nota:''}); var avForm=_av[0], setAvForm=_av[1];
   function estColor(a){ return (EST_ACT[a.estado]||EST_ACT.programado).dot; }
   var AV = avisos || [];
@@ -6475,7 +6475,7 @@ function GanttEditor({ q, acts, personas, onPatchAct, onOpenAct, fechaLimite, on
         // días
         React.createElement('div',{style:{display:'flex'}},
           React.createElement('div',{style:Object.assign({},thName,{fontSize:10,fontWeight:700,color:'#64748B',padding:'3px 6px',borderBottom:'1px solid #E2E8F0',borderRight:'1px solid #E2E8F0'})},'Actividad'),
-          cols.map(function(c,ci){ return React.createElement('div',{key:ci,style:{width:COLW,flexShrink:0,textAlign:'center',fontSize:9,fontWeight:700,color:c.we?'#CBD5E1':'#64748B',background:c.we?'#F1F5F9':'#F8FAFC',borderBottom:'1px solid #E2E8F0',borderLeft:'1px solid #EDF1F6',padding:'3px 0'}}, c.d.getDate()); })
+          cols.map(function(c,ci){ return React.createElement('div',{key:ci,style:{width:COLW,flexShrink:0,textAlign:'center',fontSize:11,fontWeight:700,color:c.we?'#CBD5E1':'#64748B',background:c.we?'#F1F5F9':'#F8FAFC',borderBottom:'1px solid #E2E8F0',borderLeft:'1px solid #EDF1F6',padding:'5px 0'}}, c.d.getDate()); })
         ),
         // filas
         rows.map(function(r,ri){
@@ -6494,7 +6494,7 @@ function GanttEditor({ q, acts, personas, onPatchAct, onOpenAct, fechaLimite, on
               AV.map(function(av){ var ax=offOf(d0,av.fecha); if(ax<0||ax>=totalDays) return null; var m=TIPO_AVISO[av.tipo]||TIPO_AVISO.otro; return React.createElement('div',{key:'av'+av.id,title:m.l+(av.nota?(': '+av.nota):'')+' — '+fmtFecha(av.fecha),style:{position:'absolute',left:ax*COLW+COLW/2-1,top:0,width:2,height:'100%',background:m.c,opacity:0.75,zIndex:1}}); }),
               fechaLimite?(function(){ var lx=offOf(d0,fechaLimite); if(lx<0||lx>=totalDays) return null; return React.createElement('div',{title:'Fecha límite',style:{position:'absolute',left:lx*COLW,top:0,width:2,height:'100%',background:'#DC2626',zIndex:1}}); })():null,
               React.createElement('div',{onMouseDown:function(e){startMove(r.a,e);},title:'Arrastrá para mover · borde derecho para estirar · doble clic para el detalle',onDoubleClick:function(){onOpenAct(r.a);},style:{position:'absolute',left:left,top:6,width:Math.max(COLW-2,w-2),height:ROWH-14,background:estColor(r.a),borderRadius:5,cursor:isDrag?'grabbing':'grab',display:'flex',alignItems:'center',padding:'0 6px',boxShadow:'0 1px 3px rgba(0,0,0,0.2)',zIndex:2,userSelect:'none'}},
-                React.createElement('span',{style:{color:'#fff',fontSize:9,fontWeight:800,whiteSpace:'nowrap',overflow:'hidden'}}, r.nd+'d'+(r.ea.durManual?' 🔒':'')),
+                React.createElement('span',{style:{color:'#fff',fontSize:11,fontWeight:800,whiteSpace:'nowrap',overflow:'hidden'}}, r.nd+'d'+(r.ea.durManual?' 🔒':'')),
                 React.createElement('div',{onMouseDown:function(e){startResize(r,e);},title:'Estirar / acortar la duración',style:{position:'absolute',right:0,top:0,width:10,height:'100%',cursor:'ew-resize'}})
               )
             )
@@ -6966,8 +6966,8 @@ function PlanificacionView({ actividades, onSave, quotes, personas, planForQuote
     ganttOpen ? (function(){
       var buds=ganttBudgets();
       var q=buds.find(function(x){return x.id===ganttQid;})||buds[0];
-      return React.createElement('div',{onMouseDown:function(){setGanttOpen(false);},style:{position:'fixed',inset:0,zIndex:10000,background:'rgba(0,0,0,0.5)',display:'flex',alignItems:'flex-start',justifyContent:'center',padding:'32px 16px',overflow:'auto'}},
-        React.createElement('div',{onMouseDown:function(e){e.stopPropagation();},style:{background:'#fff',borderRadius:14,width:1040,maxWidth:'100%',padding:20,boxShadow:'0 10px 40px rgba(0,0,0,0.25)'}},
+      return React.createElement('div',{onMouseDown:function(){setGanttOpen(false);},style:{position:'fixed',inset:0,zIndex:10000,background:'rgba(0,0,0,0.5)',display:'flex',alignItems:'flex-start',justifyContent:'center',padding:'16px',overflow:'auto'}},
+        React.createElement('div',{onMouseDown:function(e){e.stopPropagation();},style:{background:'#fff',borderRadius:14,width:'98vw',maxWidth:1700,minHeight:'88vh',padding:20,boxShadow:'0 10px 40px rgba(0,0,0,0.25)'}},
           React.createElement('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12,gap:10,flexWrap:'wrap'}},
             React.createElement('div',{style:{fontFamily:"'Oswald',system-ui",fontSize:18,fontWeight:700,color:NAVY}},'📊 Cronograma por presupuesto'),
             React.createElement('button',{type:'button',onClick:function(){setGanttOpen(false);},style:{background:'none',border:'none',fontSize:18,color:'#94A3B8',cursor:'pointer'}},'✕')
