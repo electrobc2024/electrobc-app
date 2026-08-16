@@ -6717,8 +6717,11 @@ function PlanificacionView({ actividades, onSave, quotes, personas, planForQuote
     var est = EST_ACT[a.estado]||EST_ACT.por_planificar;
     var hr = horasLabel(a, s);
     var alerta = a.quoteId && (function(){ var qq=quoteById(a.quoteId); return qq && qq.status!=='aceptado'; })();
-    return React.createElement('div',{key:a.id, title: resumenDe(a), onClick:function(e){ e.stopPropagation(); setEditing(Object.assign({},a)); },
-      style:{background:a.color||'#F26B1D', color:'#fff', borderRadius:6, padding:opts.big?'6px 9px':'3px 7px', fontSize:opts.big?12:11, cursor:'pointer', marginBottom:3, display:'flex', alignItems:'center', gap:5, overflow:'hidden', whiteSpace:'nowrap', textOverflow:'ellipsis', boxShadow: alerta?'0 0 0 2px #DC2626':'none'}},
+    return React.createElement('div',{key:a.id, title: (a.estado==='hecho'?'':'Arrastrá para mover · ')+resumenDe(a), onClick:function(e){ e.stopPropagation(); setEditing(Object.assign({},a)); },
+      draggable: a.estado!=='hecho',
+      onDragStart:function(e){ calDrag.current={id:a.id, grab:s||null}; e.dataTransfer.effectAllowed='move'; try{e.dataTransfer.setData('text/plain',a.id);}catch(_){ } },
+      onDragEnd:function(){ calDrag.current=null; },
+      style:{background:a.color||'#F26B1D', color:'#fff', borderRadius:6, padding:opts.big?'6px 9px':'3px 7px', fontSize:opts.big?12:11, cursor:a.estado==='hecho'?'pointer':'grab', marginBottom:3, display:'flex', alignItems:'center', gap:5, overflow:'hidden', whiteSpace:'nowrap', textOverflow:'ellipsis', boxShadow: alerta?'0 0 0 2px #DC2626':'none'}},
       React.createElement('span',{style:{width:7,height:7,borderRadius:'50%',background:est.dot,flexShrink:0,boxShadow:'0 0 0 1.5px rgba(255,255,255,0.7)'}}),
       alerta? React.createElement('span',{style:{flexShrink:0}},'⚠'):null,
       hr? React.createElement('span',{style:{fontWeight:700,opacity:0.95,flexShrink:0}}, hr):null,
@@ -6756,6 +6759,8 @@ function PlanificacionView({ actividades, onSave, quotes, personas, planForQuote
           var inMonth=d.getMonth()===ref.getMonth();
           var acts=actsDelDia(d);
           return React.createElement('div',{key:i,onClick:function(){ nueva(ymd(d)); },
+            onDragOver:function(e){ if(calDrag.current){ e.preventDefault(); e.dataTransfer.dropEffect='move'; } },
+            onDrop:function(e){ e.preventDefault(); soltarEnDia(ymd(d)); },
             style:{minHeight:96,borderRight:(i%7!==6)?'1px solid #F1F5F9':'none',borderBottom:i<35?'1px solid #F1F5F9':'none',padding:5,background:inMonth?'#fff':'#FBFCFE',cursor:'pointer',opacity:inMonth?1:0.55}},
             React.createElement('div',{style:{fontSize:11,fontWeight:sameDay(d,hoy)?800:600,color:sameDay(d,hoy)?'#fff':'#64748B',marginBottom:3, background:sameDay(d,hoy)?ORANGE:'transparent', width:sameDay(d,hoy)?20:'auto', height:sameDay(d,hoy)?20:'auto', borderRadius:'50%', display:'inline-flex',alignItems:'center',justifyContent:'center'}}, d.getDate()),
             acts.slice(0,3).map(function(a){ return chip(a, ymd(d)); }),
@@ -6772,6 +6777,8 @@ function PlanificacionView({ actividades, onSave, quotes, personas, planForQuote
       days.map(function(d,i){
         var acts=actsDelDia(d);
         return React.createElement('div',{key:i,onClick:function(){ nueva(ymd(d)); },
+          onDragOver:function(e){ if(calDrag.current){ e.preventDefault(); e.dataTransfer.dropEffect='move'; } },
+          onDrop:function(e){ e.preventDefault(); soltarEnDia(ymd(d)); },
           style:{background:'#fff',border:'1px solid '+(sameDay(d,hoy)?ORANGE:'#E2E8F0'),borderRadius:10,padding:8,minHeight:200,cursor:'pointer'}},
           React.createElement('div',{style:{fontSize:11,fontWeight:700,color:sameDay(d,hoy)?ORANGE:'#64748B',marginBottom:6,textAlign:'center'}}, DOW[i]+' '+d.getDate()),
           acts.map(function(a){ return chip(a, ymd(d), {big:true}); }),
@@ -6901,6 +6908,22 @@ function PlanificacionView({ actividades, onSave, quotes, personas, planForQuote
     var exists=list.some(function(x){return x.id===a.id;});
     var nl = exists ? list.map(function(x){return x.id===a.id?a:x;}) : list.concat([a]);
     onSave(nl);
+  }
+  // Arrastrar y soltar actividades en el calendario (mes/semana)
+  var calDrag = React.useRef(null);
+  function soltarEnDia(dropYmd){
+    var dr = calDrag.current; calDrag.current=null;
+    if(!dr) return;
+    var a = list.find(function(x){return x.id===dr.id;}); if(!a) return;
+    if(a.estado==='hecho'){ alert('Esta actividad está en "Hecho", no se puede mover. Cambiá el estado a Programado para reprogramarla.'); return; }
+    var origStart = (a.fecha||'').slice(0,10);
+    var nf;
+    if(dr.grab && origStart){ var delta=Math.round((parseYmd(dropYmd)-parseYmd(dr.grab))/86400000); if(!delta) return; nf=ymd(addDays(parseYmd(origStart), delta)); }
+    else { nf=dropYmd; }
+    var merged=Object.assign({}, a, {fecha:nf});
+    var q=a.quoteId?quoteById(a.quoteId):null;
+    if(q && q.fechaLimite){ var dd=diasCubiertosAct(merged); var end=dd[dd.length-1]; if(end>q.fechaLimite){ alert('No se puede mover ahí: la actividad terminaría el '+fmtFecha(end)+', después de la fecha límite ('+fmtFecha(q.fechaLimite)+').'); return; } }
+    patchAct(merged);
   }
   function nuevaEnQuote(q){
     var a = mkActividad(); a.quoteId = q.id;
