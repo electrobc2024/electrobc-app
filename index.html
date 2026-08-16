@@ -6609,11 +6609,11 @@ function PlanificacionView({ actividades, onSave, quotes, personas, planForQuote
   const [ref, setRef] = React.useState(function(){ var d=new Date(); d.setHours(0,0,0,0); return d; });
   const [editing, setEditing] = React.useState(null);   // objeto actividad en edición (o null)
   const [showProd, setShowProd] = React.useState(false);
-  const [ganttOpen, setGanttOpen] = React.useState(false);
-  const [ganttQid, setGanttQid] = React.useState('');
+  const [ganttSel, setGanttSel] = React.useState([]); // presupuestos elegidos en el Gantt (vacío = todos)
   const [bulkQ, setBulkQ] = React.useState(null);
   const [editListQ, setEditListQ] = React.useState(null);
   const [editAll, setEditAll] = React.useState(false);
+  const [editSel, setEditSel] = React.useState(null); // {acts:[...]} para editar una selección del Gantt
 
   const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
   const DOW = ['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
@@ -6720,7 +6720,7 @@ function PlanificacionView({ actividades, onSave, quotes, personas, planForQuote
     if(!planForQuote) return;
     var ex = list.find(function(a){ return a.quoteId===planForQuote; });
     var qq = quoteById(planForQuote);
-    if(ex){ setGanttQid(planForQuote); setView('gantt'); }            // ya tiene actividades → abrir el cronograma
+    if(ex){ setGanttSel([planForQuote]); setView('gantt'); }          // ya tiene actividades → abrir el cronograma
     else if(qq){ setBulkQ(qq); }                                    // sin programar → cargar varias actividades de una
     if(onConsumePlan) onConsumePlan();
   }, [planForQuote]);
@@ -6983,28 +6983,31 @@ function PlanificacionView({ actividades, onSave, quotes, personas, planForQuote
     var wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Cronograma');
     XLSX.writeFile(wb, 'ELECTRO BC - Cronograma Presupuesto '+(q.numero||'')+'.xlsx');
   }
-  // ── Vista GANTT (todos los presupuestos o uno solo) ──
+  // ── Vista GANTT (varios presupuestos a la vez o todos) ──
   function renderGantt(){
     var buds=ganttBudgets();
-    var selQ = ganttQid ? (buds.find(function(b){return b.id===ganttQid;})||null) : null;
+    var sel=(ganttSel||[]).filter(function(id){ return buds.some(function(b){return b.id===id;}); });
+    var actsShown = sel.length ? list.filter(function(a){ return sel.indexOf(a.quoteId)>=0; }) : list;
+    var single = sel.length===1 ? (buds.find(function(b){return b.id===sel[0];})||null) : null;
     var btnS={border:'1px solid #E2E8F0',background:'#fff',borderRadius:8,padding:'7px 11px',fontSize:12,fontWeight:600,cursor:'pointer',whiteSpace:'nowrap'};
+    function toggle(id){ setGanttSel(sel.indexOf(id)>=0 ? sel.filter(function(x){return x!==id;}) : sel.concat([id])); }
+    var chip=function(label,on,onClick,key){ return React.createElement('button',{key:key,type:'button',onClick:onClick,style:{padding:'5px 11px',borderRadius:20,fontSize:12,fontWeight:on?700:500,cursor:'pointer',border:'1.5px solid '+(on?'#6D28D9':'#E2E8F0'),backgroundColor:on?'#F5F3FF':'#fff',color:on?'#6D28D9':'#64748B',whiteSpace:'nowrap'}}, label); };
     return React.createElement('div',null,
-      React.createElement('div',{style:{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap',marginBottom:10}},
-        React.createElement('span',{style:{fontSize:10,fontWeight:700,color:'#94A3B8',textTransform:'uppercase'}},'Ver'),
-        React.createElement('select',{value:ganttQid,onChange:function(e){setGanttQid(e.target.value);},style:{border:'1px solid #E2E8F0',borderRadius:8,padding:'7px 10px',fontSize:13,fontWeight:600,color:NAVY,minWidth:230}},
-          [React.createElement('option',{key:'_',value:''},'Todos los presupuestos')].concat(buds.map(function(b){ var dir=[b.cliente&&b.cliente.calle,b.cliente&&b.cliente.numero].filter(Boolean).join(' '); return React.createElement('option',{key:b.id,value:b.id}, '#'+(b.numero||'')+' · '+(b.cliente&&b.cliente.nombre||'')+(dir?(' · '+dir):'')); }))
-        ),
-        selQ? React.createElement('div',{style:{marginLeft:'auto',display:'flex',gap:8,flexWrap:'wrap'}},
-          React.createElement('button',{type:'button',onClick:function(){ setEditListQ(selQ); },style:Object.assign({},btnS,{border:'1px solid #C4B5FD',color:'#6D28D9'})},'✏️ Editar en lista'),
-          React.createElement('button',{type:'button',onClick:function(){ ganttPDF(selQ); },style:btnS},'📄 PDF'),
-          React.createElement('button',{type:'button',onClick:function(){ ganttExcel(selQ); },style:Object.assign({},btnS,{border:'1px solid #86EFAC',color:'#16A34A'})},'📊 Excel')
-        ):null
+      React.createElement('div',{style:{display:'flex',gap:6,alignItems:'center',flexWrap:'wrap',marginBottom:10}},
+        React.createElement('span',{style:{fontSize:10,fontWeight:700,color:'#94A3B8',textTransform:'uppercase',marginRight:2}},'Ver'),
+        chip('Todos', sel.length===0, function(){ setGanttSel([]); }, '_todos'),
+        buds.map(function(b){ return chip('#'+(b.numero||'')+' · '+(b.cliente&&b.cliente.nombre||''), sel.indexOf(b.id)>=0, function(){ toggle(b.id); }, b.id); }),
+        React.createElement('div',{style:{marginLeft:'auto',display:'flex',gap:8,flexWrap:'wrap'}},
+          (actsShown.length? React.createElement('button',{type:'button',onClick:function(){ setEditSel({acts:actsShown}); },title:'Editar en lista las actividades que estás viendo',style:Object.assign({},btnS,{border:'1px solid #C4B5FD',color:'#6D28D9'})},'✏️ Editar en lista'):null),
+          (single? React.createElement('button',{type:'button',onClick:function(){ ganttPDF(single); },style:btnS},'📄 PDF'):null),
+          (single? React.createElement('button',{type:'button',onClick:function(){ ganttExcel(single); },style:Object.assign({},btnS,{border:'1px solid #86EFAC',color:'#16A34A'})},'📊 Excel'):null)
+        )
       ),
       buds.length===0
         ? React.createElement('div',{style:{background:'#fff',border:'1px solid #E2E8F0',borderRadius:12,padding:'40px',textAlign:'center',color:'#94A3B8',fontSize:13}}, 'Todavía no hay actividades planificadas. Cargalas desde Seguimiento (botón de programar) o con "Nueva actividad".')
-        : (selQ
-            ? React.createElement(GanttEditor,{ q:selQ, acts:list.filter(function(a){return a.quoteId===selQ.id;}), personas:pers, onPatchAct:patchAct, onOpenAct:function(a){ setEditing(Object.assign({},a)); }, onNueva:function(){ setBulkQ(selQ); }, fechaLimite:selQ.fechaLimite||'', onSetLimite:function(v){ if(onPatchQuote) onPatchQuote(selQ.id,{fechaLimite:v}); }, avisos:selQ.avisos||[], onSetAvisos:function(av){ if(onPatchQuote) onPatchQuote(selQ.id,{avisos:av}); } })
-            : React.createElement(GanttEditor,{ grouped:true, quoteById:quoteById, acts:list, personas:pers, onPatchAct:patchAct, onOpenAct:function(a){ setEditing(Object.assign({},a)); } })
+        : (single
+            ? React.createElement(GanttEditor,{ q:single, acts:list.filter(function(a){return a.quoteId===single.id;}), personas:pers, onPatchAct:patchAct, onOpenAct:function(a){ setEditing(Object.assign({},a)); }, onNueva:function(){ setBulkQ(single); }, fechaLimite:single.fechaLimite||'', onSetLimite:function(v){ if(onPatchQuote) onPatchQuote(single.id,{fechaLimite:v}); }, avisos:single.avisos||[], onSetAvisos:function(av){ if(onPatchQuote) onPatchQuote(single.id,{avisos:av}); } })
+            : React.createElement(GanttEditor,{ grouped:true, quoteById:quoteById, acts:actsShown, personas:pers, onPatchAct:patchAct, onOpenAct:function(a){ setEditing(Object.assign({},a)); } })
           )
     );
   }
@@ -7012,7 +7015,7 @@ function PlanificacionView({ actividades, onSave, quotes, personas, planForQuote
   return React.createElement(IngresosPane, null,
     React.createElement(PageHeader, { title: '🗓 Planificación de actividades', subtitle: 'Programá los trabajos aceptados y las tareas del equipo: fijales día, asignales quién los hace, colores y estado. Vista de calendario mensual, semanal y diaria.', right:
       React.createElement('div',{style:{display:'flex',gap:8,alignItems:'center',flexShrink:0}},
-        list.length? React.createElement('button',{type:'button',onClick:function(){ setEditAll(true); },title:'Editar todas las actividades en una lista',style:{background:'#fff',border:'1px solid #C4B5FD',borderRadius:8,padding:'9px 12px',fontSize:12,fontWeight:600,cursor:'pointer',color:'#6D28D9',whiteSpace:'nowrap'}}, '✏️ Editar en lista'):null,
+        (list.length && view!=='gantt')? React.createElement('button',{type:'button',onClick:function(){ setEditAll(true); },title:'Editar todas las actividades en una lista',style:{background:'#fff',border:'1px solid #C4B5FD',borderRadius:8,padding:'9px 12px',fontSize:12,fontWeight:600,cursor:'pointer',color:'#6D28D9',whiteSpace:'nowrap'}}, '✏️ Editar en lista'):null,
         React.createElement('button',{type:'button',onClick:function(){ nueva(''); },style:{backgroundColor:ORANGE,color:'#fff',border:'none',borderRadius:8,padding:'9px 16px',fontSize:13,fontWeight:700,cursor:'pointer',whiteSpace:'nowrap'}}, '➕ Nueva actividad')
       )
     }),
@@ -7136,6 +7139,18 @@ function PlanificacionView({ actividades, onSave, quotes, personas, planForQuote
       personas: pers,
       quoteById: quoteById,
       onClose: function(){ setEditAll(false); },
+      onSaveAll: function(mapPatch, borrados){
+        var nl = list.filter(function(a){ return borrados.indexOf(a.id)<0; }).map(function(a){ return mapPatch[a.id]?Object.assign({},a,mapPatch[a.id]):a; });
+        onSave(nl);
+      }
+    }) : null,
+    // Edición múltiple de la selección del Gantt
+    editSel ? React.createElement(BulkEditActividades, {
+      all: true,
+      acts: editSel.acts,
+      personas: pers,
+      quoteById: quoteById,
+      onClose: function(){ setEditSel(null); },
       onSaveAll: function(mapPatch, borrados){
         var nl = list.filter(function(a){ return borrados.indexOf(a.id)<0; }).map(function(a){ return mapPatch[a.id]?Object.assign({},a,mapPatch[a.id]):a; });
         onSave(nl);
