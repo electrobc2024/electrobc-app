@@ -875,7 +875,8 @@ function _gTitulo(a, q){
   if(q){ var dir=[q.cliente&&q.cliente.calle, q.cliente&&q.cliente.numero].filter(Boolean).join(' '); return (q.cliente&&q.cliente.nombre||'Presupuesto')+(dir?(' · '+dir):''); }
   return '(sin título)';
 }
-function ganttModelG(q, acts){
+var MESES3=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+function ganttModelG(q, acts, unit){
   var av=(acts||[]).filter(function(a){ return a.quoteId===q.id; });
   var rows=av.map(function(a){ var dias=diasCubiertosAct(a); return {a:a, start:dias[0], end:dias[dias.length-1], nd:dias.length}; })
     .filter(function(r){ return r.start; })
@@ -885,10 +886,13 @@ function ganttModelG(q, acts){
   rows.forEach(function(r){ if(r.start<minS)minS=r.start; if(r.end>maxS)maxS=r.end; });
   var d0=_gParse(minS), d1=_gParse(maxS);
   var spanDays=Math.round((d1-d0)/86400000)+1;
-  var mode = spanDays<=45 ? 'day' : 'week';
+  var mode = (unit==='dia'?'day':unit==='semana'?'week':unit==='mes'?'month': (spanDays<=45?'day':'week'));
   var cols=[];
   if(mode==='day'){
     for(var i=0;i<spanDays;i++){ var d=_gAdd(d0,i); cols.push({key:_gYmd(d), label:String(d.getDate()), sub:d.getMonth()+1, d:d, dow:d.getDay(), we:(d.getDay()===0||d.getDay()===6)}); }
+  } else if(mode==='month'){
+    var cm=new Date(d0.getFullYear(), d0.getMonth(), 1);
+    while(cm<=d1){ var me=new Date(cm.getFullYear(), cm.getMonth()+1, 0); cols.push({start:_gYmd(cm), end:_gYmd(me), label:MESES3[cm.getMonth()], sub:String(cm.getFullYear()).slice(2), we:false}); cm=new Date(cm.getFullYear(), cm.getMonth()+1, 1); }
   } else {
     var ws=_gSOW(d0);
     while(_gYmd(ws)<=maxS){ var we=_gAdd(ws,6); cols.push({start:_gYmd(ws), end:_gYmd(we), label:ws.getDate()+'–'+we.getDate(), sub:(we.getMonth()+1), we:false}); ws=_gAdd(ws,7); }
@@ -898,11 +902,11 @@ function ganttModelG(q, acts){
   return {rows:rows, cols:cols, mode:mode, minS:minS, maxS:maxS, bands:bands};
 }
 function ganttCoveredG(r, c, mode){ return mode==='day' ? (c.key>=r.start && c.key<=r.end) : (r.start<=c.end && r.end>=c.start); }
-function ganttHTMLG(q, acts, personas){
+function ganttHTMLG(q, acts, personas, unit){
   function persLbl(id){ var p=(personas||[]).find(function(x){return x.id===id;}); return p?(p.nombre||'—'):'—'; }
-  var m=ganttModelG(q, acts); if(!m) return '<div style="color:#94A3B8;padding:20px;font-family:system-ui,sans-serif">Sin programar — este presupuesto todavía no tiene actividades planificadas.</div>';
+  var m=ganttModelG(q, acts, unit); if(!m) return '<div style="color:#94A3B8;padding:20px;font-family:system-ui,sans-serif">Sin programar — este presupuesto todavía no tiene actividades planificadas.</div>';
   var dir=[q.cliente&&q.cliente.calle,q.cliente&&q.cliente.numero,q.cliente&&q.cliente.depto?('Dto '+q.cliente.depto):''].filter(Boolean).join(' ');
-  var nameW=210, colW=(m.mode==='day'? (m.cols.length>28?22:30) : 54);
+  var nameW=210, colW=(m.mode==='day'? (m.cols.length>28?22:30) : (m.mode==='month'?64:54));
   var css='border-collapse:collapse;table-layout:fixed;font-family:system-ui,\'Segoe UI\',sans-serif';
   var thBase='padding:2px 0;font-size:9px;font-weight:700;color:#64748B;text-align:center;border-left:1px solid #EDF1F6;border-bottom:1px solid #E2E8F0;';
   var html='<div style="border-bottom:3px solid #F26B1D;padding-bottom:8px;margin-bottom:12px">'
@@ -923,7 +927,7 @@ function ganttHTMLG(q, acts, personas){
   if(lim){ if(m.mode==='day'){ for(var li=0;li<m.cols.length;li++){ if(m.cols[li].key===lim){ limIdx=li; break; } } } else { for(var lj=0;lj<m.cols.length;lj++){ if(lim>=m.cols[lj].start && lim<=m.cols[lj].end){ limIdx=lj; break; } } } }
   var limBorder = 'border-right:2px solid #DC2626;';
   html+='<tr><th style="'+thBase+'text-align:left;padding-left:6px;border-left:none;background:#F8FAFC">Actividad</th>';
-  m.cols.forEach(function(c,ci){ var av=avEnCol(c); var am=av?(TIPO_AVISO[av.tipo]||TIPO_AVISO.otro):null; html+='<th style="'+thBase+(c.we?'background:#F1F5F9;color:#CBD5E1;':'')+(ci===limIdx?limBorder:'')+(am?('color:'+am.c+';'):'')+'">'+(am?am.i:c.label)+'</th>'; });
+  m.cols.forEach(function(c,ci){ var av=avEnCol(c); var am=av?(TIPO_AVISO[av.tipo]||TIPO_AVISO.otro):null; var clbl=(m.mode==='month'?(c.label+" '"+c.sub):c.label); html+='<th style="'+thBase+(c.we?'background:#F1F5F9;color:#CBD5E1;':'')+(ci===limIdx?limBorder:'')+(am?('color:'+am.c+';'):'')+'">'+(am?am.i:clbl)+'</th>'; });
   html+='</tr>';
   m.rows.forEach(function(r){
     var tit=_gTitulo(r.a, q);
@@ -6611,6 +6615,7 @@ function PlanificacionView({ actividades, onSave, quotes, personas, planForQuote
   const [showProd, setShowProd] = React.useState(false);
   const [ganttSel, setGanttSel] = React.useState([]); // presupuestos elegidos en el Gantt (vacío = todos)
   const [ganttPickOpen, setGanttPickOpen] = React.useState(false);
+  const [ganttUnit, setGanttUnit] = React.useState('auto'); // auto | dia | semana | mes (para PDF/Excel)
   const [bulkQ, setBulkQ] = React.useState(null);
   const [editListQ, setEditListQ] = React.useState(null);
   const [editAll, setEditAll] = React.useState(false);
@@ -6930,8 +6935,8 @@ function PlanificacionView({ actividades, onSave, quotes, personas, planForQuote
     list.forEach(function(a){ if(a.quoteId && !seen[a.quoteId]){ var q=quoteById(a.quoteId); if(q){ seen[a.quoteId]=1; out.push(q); } } });
     return out.sort(function(x,y){ return String(y.numero||'').localeCompare(String(x.numero||'')); });
   }
-  function ganttModel(q){ return ganttModelG(q, list); }
-  function ganttHTML(q){ return ganttHTMLG(q, list, pers); }
+  function ganttModel(q, unit){ return ganttModelG(q, list, unit); }
+  function ganttHTML(q, unit){ return ganttHTMLG(q, list, pers, unit); }
   function covered(r, c, mode){ return ganttCoveredG(r, c, mode); }
   // guardado liviano de una actividad (sin validaciones de formulario) — para drag del Gantt
   function patchAct(a){
@@ -6961,26 +6966,46 @@ function PlanificacionView({ actividades, onSave, quotes, personas, planForQuote
     setEditing(a);
   }
   function ganttPDF(q){
-    var el=document.createElement('div'); el.style.padding='6px'; el.innerHTML=ganttHTML(q);
-    var m=ganttModel(q); var land = true;
+    var el=document.createElement('div'); el.style.padding='6px'; el.innerHTML=ganttHTML(q, ganttUnit);
     var fname='ELECTRO BC - Cronograma Presupuesto '+(q.numero||'')+'.pdf';
-    if(typeof html2pdf!=='undefined'){ html2pdf().set({margin:8,filename:fname,html2canvas:{scale:2},jsPDF:{unit:'mm',format:'a4',orientation:land?'landscape':'portrait'}}).from(el).save(); }
+    if(typeof html2pdf!=='undefined'){ html2pdf().set({margin:8,filename:fname,html2canvas:{scale:2},jsPDF:{unit:'mm',format:'a4',orientation:'landscape'}}).from(el).save(); }
     else { alert('No se pudo generar el PDF.'); }
   }
   function ganttExcel(q){
-    if(typeof XLSX==='undefined'){ alert('No se pudo generar el Excel.'); return; }
-    var m=ganttModel(q); if(!m){ alert('Este presupuesto no tiene actividades planificadas.'); return; }
-    var head=['Actividad','Inicio','Fin','Días','Horas est.','Equipo','Estado'].concat(m.cols.map(function(c){ return m.mode==='day'? (c.label+'/'+c.sub) : c.label+'/'+c.sub; }));
-    var aoa=[head];
+    if(typeof XLSX==='undefined'){ alert('El generador de Excel todavía se está cargando. Probá de nuevo en unos segundos.'); return; }
+    var m=ganttModel(q, ganttUnit); if(!m){ alert('Este presupuesto no tiene actividades planificadas.'); return; }
+    var fixed=['Actividad','Inicio','Fin','Días','Horas est.','Equipo','Estado'];
+    var timeHead=m.cols.map(function(c){ return m.mode==='month'?(c.label+" '"+c.sub) : (c.label+(c.sub?('/'+c.sub):'')); });
+    var head=fixed.concat(timeHead);
+    var dirq=[q.cliente&&q.cliente.calle,q.cliente&&q.cliente.numero].filter(Boolean).join(' ');
+    var titulo='ELECTRO BC — Cronograma  ·  Presupuesto #'+(q.numero||'')+(q.cliente&&q.cliente.nombre?('  ·  '+q.cliente.nombre):'')+(dirq?('  ·  '+dirq):'');
+    var aoa=[ [titulo].concat(head.slice(1).map(function(){return '';})), head ];
+    var meta=[]; // por fila de datos: color de estado + set de columnas cubiertas
     m.rows.forEach(function(r){
       var est=EST_ACT[r.a.estado]||EST_ACT.programado;
       var eq=(r.a.equipo||[]).map(persLabel).filter(function(x){return x&&x!=='—';}).join(', ');
       var row=[tituloDe(r.a), fmtFecha(r.start), fmtFecha(r.end), r.nd, (parseFloat(r.a.horasEst)>0?parseFloat(r.a.horasEst):''), eq, est.label];
-      m.cols.forEach(function(c){ row.push(covered(r,c,m.mode)?'■':''); });
-      aoa.push(row);
+      var cov=[]; m.cols.forEach(function(c,ci){ var on=covered(r,c,m.mode); cov.push(on); row.push(''); });
+      aoa.push(row); meta.push({color:(est.dot||'#F59E0B').replace('#',''), cov:cov});
     });
     var ws=XLSX.utils.aoa_to_sheet(aoa);
-    ws['!cols']=[{wch:32},{wch:12},{wch:12},{wch:6},{wch:9},{wch:22},{wch:16}].concat(m.cols.map(function(){return {wch:4};}));
+    var nCols=head.length;
+    var border={style:'thin',color:{rgb:'D9DEE8'}}, bAll={top:border,bottom:border,left:border,right:border};
+    function setS(r,c,s){ var a=XLSX.utils.encode_cell({r:r,c:c}); if(!ws[a]) ws[a]={t:'s',v:''}; ws[a].s=s; }
+    // Título (fila 0)
+    for(var c0=0;c0<nCols;c0++){ setS(0,c0,{ font:{bold:true,sz:13,color:{rgb:'F26B1D'}}, fill:{fgColor:{rgb:'0A0F1E'}}, alignment:{vertical:'center',horizontal:'left'} }); }
+    // Encabezado (fila 1)
+    for(var c1=0;c1<nCols;c1++){ setS(1,c1,{ font:{bold:true,sz:c1<7?11:9,color:{rgb:'FFFFFF'}}, fill:{fgColor:{rgb:'0A0F1E'}}, alignment:{vertical:'center',horizontal:c1<7?'left':'center'}, border:bAll }); }
+    // Filas de datos
+    meta.forEach(function(mm,i){
+      var rr=2+i;
+      for(var cc=0;cc<7;cc++){ setS(rr,cc,{ font:{sz:11,color:{rgb:'1E293B'}}, alignment:{vertical:'center',horizontal:cc===3?'center':'left'}, border:bAll, fill:{fgColor:{rgb: (i%2===1?'F5F7FB':'FFFFFF')}} }); }
+      for(var k=0;k<mm.cov.length;k++){ var cc2=7+k; setS(rr,cc2, mm.cov[k] ? { fill:{fgColor:{rgb:mm.color}}, border:bAll } : { border:bAll, fill:{fgColor:{rgb:(i%2===1?'F5F7FB':'FFFFFF')}} }); }
+    });
+    ws['!merges']=[{s:{r:0,c:0},e:{r:0,c:nCols-1}}];
+    ws['!rows']=[{hpt:26},{hpt:20}];
+    ws['!cols']=[{wch:34},{wch:12},{wch:12},{wch:6},{wch:9},{wch:22},{wch:18}].concat(m.cols.map(function(){ return {wch:m.mode==='month'?7:(m.mode==='week'?7:4)}; }));
+    ws['!freeze']={xSplit:7,ySplit:2};
     var wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Cronograma');
     XLSX.writeFile(wb, 'ELECTRO BC - Cronograma Presupuesto '+(q.numero||'')+'.xlsx');
   }
@@ -7013,8 +7038,10 @@ function PlanificacionView({ actividades, onSave, quotes, personas, planForQuote
           ):null
         ),
         sel.length? React.createElement('button',{type:'button',onClick:function(){ setGanttSel([]); },title:'Ver todos',style:{background:'none',border:'none',color:'#94A3B8',cursor:'pointer',fontSize:12,fontWeight:600}},'Limpiar'):null,
-        React.createElement('div',{style:{marginLeft:'auto',display:'flex',gap:8,flexWrap:'wrap'}},
-          (single? React.createElement('button',{type:'button',onClick:function(){ ganttPDF(single); },title:'Descargar el cronograma en PDF',style:btnS},'📄 PDF cronograma'):null),
+        React.createElement('div',{style:{marginLeft:'auto',display:'flex',gap:8,flexWrap:'wrap',alignItems:'center'}},
+          (single? React.createElement('span',{style:{fontSize:10,fontWeight:700,color:'#94A3B8',textTransform:'uppercase'}},'Descarga por'):null),
+          (single? React.createElement('select',{value:ganttUnit,onChange:function(e){setGanttUnit(e.target.value);},title:'Unidad de tiempo para el PDF / Excel',style:Object.assign({},btnS,{cursor:'pointer'})}, [['auto','Automático'],['dia','Día'],['semana','Semana'],['mes','Mes']].map(function(o){ return React.createElement('option',{key:o[0],value:o[0]}, o[1]); })):null),
+          (single? React.createElement('button',{type:'button',onClick:function(){ ganttPDF(single); },title:'Descargar el cronograma en PDF',style:btnS},'📄 PDF'):null),
           (single? React.createElement('button',{type:'button',onClick:function(){ ganttExcel(single); },style:Object.assign({},btnS,{border:'1px solid #86EFAC',color:'#16A34A'})},'📊 Excel'):null)
         )
       ),
