@@ -343,34 +343,39 @@ function _xlsxSheet(rows, opts){
   // Links a la app
   (opts.links||[]).forEach(function(lk){ for(var r=1;r<=range.e.r;r++){ var a=XLSX.utils.encode_cell({r:r,c:lk.col}); var c=ws[a]; if(c&&c.v!=null&&c.v!==""){ c.l={Target:lk.base+encodeURIComponent(String(c.v)),Tooltip:lk.tooltip||"Abrir"}; } } });
   // Estilos por celda
+  var FONT='Calibri';
+  var subRows=opts.subtitleRows||[];
   var border=_xlThinBorder();
   for(var r=0;r<=range.e.r;r++){
     var isHeader = (r===headerRow);
     var isTitle = titleRows.indexOf(r)>=0;
+    var isSub = subRows.indexOf(r)>=0;
     var isSection = sectionRows.indexOf(r)>=0;
     var isTotal = (r===totalRow);
     for(var col=0;col<=range.e.c;col++){
       var addr=XLSX.utils.encode_cell({r:r,c:col});
       var cell=ws[addr]; if(!cell){ cell={t:'s',v:''}; ws[addr]=cell; }
-      var s={ alignment:{vertical:"center",wrapText:false}, border:border };
-      if(isTitle){ s={ font:{bold:true,sz:15,color:{rgb:XL_ORANGE}}, fill:{fgColor:{rgb:XL_NAVY}}, alignment:{vertical:"center",horizontal:"left"} }; }
-      else if(isHeader){ s={ font:{bold:true,sz:11,color:{rgb:"FFFFFF"}}, fill:{fgColor:{rgb:XL_NAVY}}, alignment:{vertical:"center",horizontal:"left"}, border:border }; }
-      else if(isSection){ s={ font:{bold:true,sz:11,color:{rgb:XL_NAVY}}, fill:{fgColor:{rgb:XL_SECT_BG}}, alignment:{vertical:"center",horizontal:"left"} }; }
-      else if(isTotal){ s={ font:{bold:true,sz:11,color:{rgb:XL_NAVY}}, fill:{fgColor:{rgb:XL_TOT_BG}}, alignment:{vertical:"center"}, border:{top:{style:"medium",color:{rgb:XL_ORANGE}},bottom:border.bottom,left:border.left,right:border.right} }; }
-      else if(opts.zebra && r>headerRow && (r-headerRow)%2===0){ s.fill={fgColor:{rgb:XL_ZEBRA}}; }
+      var s;
+      if(isTitle){ s={ font:{name:FONT,bold:true,sz:16,color:{rgb:XL_ORANGE}}, fill:{fgColor:{rgb:XL_NAVY}}, alignment:{vertical:"center",horizontal:"left",indent:1} }; }
+      else if(isSub){ s={ font:{name:FONT,italic:true,sz:10,color:{rgb:"64748B"}}, alignment:{vertical:"center",horizontal:"left",indent:1} }; }
+      else if(isHeader){ s={ font:{name:FONT,bold:true,sz:11,color:{rgb:"FFFFFF"}}, fill:{fgColor:{rgb:XL_NAVY}}, alignment:{vertical:"center",horizontal:"left",wrapText:true}, border:{top:border.top,left:border.left,right:border.right,bottom:{style:"medium",color:{rgb:XL_ORANGE}}} }; }
+      else if(isSection){ s={ font:{name:FONT,bold:true,sz:11,color:{rgb:XL_NAVY}}, fill:{fgColor:{rgb:XL_SECT_BG}}, alignment:{vertical:"center",horizontal:"left"}, border:border }; }
+      else if(isTotal){ s={ font:{name:FONT,bold:true,sz:11,color:{rgb:XL_NAVY}}, fill:{fgColor:{rgb:XL_TOT_BG}}, alignment:{vertical:"center"}, border:{top:{style:"medium",color:{rgb:XL_ORANGE}},bottom:border.bottom,left:border.left,right:border.right} }; }
+      else { s={ font:{name:FONT,sz:10.5,color:{rgb:"1E293B"}}, alignment:{vertical:"center"}, border:border }; if(opts.zebra && r>headerRow && (r-headerRow)%2===0){ s.fill={fgColor:{rgb:"F7F9FC"}}; } }
       var lk=_xlxLink(cell); if(lk){ s.font=Object.assign({},s.font,lk); }
       cell.s=s;
     }
   }
   // Autofiltro sobre la fila de encabezado
   if(headerRow>=0 && !opts.noFilter){ ws['!autofilter']={ref:XLSX.utils.encode_range({s:{r:headerRow,c:0},e:{r:(totalRow>headerRow?totalRow-1:range.e.r),c:range.e.c}})}; }
+  // Congelar la fila de encabezado (y columnas si se piden)
+  if(headerRow>=0 && !opts.noFreeze){ ws['!freeze']={xSplit:(opts.freezeCols||0), ySplit:(headerRow+1), topLeftCell:XLSX.utils.encode_cell({r:headerRow+1,c:(opts.freezeCols||0)}), activePane:'bottomLeft', state:'frozen'}; }
   if(opts.merges){ ws['!merges']=opts.merges; }
   // Alto de filas destacadas
-  var rowsMeta=[]; if(titleRows.length){ titleRows.forEach(function(tr){ rowsMeta[tr]={hpt:26}; }); if(headerRow>=0) rowsMeta[headerRow]={hpt:20}; }
-  else if(headerRow>=0){ rowsMeta[headerRow]={hpt:20}; }
+  var rowsMeta=[]; titleRows.forEach(function(tr){ rowsMeta[tr]={hpt:30}; }); subRows.forEach(function(sr){ rowsMeta[sr]={hpt:16}; }); if(headerRow>=0) rowsMeta[headerRow]={hpt:24};
   if(rowsMeta.length) ws['!rows']=rowsMeta;
   // Anchos de columna
-  var cols=[]; for(var cc2=0;cc2<=range.e.c;cc2++){ var mw=8; for(var rr=0;rr<=range.e.r;rr++){ var aa=XLSX.utils.encode_cell({r:rr,c:cc2}); var ce=ws[aa]; if(ce&&ce.v!=null){ var l=String(ce.v).length; if(l>mw)mw=l; } } cols.push({wch:Math.min(mw+2,44)}); } ws['!cols']=cols;
+  var cols=[]; for(var cc2=0;cc2<=range.e.c;cc2++){ var mw=10; for(var rr=0;rr<=range.e.r;rr++){ if(titleRows.indexOf(rr)>=0) continue; var aa=XLSX.utils.encode_cell({r:rr,c:cc2}); var ce=ws[aa]; if(ce&&ce.v!=null){ var l=String(ce.v).length; if(l>mw)mw=l; } } cols.push({wch:Math.min(mw+3,48)}); } ws['!cols']=cols;
   return ws;
 }
 function exportXLSX(filename, sheets){
@@ -6993,17 +6998,18 @@ function PlanificacionView({ actividades, onSave, quotes, personas, planForQuote
     var border={style:'thin',color:{rgb:'D9DEE8'}}, bAll={top:border,bottom:border,left:border,right:border};
     function setS(r,c,s){ var a=XLSX.utils.encode_cell({r:r,c:c}); if(!ws[a]) ws[a]={t:'s',v:''}; ws[a].s=s; }
     // Título (fila 0)
-    for(var c0=0;c0<nCols;c0++){ setS(0,c0,{ font:{bold:true,sz:13,color:{rgb:'F26B1D'}}, fill:{fgColor:{rgb:'0A0F1E'}}, alignment:{vertical:'center',horizontal:'left'} }); }
+    for(var c0=0;c0<nCols;c0++){ setS(0,c0,{ font:{name:'Calibri',bold:true,sz:15,color:{rgb:'F26B1D'}}, fill:{fgColor:{rgb:'0A0F1E'}}, alignment:{vertical:'center',horizontal:'left',indent:1} }); }
     // Encabezado (fila 1)
-    for(var c1=0;c1<nCols;c1++){ setS(1,c1,{ font:{bold:true,sz:c1<7?11:9,color:{rgb:'FFFFFF'}}, fill:{fgColor:{rgb:'0A0F1E'}}, alignment:{vertical:'center',horizontal:c1<7?'left':'center'}, border:bAll }); }
+    for(var c1=0;c1<nCols;c1++){ setS(1,c1,{ font:{name:'Calibri',bold:true,sz:c1<7?11:9,color:{rgb:'FFFFFF'}}, fill:{fgColor:{rgb:'0A0F1E'}}, alignment:{vertical:'center',horizontal:c1<7?'left':'center',wrapText:c1<7}, border:{top:bAll.top,left:bAll.left,right:bAll.right,bottom:{style:'medium',color:{rgb:'F26B1D'}}} }); }
     // Filas de datos
     meta.forEach(function(mm,i){
       var rr=2+i;
-      for(var cc=0;cc<7;cc++){ setS(rr,cc,{ font:{sz:11,color:{rgb:'1E293B'}}, alignment:{vertical:'center',horizontal:cc===3?'center':'left'}, border:bAll, fill:{fgColor:{rgb: (i%2===1?'F5F7FB':'FFFFFF')}} }); }
-      for(var k=0;k<mm.cov.length;k++){ var cc2=7+k; setS(rr,cc2, mm.cov[k] ? { fill:{fgColor:{rgb:mm.color}}, border:bAll } : { border:bAll, fill:{fgColor:{rgb:(i%2===1?'F5F7FB':'FFFFFF')}} }); }
+      var zeb=(i%2===1?'F7F9FC':'FFFFFF');
+      for(var cc=0;cc<7;cc++){ setS(rr,cc,{ font:{name:'Calibri',sz:10.5,color:{rgb:'1E293B'},bold:cc===0}, alignment:{vertical:'center',horizontal:cc===3?'center':'left'}, border:bAll, fill:{fgColor:{rgb: zeb}} }); }
+      for(var k=0;k<mm.cov.length;k++){ var cc2=7+k; setS(rr,cc2, mm.cov[k] ? { fill:{fgColor:{rgb:mm.color}}, border:bAll } : { border:bAll, fill:{fgColor:{rgb:zeb}} }); }
     });
     ws['!merges']=[{s:{r:0,c:0},e:{r:0,c:nCols-1}}];
-    ws['!rows']=[{hpt:26},{hpt:20}];
+    ws['!rows']=[{hpt:30},{hpt:24}];
     ws['!cols']=[{wch:34},{wch:12},{wch:12},{wch:6},{wch:9},{wch:22},{wch:18}].concat(m.cols.map(function(){ return {wch:m.mode==='month'?7:(m.mode==='week'?7:4)}; }));
     ws['!freeze']={xSplit:7,ySplit:2};
     var wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Cronograma');
