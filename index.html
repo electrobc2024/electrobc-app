@@ -9365,6 +9365,8 @@ function PortalView({ token }){
   const [sortBy,setSortBy]=React.useState('numero');
   const [sortDir,setSortDir]=React.useState('desc');
   const [showHelp,setShowHelp]=React.useState(false);
+  const [isMobile,setIsMobile]=React.useState(function(){ try{ return window.innerWidth<720; }catch(e){ return false; } });
+  React.useEffect(function(){ function r(){ try{ setIsMobile(window.innerWidth<720); }catch(e){} } window.addEventListener('resize',r); return function(){ window.removeEventListener('resize',r); }; },[]);
   React.useEffect(function(){
     (async function(){
       try{
@@ -9468,6 +9470,27 @@ function PortalView({ token }){
     // tabla
     visibles.length===0
       ? React.createElement('div',{style:{background:'#fff',border:'1px solid #E2E8F0',borderRadius:12,padding:'40px',textAlign:'center',color:'#94A3B8'}}, mine.length===0?'Todavía no hay presupuestos para esta administración.':'No hay presupuestos con este estado.')
+      : isMobile
+      ? React.createElement('div',{style:{display:'flex',flexDirection:'column',gap:10}}, visibles.map(function(q){
+          var t=calcSub(q.mdo)+calcSub(q.mat); var c=cobradoDe(q); var saldo=Math.max(0,t-c);
+          var st=STATUS_MAP[effectiveStatus(q)]||STATUS_MAP[q.status]||STATUS_MAP.generado; var ea=estAct(q);
+          var dir=[q.cliente&&q.cliente.calle,q.cliente&&q.cliente.numero,q.cliente&&q.cliente.depto?('Dto '+q.cliente.depto):''].filter(Boolean).join(' ')||'—';
+          var tieneAct=(acts||[]).some(function(x){return x.quoteId===q.id;});
+          var fila=function(label,val){ return React.createElement('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'baseline',gap:10,fontSize:12,marginTop:5}}, React.createElement('span',{style:{color:'#94A3B8',fontWeight:600}},label), React.createElement('span',{style:{textAlign:'right'}},val)); };
+          return React.createElement('div',{key:q.id,style:{background:'#fff',border:'1px solid #E2E8F0',borderRadius:12,padding:'12px 14px'}},
+            React.createElement('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',gap:8}},
+              React.createElement('button',{type:'button',onClick:function(){setPdfQuote(q);},title:'Ver / descargar PDF',style:{background:'none',border:'none',color:ORANGE,fontWeight:700,cursor:'pointer',textDecoration:'underline',fontSize:16,padding:0,fontFamily:"'Oswald',system-ui"}}, '#'+(q.numero||'')),
+              React.createElement('span',{style:{fontSize:10,fontWeight:700,padding:'3px 9px',borderRadius:20,color:st.fg,background:st.bg,border:'1px solid '+st.br,whiteSpace:'nowrap'}}, st.label+(isVencido(q)?' ⏰':''))
+            ),
+            React.createElement('div',{style:{fontSize:12,color:'#64748B',marginTop:2}}, fmtFecha(q.fecha)+' · '+dir),
+            fila('Total', React.createElement('span',{style:{fontWeight:700,color:NAVY,fontSize:14}}, '$ '+Math.round(t).toLocaleString('es-AR'))),
+            (q.status==='aceptado' && t>0) ? (function(){ var pct=Math.min(100,Math.round(c/t*100)); var col=pct>=100?'#059669':pct>=50?'#2563EB':'#F59E0B'; return React.createElement('div',{style:{marginTop:8}}, React.createElement('div',{style:{height:7,background:'#E2E8F0',borderRadius:4,overflow:'hidden'}}, React.createElement('div',{style:{width:pct+'%',height:'100%',background:col,borderRadius:4}})), React.createElement('div',{style:{display:'flex',justifyContent:'space-between',gap:6,marginTop:3}}, React.createElement('span',{style:{fontSize:11,fontWeight:700,color:col}}, pct+'% cobrado'), React.createElement('span',{style:{fontSize:11,color:'#94A3B8'}}, 'Resta $'+Math.round(saldo).toLocaleString('es-AR')))); })() : null,
+            React.createElement('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',gap:10,marginTop:10,paddingTop:10,borderTop:'1px solid #F1F5F9'}},
+              ea? React.createElement('span',{style:{fontSize:10,fontWeight:700,padding:'2px 8px',borderRadius:20,color:ea.color,background:ea.bg,border:'1px solid '+ea.dot}}, ea.label) : React.createElement('span',{style:{fontSize:11,color:'#CBD5E1'}},'Sin trabajo'),
+              tieneAct ? React.createElement('button',{type:'button',onClick:function(){setCronQ(q);},style:{background:'none',border:'none',color:ORANGE,fontWeight:700,cursor:'pointer',textDecoration:'underline',fontSize:12,padding:0,whiteSpace:'nowrap'}}, '📅 Ver cronograma') : React.createElement('span',{style:{fontSize:11,color:'#94A3B8',fontStyle:'italic'}},'Sin programar')
+            )
+          );
+        }))
       : React.createElement('div',{style:{background:'#fff',border:'1px solid #E2E8F0',borderRadius:12,overflow:'hidden'}},
           React.createElement('div',{style:{overflowX:'auto'}}, React.createElement('table',{style:{width:'100%',borderCollapse:'collapse',minWidth:840}},
             React.createElement('thead',null,React.createElement('tr',{style:{background:'#F8FAFC'}},
