@@ -6415,7 +6415,7 @@ function GanttEditor({ q, acts, personas, onPatchAct, onOpenAct, fechaLimite, on
     }
     function mu(){
       var pid=drag.id;
-      setPreview(function(p){ var pv=p[pid]; if(pv){ var a=(actsRef.current||[]).find(function(x){return x.id===pid;}); if(a) onPatchAct(Object.assign({},a,pv)); } var n=Object.assign({},p); delete n[pid]; return n; });
+      setPreview(function(p){ var pv=p[pid]; if(pv){ var a=(actsRef.current||[]).find(function(x){return x.id===pid;}); if(a){ var merged=Object.assign({},a,pv); var dd=diasCubiertosAct(merged); var end=dd[dd.length-1]; if(fechaLimite && end>fechaLimite){ alert('No podés dejar la actividad terminando después de la fecha límite ('+fmtFecha(fechaLimite)+'). Corré la fecha límite o acortá/reprogramá la actividad.'); } else { onPatchAct(merged); } } } var n=Object.assign({},p); delete n[pid]; return n; });
       setDrag(null);
     }
     document.addEventListener('mousemove',mm); document.addEventListener('mouseup',mu);
@@ -6574,6 +6574,9 @@ function PlanificacionView({ actividades, onSave, quotes, personas, planForQuote
     var _hoyY2=(function(){ var d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); })();
     if(a.estado==='hecho' && a.fecha && String(a.fecha).slice(0,10)>_hoyY2){ alert('No se puede marcar "Hecho": la fecha de inicio todavía no llegó.'); return; }
     if(a.estado==='materiales'){ var _q=a.quoteId?quoteById(a.quoteId):null; var _nm=_q?(_q.mat||[]).filter(function(m){return (m.desc&&m.desc.trim())||m.pu;}):[]; if(_nm.length===0){ alert('No se puede marcar "Materiales comprados": el presupuesto no tiene materiales.'); return; } }
+    // No permitir que la actividad termine después de la fecha límite del presupuesto
+    var _ql = a.quoteId ? quoteById(a.quoteId) : null;
+    if(_ql && _ql.fechaLimite){ var _ddL=diasCubiertosAct(a); var _endL=_ddL[_ddL.length-1]; if(_endL>_ql.fechaLimite){ alert('No podés guardar: la actividad termina el '+fmtFecha(_endL)+', después de la fecha límite del presupuesto ('+fmtFecha(_ql.fechaLimite)+'). Corré la fecha límite o acortá la actividad.'); return; } }
     // Aviso si se superponen personas con otra actividad en los mismos días
     var diasA = diasCubiertosAct(a);
     if((a.equipo&&a.equipo.length) && diasA.length){
@@ -7047,6 +7050,7 @@ function BulkAddActividades({ q, onClose, onSaveAll }){
       var dias=diasCubiertosAct(a); prevEnd=dias[dias.length-1];
       nuevas.push(a);
     });
+    if(q.fechaLimite){ var maxEnd=nuevas.reduce(function(m,a){ var d=diasCubiertosAct(a); var e=d[d.length-1]; return e>m?e:m; },''); if(maxEnd>q.fechaLimite){ alert('No se puede guardar: con esta programación las actividades terminan el '+fmtFecha(maxEnd)+', después de la fecha límite del presupuesto ('+fmtFecha(q.fechaLimite)+'). Corré la fecha límite, reducí las horas o quitá alguna actividad.'); return; } }
     onSaveAll(nuevas);
   }
   var inp={border:'1px solid #E2E8F0',borderRadius:7,padding:'7px 9px',fontSize:13,boxSizing:'border-box'};
