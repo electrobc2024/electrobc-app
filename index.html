@@ -9025,6 +9025,7 @@ function PortalView({ token }){
   const [cronQ,setCronQ]=React.useState(null);
   const [sortBy,setSortBy]=React.useState('numero');
   const [sortDir,setSortDir]=React.useState('desc');
+  const [showHelp,setShowHelp]=React.useState(false);
   React.useEffect(function(){
     (async function(){
       try{
@@ -9087,7 +9088,27 @@ function PortalView({ token }){
 
   return wrap(React.createElement('div',null,
     React.createElement('div',{style:{fontFamily:"'Oswald',system-ui",fontSize:22,fontWeight:700,color:NAVY,marginBottom:2}}, admin),
-    React.createElement('div',{style:{fontSize:13,color:'#64748B',marginBottom:14}},'Seguimiento de presupuestos y estado de cuenta en tiempo real.'),
+    React.createElement('div',{style:{fontSize:13,color:'#64748B',marginBottom:10}},'Seguimiento de presupuestos y estado de cuenta en tiempo real.'),
+    // Guía / manual de uso del portal
+    React.createElement('div',{style:{marginBottom:14}},
+      React.createElement('button',{type:'button',onClick:function(){setShowHelp(!showHelp);},style:{display:'inline-flex',alignItems:'center',gap:6,background:'#fff',border:'1px solid #E2E8F0',borderRadius:8,padding:'7px 12px',fontSize:12,fontWeight:700,color:NAVY,cursor:'pointer'}}, (showHelp?'▲':'▼')+' ℹ️ ¿Cómo usar este portal?'),
+      showHelp ? React.createElement('div',{style:{background:'#fff',border:'1px solid #E2E8F0',borderRadius:12,padding:'16px 18px',marginTop:8}},
+        React.createElement('div',{style:{fontSize:13,color:'#334155',lineHeight:1.6,marginBottom:12}}, 'Este portal es tu espacio privado para seguir, en vivo, todos los trabajos que ELECTRO BC presupuestó para vos. Es de ',React.createElement('b',null,'solo lectura'),': no tenés que cargar nada, se actualiza solo a medida que avanzamos con los trabajos y los pagos. El link es personal — podés guardarlo en favoritos y volver cuando quieras.'),
+        React.createElement('div',{style:{display:'grid',gridTemplateColumns:'repeat(auto-fit, minmax(240px, 1fr))',gap:10}},
+          [
+            ['🗂 Estados','Las tarjetas de arriba (En espera, Para recotizar, Aceptado, etc.) muestran cuántos presupuestos hay en cada estado. Tocá una para filtrar la tabla por ese estado.'],
+            ['⚡ Tipo de trabajo','Filtrá por rubro: electricidad, pintura o plomería. Podés combinar varios.'],
+            ['💰 Estado de cuenta','Total presupuestado, lo que ya está cobrado y lo que queda pendiente de cobro, sumando todos tus trabajos aceptados.'],
+            ['📊 Progreso de pago','En cada presupuesto ves el porcentaje cobrado y cuánto resta.'],
+            ['🔀 Ordenar','Tocá los títulos N°, Fecha, Estado o Total para ordenar la tabla como prefieras.'],
+            ['📄 Ver el PDF','Tocá el N° de cada presupuesto para ver o descargar el presupuesto en PDF.'],
+            ['📅 Cronograma','Donde dice "Ver cronograma" abrís la planificación de los trabajos (qué se hace cada día, cortes de luz/agua avisados y la fecha límite). También lo podés descargar en PDF.'],
+            ['⏰ Para recotizar','Si un presupuesto figura "Para recotizar ⏰" significa que venció el plazo y conviene pedir una actualización de precios.']
+          ].map(function(it){ return React.createElement('div',{key:it[0],style:{background:'#F8FAFC',border:'1px solid #EDF1F6',borderRadius:10,padding:'10px 12px'}}, React.createElement('div',{style:{fontSize:12,fontWeight:700,color:NAVY,marginBottom:3}},it[0]), React.createElement('div',{style:{fontSize:12,color:'#64748B',lineHeight:1.5}},it[1])); })
+        ),
+        React.createElement('div',{style:{fontSize:12,color:'#94A3B8',marginTop:12}}, '¿Dudas o algo no coincide? Escribinos y lo revisamos.')
+      ) : null
+    ),
     // tarjetas de estado (filtro)
     React.createElement('div',{style:{display:'flex',gap:8,flexWrap:'wrap',marginBottom:14}}, cardsDef.map(function(cd){ var n=mine.filter(function(q){return coincide(q,cd[0]);}).length; var on=pf===cd[0]; return React.createElement('button',{key:cd[0],type:'button',onClick:function(){setPf(cd[0]);},style:{flex:'1 1 130px',textAlign:'left',cursor:'pointer',background:on?cd[3]:'#fff',border:'2px solid '+(on?cd[4]:'#E2E8F0'),borderRadius:10,padding:'8px 12px'}}, React.createElement('div',{style:{fontSize:10,fontWeight:700,color:cd[2],textTransform:'uppercase'}},cd[1]), React.createElement('div',{style:{fontSize:20,fontWeight:700,color:cd[2],fontFamily:"'Oswald',system-ui"}}, n)); })),
     // resumen
