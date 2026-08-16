@@ -6850,7 +6850,7 @@ function PlanificacionView({ actividades, onSave, quotes, personas, planForQuote
   }
   function ganttPDF(q){
     var el=document.createElement('div'); el.style.padding='6px'; el.innerHTML=ganttHTML(q);
-    var m=ganttModel(q); var land = m && m.cols.length>10;
+    var m=ganttModel(q); var land = true;
     var fname='ELECTRO BC - Cronograma Presupuesto '+(q.numero||'')+'.pdf';
     if(typeof html2pdf!=='undefined'){ html2pdf().set({margin:8,filename:fname,html2canvas:{scale:2},jsPDF:{unit:'mm',format:'a4',orientation:land?'landscape':'portrait'}}).from(el).save(); }
     else { alert('No se pudo generar el PDF.'); }
@@ -9140,7 +9140,7 @@ function PortalView({ token }){
       React.createElement('div',{onMouseDown:function(e){e.stopPropagation();},style:{display:'flex',gap:10,marginBottom:14,alignItems:'center',justifyContent:'space-between',backgroundColor:'rgba(255,255,255,0.07)',borderRadius:12,padding:'12px 18px',width:'100%',maxWidth:900}},
         React.createElement('div',{style:{color:'#fff',fontFamily:"'Oswald',system-ui",fontSize:16,fontWeight:700}},'📅 Cronograma — Presupuesto #'+(cronQ.numero||'')),
         React.createElement('div',{style:{display:'flex',gap:8}},
-          React.createElement('button',{type:'button',onClick:function(){ var el=document.createElement('div'); el.style.padding='6px'; el.innerHTML=ganttHTMLG(cronQ, acts, personas); var m=ganttModelG(cronQ, acts); var land=m&&m.cols.length>10; var fn='ELECTRO BC - Cronograma Presupuesto '+(cronQ.numero||'')+'.pdf'; if(typeof html2pdf!=='undefined'){ html2pdf().set({margin:8,filename:fn,html2canvas:{scale:2},jsPDF:{unit:'mm',format:'a4',orientation:land?'landscape':'portrait'}}).from(el).save(); } },style:{display:'inline-flex',alignItems:'center',gap:8,borderRadius:9,padding:'10px 20px',fontSize:14,fontWeight:700,border:'none',cursor:'pointer',backgroundColor:NAVY,color:'#fff'}},'💾 Descargar PDF'),
+          React.createElement('button',{type:'button',onClick:function(){ var el=document.createElement('div'); el.style.padding='6px'; el.innerHTML=ganttHTMLG(cronQ, acts, personas); var fn='ELECTRO BC - Cronograma Presupuesto '+(cronQ.numero||'')+'.pdf'; if(typeof html2pdf!=='undefined'){ html2pdf().set({margin:8,filename:fn,html2canvas:{scale:2},jsPDF:{unit:'mm',format:'a4',orientation:'landscape'}}).from(el).save(); } },style:{display:'inline-flex',alignItems:'center',gap:8,borderRadius:9,padding:'10px 20px',fontSize:14,fontWeight:700,border:'none',cursor:'pointer',backgroundColor:NAVY,color:'#fff'}},'💾 Descargar PDF'),
           React.createElement('button',{type:'button',onClick:function(){setCronQ(null);},style:{display:'inline-flex',alignItems:'center',gap:8,borderRadius:9,padding:'10px 20px',fontSize:14,fontWeight:700,border:'none',cursor:'pointer',backgroundColor:'#fff',color:NAVY}},'✕ Cerrar')
         )
       ),
