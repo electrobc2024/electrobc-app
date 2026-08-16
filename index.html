@@ -6630,8 +6630,9 @@ function PlanificacionView({ actividades, onSave, quotes, personas, planForQuote
   React.useEffect(function(){
     if(!planForQuote) return;
     var ex = list.find(function(a){ return a.quoteId===planForQuote; });
-    if(ex){ setEditing(Object.assign({}, ex)); }
-    else { var a=mkActividad(); a.fecha=ymd(new Date()); a.color=COLORS_ACT[list.length % COLORS_ACT.length]; a.quoteId=planForQuote; var qq=quoteById(planForQuote); var tp=qq&&qq.cliente&&qq.cliente.tipo; if(COLOR_POR_TIPO[tp]) a.color=COLOR_POR_TIPO[tp]; setEditing(a); }
+    var qq = quoteById(planForQuote);
+    if(ex){ setGanttQid(planForQuote); setGanttOpen(true); }         // ya tiene actividades → abrir el cronograma
+    else if(qq){ setBulkQ(qq); }                                    // sin programar → cargar varias actividades de una
     if(onConsumePlan) onConsumePlan();
   }, [planForQuote]);
 
