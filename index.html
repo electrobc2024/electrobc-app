@@ -3929,18 +3929,15 @@ function PdfOverlay({
   const filename = pdfName(quote);
   const [status, setStatus] = useState("idle");
   const sheetRef = useRef(null);
-  const [fit, setFit] = useState({ scale: 1, h: 0 });
+  const _calcScale = function(){ try{ var avail=Math.min(window.innerWidth-28,780); return Math.min(1, avail/780); }catch(e){ return 1; } };
+  const [fit, setFit] = useState(function(){ return { scale:_calcScale(), h:0 }; });
   useEffect(function(){
-    function calc(){
-      var avail = Math.min((typeof window!=='undefined'?window.innerWidth:800) - 28, 780);
-      var s = Math.min(1, avail/780);
-      var natH = sheetRef.current ? sheetRef.current.offsetHeight : 0;
-      setFit({ scale: s, h: (s<1 && natH) ? Math.ceil(natH*s) : 0 });
-    }
-    calc();
-    var t1=setTimeout(calc, 250), t2=setTimeout(calc, 900);
-    window.addEventListener('resize', calc);
-    return function(){ clearTimeout(t1); clearTimeout(t2); window.removeEventListener('resize', calc); };
+    function sync(){ var s=_calcScale(); var natH=sheetRef.current?sheetRef.current.offsetHeight:0; setFit({ scale:s, h:(s<1 && natH)?Math.ceil(natH*s):0 }); }
+    sync();
+    var ro=null;
+    try{ if(sheetRef.current && typeof ResizeObserver!=='undefined'){ ro=new ResizeObserver(sync); ro.observe(sheetRef.current); } }catch(e){}
+    window.addEventListener('resize', sync);
+    return function(){ if(ro) ro.disconnect(); window.removeEventListener('resize', sync); };
   }, [quote]);
   const downloadPdf = async () => {
     setStatus("loading");
