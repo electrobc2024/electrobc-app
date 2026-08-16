@@ -9625,7 +9625,7 @@ function PortalView({ token }){
           );
         }))
       : React.createElement('div',{style:{background:'#fff',border:'1px solid #E2E8F0',borderRadius:12,overflow:'hidden'}},
-          React.createElement('div',{style:{overflowX:'auto'}}, React.createElement('table',{style:{width:'100%',borderCollapse:'collapse',minWidth:840}},
+          React.createElement('div',{style:{overflowX:'auto'}}, React.createElement('table',{style:{width:'100%',borderCollapse:'collapse',minWidth:920}},
             React.createElement('thead',null,React.createElement('tr',{style:{background:'#F8FAFC'}},
               thSort('numero','N°'),
               thSort('fecha','Fecha'),
@@ -9633,6 +9633,7 @@ function PortalView({ token }){
               thSort('estado','Estado'),
               thSort('total','Total',{textAlign:'right'}),
               React.createElement('th',{style:Object.assign({},thS,{minWidth:150})},'Progreso de pago'),
+              React.createElement('th',{style:Object.assign({},thS,{textAlign:'center'})},'Factura'),
               React.createElement('th',{style:thS},'Trabajo'),
               React.createElement('th',{style:Object.assign({},thS,{textAlign:'center'})},'Cronograma')
             )),
@@ -9640,12 +9641,13 @@ function PortalView({ token }){
               var t=calcSub(q.mdo)+calcSub(q.mat); var c=cobradoDe(q); var saldo=Math.max(0,t-c);
               var st=STATUS_MAP[effectiveStatus(q)]||STATUS_MAP[q.status]||STATUS_MAP.generado; var ea=estAct(q);
               return React.createElement('tr',{key:q.id},
-                React.createElement('td',{style:tdS}, React.createElement('div',null, React.createElement('button',{type:'button',onClick:function(){setPdfQuote(q);},title:'Ver / descargar PDF',style:{background:'none',border:'none',color:ORANGE,fontWeight:700,cursor:'pointer',textDecoration:'underline',fontSize:12,padding:0}}, '#'+(q.numero||'')), facturasIdx[q.id]?React.createElement('div',null, React.createElement('button',{type:'button',onClick:function(){verFactura(q);},title:'Ver la factura',style:{background:'none',border:'none',color:'#16A34A',fontWeight:700,cursor:'pointer',textDecoration:'underline',fontSize:10,padding:0,marginTop:3,whiteSpace:'nowrap'}},'🧾 Factura')):null)),
+                React.createElement('td',{style:tdS}, React.createElement('button',{type:'button',onClick:function(){setPdfQuote(q);},title:'Ver / descargar PDF',style:{background:'none',border:'none',color:ORANGE,fontWeight:700,cursor:'pointer',textDecoration:'underline',fontSize:12,padding:0}}, '#'+(q.numero||''))),
                 React.createElement('td',{style:tdS}, fmtFecha(q.fecha)),
                 React.createElement('td',{style:tdS}, [q.cliente&&q.cliente.calle,q.cliente&&q.cliente.numero,q.cliente&&q.cliente.depto?('Dto '+q.cliente.depto):''].filter(Boolean).join(' ')||'—'),
                 React.createElement('td',{style:tdS}, React.createElement('span',{title:isVencido(q)?'Venció el plazo de espera — hay que recotizar':'',style:{fontSize:10,fontWeight:700,padding:'2px 8px',borderRadius:20,color:st.fg,background:st.bg,border:'1px solid '+st.br}}, st.label+(isVencido(q)?' ⏰':''))),
                 React.createElement('td',{style:Object.assign({},tdS,{textAlign:'right',fontWeight:700,color:NAVY})}, '$ '+Math.round(t).toLocaleString('es-AR')),
                 React.createElement('td',{style:tdS}, (function(){ if(q.status!=='aceptado' || t<=0) return React.createElement('span',{style:{color:'#CBD5E1'}},'—'); var pct=Math.min(100,Math.round(c/t*100)); var col=pct>=100?'#059669':pct>=50?'#2563EB':'#F59E0B'; return React.createElement('div',{style:{minWidth:140}}, React.createElement('div',{style:{height:6,background:'#E2E8F0',borderRadius:3,overflow:'hidden'}}, React.createElement('div',{style:{width:pct+'%',height:'100%',background:col,borderRadius:3}})), React.createElement('div',{style:{display:'flex',justifyContent:'space-between',gap:6,marginTop:2}}, React.createElement('span',{style:{fontSize:9,fontWeight:700,color:col}}, pct+'% cobrado'), React.createElement('span',{style:{fontSize:9,color:'#94A3B8'}}, 'Resta $'+Math.round(saldo).toLocaleString('es-AR')))); })()),
+                React.createElement('td',{style:Object.assign({},tdS,{textAlign:'center'})}, facturasIdx[q.id] ? React.createElement('button',{type:'button',onClick:function(){verFactura(q);},title:'Ver la factura',style:{background:'none',border:'none',color:'#16A34A',fontWeight:700,cursor:'pointer',textDecoration:'underline',fontSize:12,padding:0,whiteSpace:'nowrap'}},'🧾 Ver') : React.createElement('span',{style:{color:'#CBD5E1'}},'—')),
                 React.createElement('td',{style:tdS}, ea? React.createElement('span',{style:{fontSize:10,fontWeight:700,padding:'2px 8px',borderRadius:20,color:ea.color,background:ea.bg,border:'1px solid '+ea.dot}}, ea.label) : React.createElement('span',{style:{color:'#CBD5E1'}},'—')),
                 React.createElement('td',{style:Object.assign({},tdS,{textAlign:'center'})}, (acts||[]).some(function(x){return x.quoteId===q.id;}) ? React.createElement('button',{type:'button',onClick:function(){setCronQ(q);},title:'Ver el cronograma de este presupuesto',style:{background:'none',border:'none',color:ORANGE,fontWeight:700,cursor:'pointer',textDecoration:'underline',fontSize:12,padding:0,whiteSpace:'nowrap'}}, '📅 Ver cronograma') : React.createElement('span',{style:{fontSize:11,color:'#94A3B8',fontStyle:'italic'}},'Sin programar'))
               );
