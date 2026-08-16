@@ -3143,18 +3143,18 @@ function ClientesView({
       if(!url) return /*#__PURE__*/React.createElement("button",{type:"button",onMouseDown:function(e){e.preventDefault();},onClick:function(){ genLink(adm); },title:"Generar link de seguimiento (solo lectura) para este cliente/administración",style:{background:"none",border:"1px dashed "+ORANGE,borderRadius:6,padding:"5px 9px",fontSize:11,color:ORANGE,fontWeight:700,cursor:"pointer"}},"🔗 Generar link");
       return /*#__PURE__*/React.createElement("div",{style:{display:"flex",gap:5,alignItems:"center"}},
         /*#__PURE__*/React.createElement("button",{type:"button",title:"Enviar el link por WhatsApp con un mensaje de bienvenida",onMouseDown:function(e){e.preventDefault();},onClick:function(){
-          var nom=((cl.nombre||'').trim().split(/\s+/)[0]||'');
-          var msg='\u{1F44B} Hola'+(nom?(' '+nom):'')+'! Te compartimos tu *Portal de seguimiento de ELECTRO BC*.\n\n'
+          var nom=((cl.nombre||'').trim().split(/\s+/)[0]||''); if(/^(admin|administraci|adm\.)/i.test(nom)) nom='';
+          var msg='Hola'+(nom?(' '+nom):'')+'! Te compartimos tu *Portal de seguimiento de ELECTRO BC*.\n\n'
             +'Desde este link vas a poder ver, en tiempo real y sin instalar nada, todos tus presupuestos: estado, total, lo cobrado, lo pendiente, el avance de los trabajos y el PDF de cada uno.\n\n'
             +'*Cómo usarlo:*\n'
-            +'\u2705 Abrí el link.\n'
-            +'\u2705 Tocá el número de cada presupuesto para ver o descargar el PDF.\n'
-            +'\u2705 Filtrá por estado y mirá el progreso de pago de cada trabajo.\n'
-            +'\u2705 Donde dice "Ver cronograma" ves la planificación de los trabajos.\n\n'
-            +'\u{1F4CC} Dentro del portal, arriba de todo, tenés el botón *"¿Cómo usar este portal?"* con una guía rápida. Te recomendamos leerlo.\n\n'
+            +'- Abrí el link.\n'
+            +'- Tocá el número de cada presupuesto para ver o descargar el PDF.\n'
+            +'- Filtrá por estado y mirá el progreso de pago de cada trabajo.\n'
+            +'- Donde dice "Ver cronograma" ves la planificación de los trabajos.\n\n'
+            +'Dentro del portal, arriba de todo, tenés el botón *"¿Cómo usar este portal?"* con una guía rápida. Te recomendamos leerlo.\n\n'
             +'Es de solo lectura y se actualiza solo, así que podés volver cuando quieras. Te recomendamos guardarlo en favoritos.\n\n'
-            +'\u{1F517} Link: '+url+'\n\n'
-            +'Cualquier duda, escribinos. Saludos, *ELECTRO BC - Servicios Integrales* \u26A1';
+            +'Link: '+url+'\n\n'
+            +'Cualquier duda, escribinos. Saludos, *ELECTRO BC - Servicios Integrales*.';
           var base=(waLink(cl.telefono||cl.telefonoAdm)||'https://wa.me/');
           window.open(base+'?text='+encodeURIComponent(msg),'_blank');
         },style:{background:"#25D366",border:"none",borderRadius:6,padding:"5px 9px",fontSize:11,fontWeight:700,color:"#fff",cursor:"pointer"}},"WhatsApp"),
