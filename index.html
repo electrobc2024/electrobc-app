@@ -3143,7 +3143,7 @@ function ClientesView({
       if(!url) return /*#__PURE__*/React.createElement("button",{type:"button",onMouseDown:function(e){e.preventDefault();},onClick:function(){ genLink(adm); },title:"Generar link de seguimiento (solo lectura) para este cliente/administración",style:{background:"none",border:"1px dashed "+ORANGE,borderRadius:6,padding:"5px 9px",fontSize:11,color:ORANGE,fontWeight:700,cursor:"pointer"}},"🔗 Generar link");
       return /*#__PURE__*/React.createElement("div",{style:{display:"flex",gap:5,alignItems:"center"}},
         /*#__PURE__*/React.createElement("button",{type:"button",title:"Enviar el link por WhatsApp con un mensaje de bienvenida",onMouseDown:function(e){e.preventDefault();},onClick:function(){
-          var nom=((cl.nombre||'').trim().split(/\s+/)[0]||''); if(/^(admin|administraci|adm\.)/i.test(nom)) nom='';
+          var nom=(cl.nombre||'').trim();
           var msg='Hola'+(nom?(' '+nom):'')+'! Te compartimos tu *Portal de seguimiento de ELECTRO BC*.\n\n'
             +'Desde este link vas a poder ver, en tiempo real y sin instalar nada, todos tus presupuestos: estado, total, lo cobrado, lo pendiente, el avance de los trabajos y el PDF de cada uno.\n\n'
             +'*Cómo usarlo:*\n'
