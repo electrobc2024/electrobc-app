@@ -6457,7 +6457,8 @@ function GanttEditor({ q, acts, personas, onPatchAct, onOpenAct, fechaLimite, on
   var _s = React.useState(null); var drag=_s[0], setDrag=_s[1];
   var _p = React.useState({}); var preview=_p[0], setPreview=_p[1];
   var actsRef = React.useRef(acts); actsRef.current = acts;
-  function eff(a){ var p=preview[a.id]; return p?Object.assign({},a,p):a; }
+  // Solo aplicar el "preview" a la barra que se está arrastrando ahora; el resto usa siempre la fecha real
+  function eff(a){ var p=preview[a.id]; return (p && drag && drag.id===a.id) ? Object.assign({},a,p) : a; }
   function offOf(d0,ymd){ return Math.round((_gParse(ymd)-d0)/86400000); }
   function capDia(f,hDia,hSab){ var p=f.split('-'); return new Date(+p[0],+p[1]-1,+p[2]).getDay()===6?hSab:hDia; }
   function workWin(startYmd,calDays,sat,dom){ var out=[],d=_gParse(startYmd); for(var i=0;i<calDays;i++){ var wd=d.getDay(); var ok=true; if(wd===0&&!dom)ok=false; else if(wd===6&&!sat)ok=false; if(ok)out.push(_gYmd(d)); d=_gAdd(d,1);} return out; }
