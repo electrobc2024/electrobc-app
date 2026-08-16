@@ -128,9 +128,12 @@ const effectiveStatus = q => isVencido(q) ? "recotizar" : q.status;
 const _mem = {};
 const SB_URL = 'https://wdvzepyxlehmitncnxlv.supabase.co';
 const SB_KEY = 'sb_publishable_pMpGWXdigzfRKn2IBznFvg_4is9UlWp';
+// Namespace de datos por entorno: prod usa las claves reales; testing/preview usan su propia base ("test:")
+const ENV_PFX = (function(){ try{ var h=(typeof window!=='undefined' ? window.location.hostname : '').toLowerCase(); var esTesting = h.indexOf('testing')>=0 || h.indexOf('localhost')>=0 || h.indexOf('127.0.0.1')>=0; return esTesting ? 'test:' : ''; }catch(e){ return ''; } })();
+const sbKey = (key) => ENV_PFX + key;
 const sbGet = async (key) => {
   try {
-    const r = await fetch(SB_URL+'/rest/v1/ebc_data?key=eq.'+encodeURIComponent(key)+'&select=value',
+    const r = await fetch(SB_URL+'/rest/v1/ebc_data?key=eq.'+encodeURIComponent(sbKey(key))+'&select=value',
       {headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY}});
     const d = await r.json();
     return d && d[0] ? d[0].value : null;
@@ -142,7 +145,7 @@ const sbSet = async (key, value) => {
       method:'POST',
       headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,
         'Content-Type':'application/json','Prefer':'resolution=merge-duplicates'},
-      body: JSON.stringify({key, value, updated_at: new Date().toISOString()})
+      body: JSON.stringify({key: sbKey(key), value, updated_at: new Date().toISOString()})
     });
   } catch(e) {}
 };
