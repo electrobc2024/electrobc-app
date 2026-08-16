@@ -6434,11 +6434,16 @@ function BackupView({ quotes, catalog, clients, egresos, personas, onRestore }){
 }
 
 // ── Gantt interactivo (arrastrar barras: mover / estirar; editar nombre; fecha límite) ──
-function GanttEditor({ q, acts, personas, onPatchAct, onOpenAct, fechaLimite, onSetLimite, onNueva, avisos, onSetAvisos }){
+function GanttEditor({ q, acts, personas, onPatchAct, onOpenAct, fechaLimite, onSetLimite, onNueva, avisos, onSetAvisos, grouped, quoteById }){
   var COLW=42, ROWH=46, NAMEW=280;
   var _av = React.useState({fecha:'',tipo:'luz',nota:''}); var avForm=_av[0], setAvForm=_av[1];
   function estColor(a){ return (EST_ACT[a.estado]||EST_ACT.programado).dot; }
   var AV = avisos || [];
+  var GROUPED = !!grouped;
+  function qOf(a){ return (GROUPED && quoteById) ? (quoteById(a.quoteId)||null) : q; }
+  function limOf(a){ var qq=qOf(a); return (qq&&qq.fechaLimite)||''; }
+  function avOf(a){ var qq=qOf(a); return (qq&&qq.avisos)||[]; }
+  function titPh(a){ return _gTitulo(a, qOf(a)); }
   function addAviso(){ if(!avForm.fecha) return; var na=AV.concat([{id:uid(),fecha:avForm.fecha,tipo:avForm.tipo,nota:(avForm.nota||'').trim()}]).sort(function(x,y){return String(x.fecha).localeCompare(String(y.fecha));}); onSetAvisos(na); setAvForm({fecha:'',tipo:'luz',nota:''}); }
   function delAviso(id){ onSetAvisos(AV.filter(function(x){return x.id!==id;})); }
   function setEstado(a, est){
@@ -6474,7 +6479,7 @@ function GanttEditor({ q, acts, personas, onPatchAct, onOpenAct, fechaLimite, on
     }
     function mu(){
       var pid=drag.id;
-      setPreview(function(p){ var pv=p[pid]; if(pv){ var a=(actsRef.current||[]).find(function(x){return x.id===pid;}); if(a){ var merged=Object.assign({},a,pv); var dd=diasCubiertosAct(merged); var end=dd[dd.length-1]; if(fechaLimite && end>fechaLimite){ alert('No podés dejar la actividad terminando después de la fecha límite ('+fmtFecha(fechaLimite)+'). Corré la fecha límite o acortá/reprogramá la actividad.'); } else { onPatchAct(merged); } } } var n=Object.assign({},p); delete n[pid]; return n; });
+      setPreview(function(p){ var pv=p[pid]; if(pv){ var a=(actsRef.current||[]).find(function(x){return x.id===pid;}); if(a){ var merged=Object.assign({},a,pv); var dd=diasCubiertosAct(merged); var end=dd[dd.length-1]; var lim=limOf(a); if(lim && end>lim){ alert('No podés dejar la actividad terminando después de la fecha límite ('+fmtFecha(lim)+'). Corré la fecha límite o acortá/reprogramá la actividad.'); } else { onPatchAct(merged); } } } var n=Object.assign({},p); delete n[pid]; return n; });
       setDrag(null);
     }
     document.addEventListener('mousemove',mm); document.addEventListener('mouseup',mu);
@@ -6482,25 +6487,34 @@ function GanttEditor({ q, acts, personas, onPatchAct, onOpenAct, fechaLimite, on
   },[drag]);
 
   if(!rows.length){ return React.createElement('div',null,
-    React.createElement('button',{type:'button',onClick:onNueva,style:{background:ORANGE,color:'#fff',border:'none',borderRadius:8,padding:'9px 14px',fontSize:13,fontWeight:700,cursor:'pointer'}},'➕ Agregar actividad'),
-    React.createElement('div',{style:{textAlign:'center',color:'#94A3B8',padding:'30px 10px',fontSize:13}}, 'Este presupuesto todavía no tiene actividades. Agregá la primera para armar el cronograma.')
+    GROUPED?null:React.createElement('button',{type:'button',onClick:onNueva,style:{background:ORANGE,color:'#fff',border:'none',borderRadius:8,padding:'9px 14px',fontSize:13,fontWeight:700,cursor:'pointer'}},'➕ Agregar actividad'),
+    React.createElement('div',{style:{textAlign:'center',color:'#94A3B8',padding:'30px 10px',fontSize:13}}, GROUPED?'Todavía no hay actividades planificadas.':'Este presupuesto todavía no tiene actividades. Agregá la primera para armar el cronograma.')
   ); }
 
-  var ds=[]; rows.forEach(function(r){ ds.push(r.start,r.end); }); if(fechaLimite) ds.push(fechaLimite); AV.forEach(function(av){ if(av.fecha) ds.push(av.fecha); });
+  var ds=[]; rows.forEach(function(r){ ds.push(r.start,r.end); var _l=limOf(r.a); if(_l) ds.push(_l); avOf(r.a).forEach(function(av){ if(av.fecha) ds.push(av.fecha); }); });
   var minS=ds.reduce(function(m,x){return x<m?x:m;},ds[0]); var maxS=ds.reduce(function(m,x){return x>m?x:m;},ds[0]);
   var d0=_gParse(minS); var d1=_gParse(maxS); var pad=8;
   var totalDays=Math.round((d1-d0)/86400000)+1+pad;
   var cols=[]; for(var i=0;i<totalDays;i++){ var dcur=_gAdd(d0,i); cols.push({ymd:_gYmd(dcur), d:dcur, we:(dcur.getDay()===0||dcur.getDay()===6)}); }
   var bands=[]; var cur=null; cols.forEach(function(c){ var mk=c.d.getFullYear()+'-'+c.d.getMonth(); if(!cur||cur.mk!==mk){ cur={mk:mk,label:MESES[c.d.getMonth()]+' '+c.d.getFullYear(),n:0}; bands.push(cur);} cur.n++; });
   var bodyW=totalDays*COLW;
-  var overDeadline = fechaLimite ? rows.filter(function(r){return r.end>fechaLimite;}) : [];
+  var overDeadline = rows.filter(function(r){ var l=limOf(r.a); return l && r.end>l; });
+  // items a renderizar (con cabeceras de presupuesto si es vista agrupada)
+  var renderItems=[];
+  if(GROUPED){
+    rows.sort(function(x,y){ var qx=qOf(x.a), qy=qOf(y.a); var nx=parseInt(qx&&qx.numero)||0, ny=parseInt(qy&&qy.numero)||0; if(nx!==ny) return nx-ny; return String(x.start).localeCompare(String(y.start)); });
+    var lastQ=null;
+    rows.forEach(function(r){ var qq=qOf(r.a); var qid=qq?qq.id:'_'; if(qid!==lastQ){ renderItems.push({header:true,q:qq,key:'h'+qid}); lastQ=qid; } renderItems.push({row:r,key:r.a.id}); });
+  } else { renderItems = rows.map(function(r){ return {row:r,key:r.a.id}; }); }
+  var allAv; if(GROUPED){ var _seen={}; allAv=[]; rows.forEach(function(r){ avOf(r.a).forEach(function(av){ if(!_seen[av.id]){_seen[av.id]=1; allAv.push(av);} }); }); } else { allAv=AV; }
+  var hayLim = rows.some(function(r){ return limOf(r.a); });
 
   function startMove(a,e){ if(e.button!==0)return; if(a.estado==='hecho'){ alert('Esta actividad está en "Hecho", no se puede mover. Cambiá el estado a Programado si necesitás reprogramarla.'); return; } e.preventDefault(); e.stopPropagation(); setDrag({id:a.id,mode:'move',startX:e.clientX,origFecha:(a.fecha||'').slice(0,10)||_gYmd(d0)}); }
   function startResize(r,e){ if(e.button!==0)return; if(r.a.estado==='hecho'){ alert('Esta actividad está en "Hecho", no se puede cambiar su duración. Cambiá el estado a Programado si necesitás reprogramarla.'); return; } e.preventDefault(); e.stopPropagation(); var a=r.a; var cal=Math.round((_gParse(r.end)-_gParse(r.start))/86400000)+1; setDrag({id:a.id,mode:'resize',startX:e.clientX,origCal:cal,startYmd:r.start,sat:!!a.trabajaSab,dom:!!a.trabajaDom,hDia:a.horasPorDia,hSab:a.horasSab}); }
 
   var thName={width:NAMEW,flexShrink:0,position:'sticky',left:0,zIndex:3,background:'#F8FAFC'};
   return React.createElement('div',null,
-    React.createElement('div',{style:{display:'flex',gap:10,alignItems:'center',flexWrap:'wrap',marginBottom:10}},
+    GROUPED?null:React.createElement('div',{style:{display:'flex',gap:10,alignItems:'center',flexWrap:'wrap',marginBottom:10}},
       React.createElement('button',{type:'button',onClick:onNueva,style:{background:ORANGE,color:'#fff',border:'none',borderRadius:8,padding:'8px 12px',fontSize:12,fontWeight:700,cursor:'pointer'}},'➕ Agregar actividad'),
       React.createElement('div',{style:{marginLeft:'auto',display:'flex',alignItems:'center',gap:6}},
         React.createElement('span',{style:{fontSize:11,fontWeight:700,color:'#B91C1C'}},'📍 Fecha límite'),
@@ -6508,9 +6522,9 @@ function GanttEditor({ q, acts, personas, onPatchAct, onOpenAct, fechaLimite, on
         fechaLimite? React.createElement('button',{type:'button',onClick:function(){onSetLimite('');},title:'Quitar fecha límite',style:{background:'none',border:'none',color:'#94A3B8',cursor:'pointer',fontSize:14}},'✕'):null
       )
     ),
-    overDeadline.length? React.createElement('div',{style:{background:'#FEF2F2',border:'1px solid #FECACA',borderRadius:8,padding:'7px 10px',marginBottom:10,fontSize:12,color:'#B91C1C',fontWeight:600}}, '⚠ '+overDeadline.length+' actividad(es) terminan después de la fecha límite ('+fmtFecha(fechaLimite)+').'):null,
+    overDeadline.length? React.createElement('div',{style:{background:'#FEF2F2',border:'1px solid #FECACA',borderRadius:8,padding:'7px 10px',marginBottom:10,fontSize:12,color:'#B91C1C',fontWeight:600}}, '⚠ '+overDeadline.length+' actividad(es) terminan después de su fecha límite.'):null,
     // Panel de avisos / cortes de suministro
-    React.createElement('div',{style:{background:'#FFFBEB',border:'1px solid #FDE68A',borderRadius:10,padding:'8px 10px',marginBottom:10}},
+    GROUPED?null:React.createElement('div',{style:{background:'#FFFBEB',border:'1px solid #FDE68A',borderRadius:10,padding:'8px 10px',marginBottom:10}},
       React.createElement('div',{style:{fontSize:11,fontWeight:700,color:'#B45309',marginBottom:6}},'🔔 Avisos / cortes de suministro (luz, agua, gas, imprevistos a avisar con anticipación)'),
       React.createElement('div',{style:{display:'flex',gap:6,flexWrap:'wrap',alignItems:'center',marginBottom:AV.length?8:0}},
         React.createElement('input',{type:'date',value:avForm.fecha,onChange:function(e){setAvForm(Object.assign({},avForm,{fecha:e.target.value}));},style:{border:'1px solid #E2E8F0',borderRadius:7,padding:'5px 7px',fontSize:12}}),
@@ -6534,22 +6548,28 @@ function GanttEditor({ q, acts, personas, onPatchAct, onOpenAct, fechaLimite, on
           React.createElement('div',{style:Object.assign({},thName,{fontSize:10,fontWeight:700,color:'#64748B',padding:'3px 6px',borderBottom:'1px solid #E2E8F0',borderRight:'1px solid #E2E8F0'})},'Actividad'),
           cols.map(function(c,ci){ return React.createElement('div',{key:ci,style:{width:COLW,flexShrink:0,textAlign:'center',fontSize:11,fontWeight:700,color:c.we?'#CBD5E1':'#64748B',background:c.we?'#F1F5F9':'#F8FAFC',borderBottom:'1px solid #E2E8F0',borderLeft:'1px solid #EDF1F6',padding:'5px 0'}}, c.d.getDate()); })
         ),
-        // filas
-        rows.map(function(r,ri){
+        // filas (con cabeceras de presupuesto en modo agrupado)
+        renderItems.map(function(item){
+          if(item.header){ var hq=item.q; return React.createElement('div',{key:item.key,style:{display:'flex',height:26}},
+            React.createElement('div',{style:Object.assign({},thName,{background:'#EEF2F7',display:'flex',alignItems:'center',padding:'0 8px',fontSize:11,fontWeight:800,color:NAVY,borderBottom:'1px solid #E2E8F0',borderRight:'1px solid #E2E8F0',whiteSpace:'nowrap',overflow:'hidden'})}, hq?('#'+(hq.numero||'')+' · '+((hq.cliente&&(hq.cliente.administracion||hq.cliente.nombre))||'')):'Sin presupuesto'),
+            React.createElement('div',{style:{width:bodyW,flexShrink:0,background:'#EEF2F7',borderBottom:'1px solid #E2E8F0'}})
+          ); }
+          var r=item.row;
           var left=offOf(d0,r.start)*COLW; var w=(offOf(d0,r.end)-offOf(d0,r.start)+1)*COLW;
           var isDrag=drag&&drag.id===r.a.id;
-          return React.createElement('div',{key:r.a.id,style:{display:'flex',height:ROWH}},
+          var rowAv=avOf(r.a); var rowLim=limOf(r.a);
+          return React.createElement('div',{key:item.key,style:{display:'flex',height:ROWH}},
             React.createElement('div',{style:Object.assign({},thName,{background:'#fff',zIndex:2,borderRight:'1px solid #E2E8F0',borderBottom:'1px solid #F1F5F9',display:'flex',alignItems:'center',padding:'0 6px',gap:4})},
               React.createElement('span',{onClick:function(){onOpenAct(r.a);},title:'Abrir detalle (equipo, horas, materiales)',style:{width:10,height:10,borderRadius:2,background:estColor(r.a),flexShrink:0,cursor:'pointer'}}),
-              React.createElement('input',{defaultValue:r.a.titulo||'',key:r.a.id+'|'+(r.a.titulo||''),placeholder:_gTitulo(r.a,q),onBlur:function(e){ var v=e.target.value; if(v!==(r.a.titulo||'')) onPatchAct(Object.assign({},r.a,{titulo:v})); },style:{border:'none',outline:'none',fontSize:11,fontWeight:700,color:'#0A0F1E',width:'100%',minWidth:0,flex:1,background:'transparent'}}),
+              React.createElement('input',{defaultValue:r.a.titulo||'',key:r.a.id+'|'+(r.a.titulo||''),placeholder:titPh(r.a),onBlur:function(e){ var v=e.target.value; if(v!==(r.a.titulo||'')) onPatchAct(Object.assign({},r.a,{titulo:v})); },style:{border:'none',outline:'none',fontSize:11,fontWeight:700,color:'#0A0F1E',width:'100%',minWidth:0,flex:1,background:'transparent'}}),
               React.createElement('select',{value:r.a.estado||'programado',title:'Estado de la actividad',onChange:function(e){ setEstado(r.a, e.target.value); },style:{border:'1px solid '+estColor(r.a),borderRadius:6,fontSize:9,fontWeight:700,color:(EST_ACT[r.a.estado]||EST_ACT.programado).color,background:(EST_ACT[r.a.estado]||EST_ACT.programado).bg,padding:'2px 3px',cursor:'pointer',flexShrink:0,maxWidth:74}},
                 [['programado','Programado'],['materiales','Materiales'],['hecho','Hecho']].map(function(o){ return React.createElement('option',{key:o[0],value:o[0]}, o[1]); })
               )
             ),
             React.createElement('div',{style:{width:bodyW,flexShrink:0,position:'relative',borderBottom:'1px solid #F1F5F9'}},
               cols.map(function(c,ci){ return c.we?React.createElement('div',{key:'we'+ci,style:{position:'absolute',left:ci*COLW,top:0,width:COLW,height:'100%',background:'#F8FAFC'}}):null; }),
-              AV.map(function(av){ var ax=offOf(d0,av.fecha); if(ax<0||ax>=totalDays) return null; var m=TIPO_AVISO[av.tipo]||TIPO_AVISO.otro; return React.createElement('div',{key:'av'+av.id,title:m.l+(av.nota?(': '+av.nota):'')+' — '+fmtFecha(av.fecha),style:{position:'absolute',left:ax*COLW+COLW/2-1,top:0,width:2,height:'100%',background:m.c,opacity:0.75,zIndex:1}}); }),
-              fechaLimite?(function(){ var lx=offOf(d0,fechaLimite); if(lx<0||lx>=totalDays) return null; return React.createElement('div',{title:'Fecha límite: '+fmtFecha(fechaLimite),style:{position:'absolute',left:(lx+1)*COLW-1,top:0,width:2,height:'100%',background:'#DC2626',zIndex:1}}); })():null,
+              rowAv.map(function(av){ var ax=offOf(d0,av.fecha); if(ax<0||ax>=totalDays) return null; var m=TIPO_AVISO[av.tipo]||TIPO_AVISO.otro; return React.createElement('div',{key:'av'+av.id,title:m.l+(av.nota?(': '+av.nota):'')+' — '+fmtFecha(av.fecha),style:{position:'absolute',left:ax*COLW+COLW/2-1,top:0,width:2,height:'100%',background:m.c,opacity:0.75,zIndex:1}}); }),
+              rowLim?(function(){ var lx=offOf(d0,rowLim); if(lx<0||lx>=totalDays) return null; return React.createElement('div',{title:'Fecha límite: '+fmtFecha(rowLim),style:{position:'absolute',left:(lx+1)*COLW-1,top:0,width:2,height:'100%',background:'#DC2626',zIndex:1}}); })():null,
               React.createElement('div',{onMouseDown:function(e){startMove(r.a,e);},title:r.a.estado==='hecho'?'Actividad Hecha — no se puede mover (cambiá el estado para reprogramar)':'Arrastrá para mover · borde derecho para estirar · doble clic para el detalle',onDoubleClick:function(){onOpenAct(r.a);},style:{position:'absolute',left:left,top:6,width:Math.max(COLW-2,w-2),height:ROWH-14,background:estColor(r.a),borderRadius:5,cursor:r.a.estado==='hecho'?'default':(isDrag?'grabbing':'grab'),opacity:r.a.estado==='hecho'?0.92:1,display:'flex',alignItems:'center',padding:'0 6px',boxShadow:'0 1px 3px rgba(0,0,0,0.2)',zIndex:2,userSelect:'none'}},
                 React.createElement('span',{style:{color:'#fff',fontSize:11,fontWeight:800,whiteSpace:'nowrap',overflow:'hidden'}}, (r.a.estado==='hecho'?'✓ ':'')+r.nd+'d'+(r.ea.durManual?' 🔒':'')),
                 r.a.estado==='hecho'?null:React.createElement('div',{onMouseDown:function(e){startResize(r,e);},title:'Estirar / acortar la duración',style:{position:'absolute',right:0,top:0,width:10,height:'100%',cursor:'ew-resize'}})
@@ -6563,11 +6583,11 @@ function GanttEditor({ q, acts, personas, onPatchAct, onOpenAct, fechaLimite, on
     React.createElement('div',{style:{display:'flex',gap:14,flexWrap:'wrap',alignItems:'center',marginTop:10}},
       React.createElement('span',{style:{fontSize:10,fontWeight:700,color:'#94A3B8',textTransform:'uppercase'}},'Estados:'),
       ['programado','materiales','hecho'].map(function(k){ var e=EST_ACT[k]; return React.createElement('span',{key:k,style:{display:'inline-flex',alignItems:'center',gap:4,fontSize:11,color:'#475569'}}, React.createElement('span',{style:{width:11,height:11,borderRadius:3,background:e.dot,display:'inline-block'}}), e.label); }),
-      fechaLimite? React.createElement('span',{style:{display:'inline-flex',alignItems:'center',gap:4,fontSize:11,color:'#B91C1C'}}, React.createElement('span',{style:{width:2,height:12,background:'#DC2626',display:'inline-block'}}), 'Fecha límite'):null
+      hayLim? React.createElement('span',{style:{display:'inline-flex',alignItems:'center',gap:4,fontSize:11,color:'#B91C1C'}}, React.createElement('span',{style:{width:2,height:12,background:'#DC2626',display:'inline-block'}}), 'Fecha límite'):null
     ),
-    AV.length? React.createElement('div',{style:{display:'flex',gap:12,flexWrap:'wrap',alignItems:'center',marginTop:6}},
+    allAv.length? React.createElement('div',{style:{display:'flex',gap:12,flexWrap:'wrap',alignItems:'center',marginTop:6}},
       React.createElement('span',{style:{fontSize:10,fontWeight:700,color:'#B45309',textTransform:'uppercase'}},'🔔 Cortes / avisos:'),
-      AV.slice().sort(function(x,y){return String(x.fecha).localeCompare(String(y.fecha));}).map(function(av){ var m=TIPO_AVISO[av.tipo]||TIPO_AVISO.otro; return React.createElement('span',{key:'lg'+av.id,style:{display:'inline-flex',alignItems:'center',gap:4,fontSize:11,color:m.c}}, React.createElement('span',{style:{width:2,height:12,background:m.c,display:'inline-block'}}), m.i+' '+fmtFecha(av.fecha)+' — '+m.l+(av.nota?(': '+av.nota):'')); })
+      allAv.slice().sort(function(x,y){return String(x.fecha).localeCompare(String(y.fecha));}).map(function(av){ var m=TIPO_AVISO[av.tipo]||TIPO_AVISO.otro; return React.createElement('span',{key:'lg'+av.id,style:{display:'inline-flex',alignItems:'center',gap:4,fontSize:11,color:m.c}}, React.createElement('span',{style:{width:2,height:12,background:m.c,display:'inline-block'}}), m.i+' '+fmtFecha(av.fecha)+' — '+m.l+(av.nota?(': '+av.nota):'')); })
     ):null,
     React.createElement('div',{style:{fontSize:10,color:'#94A3B8',marginTop:8,lineHeight:1.5}},'Arrastrá una barra para mover la actividad · el borde derecho para estirar o acortar los días · editá el nombre en la columna izquierda · doble clic (o el cuadradito de color) abre el detalle con equipo, horas y materiales · 🔒 = duración fijada a mano (si cambiás las horas en el detalle vuelve al cálculo automático).')
   );
@@ -6691,7 +6711,7 @@ function PlanificacionView({ actividades, onSave, quotes, personas, planForQuote
     if(!planForQuote) return;
     var ex = list.find(function(a){ return a.quoteId===planForQuote; });
     var qq = quoteById(planForQuote);
-    if(ex){ setGanttQid(planForQuote); setGanttOpen(true); }         // ya tiene actividades → abrir el cronograma
+    if(ex){ setGanttQid(planForQuote); setView('gantt'); }            // ya tiene actividades → abrir el cronograma
     else if(qq){ setBulkQ(qq); }                                    // sin programar → cargar varias actividades de una
     if(onConsumePlan) onConsumePlan();
   }, [planForQuote]);
@@ -6956,40 +6976,64 @@ function PlanificacionView({ actividades, onSave, quotes, personas, planForQuote
     var wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Cronograma');
     XLSX.writeFile(wb, 'ELECTRO BC - Cronograma Presupuesto '+(q.numero||'')+'.xlsx');
   }
+  // ── Vista GANTT (todos los presupuestos o uno solo) ──
+  function renderGantt(){
+    var buds=ganttBudgets();
+    var selQ = ganttQid ? (buds.find(function(b){return b.id===ganttQid;})||null) : null;
+    var btnS={border:'1px solid #E2E8F0',background:'#fff',borderRadius:8,padding:'7px 11px',fontSize:12,fontWeight:600,cursor:'pointer',whiteSpace:'nowrap'};
+    return React.createElement('div',null,
+      React.createElement('div',{style:{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap',marginBottom:10}},
+        React.createElement('span',{style:{fontSize:10,fontWeight:700,color:'#94A3B8',textTransform:'uppercase'}},'Ver'),
+        React.createElement('select',{value:ganttQid,onChange:function(e){setGanttQid(e.target.value);},style:{border:'1px solid #E2E8F0',borderRadius:8,padding:'7px 10px',fontSize:13,fontWeight:600,color:NAVY,minWidth:230}},
+          [React.createElement('option',{key:'_',value:''},'Todos los presupuestos')].concat(buds.map(function(b){ var dir=[b.cliente&&b.cliente.calle,b.cliente&&b.cliente.numero].filter(Boolean).join(' '); return React.createElement('option',{key:b.id,value:b.id}, '#'+(b.numero||'')+' · '+(b.cliente&&b.cliente.nombre||'')+(dir?(' · '+dir):'')); }))
+        ),
+        selQ? React.createElement('div',{style:{marginLeft:'auto',display:'flex',gap:8,flexWrap:'wrap'}},
+          React.createElement('button',{type:'button',onClick:function(){ setEditListQ(selQ); },style:Object.assign({},btnS,{border:'1px solid #C4B5FD',color:'#6D28D9'})},'✏️ Editar en lista'),
+          React.createElement('button',{type:'button',onClick:function(){ ganttPDF(selQ); },style:btnS},'📄 PDF'),
+          React.createElement('button',{type:'button',onClick:function(){ ganttExcel(selQ); },style:Object.assign({},btnS,{border:'1px solid #86EFAC',color:'#16A34A'})},'📊 Excel')
+        ):null
+      ),
+      buds.length===0
+        ? React.createElement('div',{style:{background:'#fff',border:'1px solid #E2E8F0',borderRadius:12,padding:'40px',textAlign:'center',color:'#94A3B8',fontSize:13}}, 'Todavía no hay actividades planificadas. Cargalas desde Seguimiento (botón de programar) o con "Nueva actividad".')
+        : (selQ
+            ? React.createElement(GanttEditor,{ q:selQ, acts:list.filter(function(a){return a.quoteId===selQ.id;}), personas:pers, onPatchAct:patchAct, onOpenAct:function(a){ setEditing(Object.assign({},a)); }, onNueva:function(){ setBulkQ(selQ); }, fechaLimite:selQ.fechaLimite||'', onSetLimite:function(v){ if(onPatchQuote) onPatchQuote(selQ.id,{fechaLimite:v}); }, avisos:selQ.avisos||[], onSetAvisos:function(av){ if(onPatchQuote) onPatchQuote(selQ.id,{avisos:av}); } })
+            : React.createElement(GanttEditor,{ grouped:true, quoteById:quoteById, acts:list, personas:pers, onPatchAct:patchAct, onOpenAct:function(a){ setEditing(Object.assign({},a)); } })
+          )
+    );
+  }
 
   return React.createElement(IngresosPane, null,
     React.createElement(PageHeader, { title: '🗓 Planificación de actividades', subtitle: 'Programá los trabajos aceptados y las tareas del equipo: fijales día, asignales quién los hace, colores y estado. Vista de calendario mensual, semanal y diaria.', right:
       React.createElement('div',{style:{display:'flex',gap:8,alignItems:'center',flexShrink:0}},
-        list.length? React.createElement('button',{type:'button',onClick:borrarTodas,title:'Borrar todas las actividades',style:{background:'none',border:'1px solid #FECACA',borderRadius:8,padding:'9px 12px',fontSize:12,fontWeight:600,cursor:'pointer',color:'#DC2626',whiteSpace:'nowrap'}}, '🗑 Borrar todas'):null,
         React.createElement('button',{type:'button',onClick:function(){ nueva(''); },style:{backgroundColor:ORANGE,color:'#fff',border:'none',borderRadius:8,padding:'9px 16px',fontSize:13,fontWeight:700,cursor:'pointer',whiteSpace:'nowrap'}}, '➕ Nueva actividad')
       )
     }),
     // Barra: toggle de vista + navegación
     React.createElement('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',gap:10,flexWrap:'wrap',marginBottom:12}},
-      React.createElement('div',{style:{display:'flex',gap:8,alignItems:'center'}},
+      React.createElement('div',{style:{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap'}},
         React.createElement('div',{style:{display:'flex',gap:4,background:'#F1F5F9',borderRadius:8,padding:3}},
-          [['anio','Año'],['mes','Mes'],['semana','Semana'],['dia','Día']].map(function(v){ var act=view===v[0]; return React.createElement('button',{key:v[0],type:'button',onClick:function(){setView(v[0]);},style:{border:'none',borderRadius:6,padding:'6px 14px',fontSize:12,fontWeight:700,cursor:'pointer',background:act?'#fff':'transparent',color:act?NAVY:'#64748B',boxShadow:act?'0 1px 2px rgba(0,0,0,0.08)':'none'}}, v[1]); })
+          [['anio','Año'],['mes','Mes'],['semana','Semana'],['dia','Día'],['gantt','📊 Gantt']].map(function(v){ var act=view===v[0]; return React.createElement('button',{key:v[0],type:'button',onClick:function(){setView(v[0]);},style:{border:'none',borderRadius:6,padding:'6px 14px',fontSize:12,fontWeight:700,cursor:'pointer',background:act?'#fff':'transparent',color:act?NAVY:'#64748B',boxShadow:act?'0 1px 2px rgba(0,0,0,0.08)':'none',whiteSpace:'nowrap'}}, v[1]); })
         ),
-        list.length? React.createElement('button',{type:'button',onClick:function(){ var b=ganttBudgets(); setGanttQid(b.length?b[0].id:''); setGanttOpen(true); },title:'Cronograma (Gantt) por presupuesto',style:{background:'#fff',border:'1px solid #C4B5FD',borderRadius:8,padding:'7px 12px',fontSize:12,fontWeight:600,cursor:'pointer',color:'#6D28D9',whiteSpace:'nowrap'}}, '📊 Cronograma'):null
+        view!=='gantt'? React.createElement('div',{style:{display:'flex',alignItems:'center',gap:8}},
+          React.createElement('button',{type:'button',onClick:function(){navega(-1);},style:{border:'1px solid #E2E8F0',background:'#fff',borderRadius:6,width:30,height:30,cursor:'pointer',fontWeight:800}},'‹'),
+          React.createElement('div',{style:{fontWeight:700,fontSize:14,color:NAVY,fontFamily:"'Oswald',system-ui",minWidth:150,textAlign:'center'}}, periodoLabel()),
+          React.createElement('button',{type:'button',onClick:function(){navega(1);},style:{border:'1px solid #E2E8F0',background:'#fff',borderRadius:6,width:30,height:30,cursor:'pointer',fontWeight:800}},'›'),
+          React.createElement('button',{type:'button',onClick:function(){ var d=new Date(); d.setHours(0,0,0,0); setRef(d); },style:{border:'1px solid #E2E8F0',background:'#fff',borderRadius:6,padding:'6px 12px',fontSize:12,cursor:'pointer',color:'#475569',fontWeight:600}},'Hoy')
+        ):null
       ),
-      React.createElement('div',{style:{display:'flex',alignItems:'center',gap:8}},
-        React.createElement('button',{type:'button',onClick:function(){navega(-1);},style:{border:'1px solid #E2E8F0',background:'#fff',borderRadius:6,width:30,height:30,cursor:'pointer',fontWeight:800}},'‹'),
-        React.createElement('div',{style:{fontWeight:700,fontSize:14,color:NAVY,fontFamily:"'Oswald',system-ui",minWidth:160,textAlign:'center'}}, periodoLabel()),
-        React.createElement('button',{type:'button',onClick:function(){navega(1);},style:{border:'1px solid #E2E8F0',background:'#fff',borderRadius:6,width:30,height:30,cursor:'pointer',fontWeight:800}},'›'),
-        React.createElement('button',{type:'button',onClick:function(){ var d=new Date(); d.setHours(0,0,0,0); setRef(d); },style:{border:'1px solid #E2E8F0',background:'#fff',borderRadius:6,padding:'6px 12px',fontSize:12,cursor:'pointer',color:'#475569',fontWeight:600}},'Hoy'),
-        React.createElement('div',{style:{width:1,height:20,background:'#E2E8F0',margin:'0 2px'}}),
+      view!=='gantt'? React.createElement('div',{style:{display:'flex',alignItems:'center',gap:8}},
         React.createElement('button',{type:'button',title:'Compartir la agenda de este período por WhatsApp',onClick:compartirWA,style:{border:'1px solid #86EFAC',background:'#fff',borderRadius:6,padding:'6px 11px',fontSize:12,cursor:'pointer',color:'#16A34A',fontWeight:600,whiteSpace:'nowrap'}},'📲 WhatsApp'),
         React.createElement('button',{type:'button',title:'Descargar la agenda de este período en PDF',onClick:pdfPeriodo,style:{border:'1px solid #E2E8F0',background:'#fff',borderRadius:6,padding:'6px 11px',fontSize:12,cursor:'pointer',color:'#475569',fontWeight:600,whiteSpace:'nowrap'}},'📄 PDF'),
         React.createElement('button',{type:'button',title:'Productividad: horas estimadas vs reales',onClick:function(){setShowProd(true);},style:{border:'1px solid #C4B5FD',background:'#fff',borderRadius:6,padding:'6px 11px',fontSize:12,cursor:'pointer',color:'#6D28D9',fontWeight:600,whiteSpace:'nowrap'}},'📊 Productividad')
-      )
+      ):null
     ),
     // Franja de sin fecha / por planificar
-    sinFecha.length>0 ? React.createElement('div',{style:{background:'#FEF2F2',border:'1px solid #FECACA',borderRadius:10,padding:'8px 12px',marginBottom:12}},
+    (sinFecha.length>0 && view!=='gantt') ? React.createElement('div',{style:{background:'#FEF2F2',border:'1px solid #FECACA',borderRadius:10,padding:'8px 12px',marginBottom:12}},
       React.createElement('div',{style:{fontSize:10,fontWeight:700,color:'#B91C1C',textTransform:'uppercase',marginBottom:6}}, '⚠ Sin fecha ('+sinFecha.length+') — arrastralas a un día o abrilas para fijar fecha'),
       React.createElement('div',{style:{display:'flex',gap:6,flexWrap:'wrap'}}, sinFecha.map(function(a){ return React.createElement('div',{key:a.id,style:{maxWidth:260}}, chip(a,{big:true})); }))
     ) : null,
-    // Calendario
-    view==='anio'?renderAnio():view==='mes'?renderMes():view==='semana'?renderSemana():renderDia(),
+    // Calendario / Gantt
+    view==='gantt'?renderGantt():view==='anio'?renderAnio():view==='mes'?renderMes():view==='semana'?renderSemana():renderDia(),
     // Editor
     editing ? React.createElement(ActividadEditor, { act: editing, onChange: setEditing, onSave: saveAct, onDelete: delAct, onClose: function(){ setEditing(null); }, quotesAceptados: aceptados, quoteById: quoteById, personas: pers }) : null,
     // Productividad
@@ -7058,45 +7102,6 @@ function PlanificacionView({ actividades, onSave, quotes, personas, planForQuote
       );
     })() : null,
     // Cronograma (Gantt) por presupuesto
-    ganttOpen ? (function(){
-      var buds=ganttBudgets();
-      var q=buds.find(function(x){return x.id===ganttQid;})||buds[0];
-      return React.createElement('div',{onMouseDown:function(){setGanttOpen(false);},style:{position:'fixed',inset:0,zIndex:10000,background:'rgba(0,0,0,0.5)',display:'flex',alignItems:'flex-start',justifyContent:'center',padding:'16px',overflow:'auto'}},
-        React.createElement('div',{onMouseDown:function(e){e.stopPropagation();},style:{background:'#fff',borderRadius:14,width:'98vw',maxWidth:1700,minHeight:'88vh',padding:20,boxShadow:'0 10px 40px rgba(0,0,0,0.25)'}},
-          React.createElement('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12,gap:10,flexWrap:'wrap'}},
-            React.createElement('div',{style:{fontFamily:"'Oswald',system-ui",fontSize:18,fontWeight:700,color:NAVY}},'📊 Cronograma por presupuesto'),
-            React.createElement('button',{type:'button',onClick:function(){setGanttOpen(false);},style:{background:'none',border:'none',fontSize:18,color:'#94A3B8',cursor:'pointer'}},'✕')
-          ),
-          buds.length===0
-            ? React.createElement('div',{style:{textAlign:'center',color:'#94A3B8',fontSize:13,padding:'24px 0'}},'Todavía no hay presupuestos con actividades planificadas.')
-            : React.createElement('div',null,
-                React.createElement('div',{style:{display:'flex',gap:10,alignItems:'center',flexWrap:'wrap',marginBottom:14}},
-                  React.createElement('span',{style:{fontSize:10,fontWeight:700,color:'#94A3B8',textTransform:'uppercase'}},'Presupuesto'),
-                  React.createElement('select',{value:q?q.id:'',onChange:function(e){setGanttQid(e.target.value);},style:{border:'1px solid #E2E8F0',borderRadius:8,padding:'8px 10px',fontSize:13,fontWeight:600,color:NAVY,minWidth:280}},
-                    buds.map(function(b){ var dir=[b.cliente&&b.cliente.calle,b.cliente&&b.cliente.numero].filter(Boolean).join(' '); return React.createElement('option',{key:b.id,value:b.id}, '#'+(b.numero||'')+' · '+(b.cliente&&b.cliente.nombre||'')+(dir?(' · '+dir):'')); })
-                  ),
-                  React.createElement('div',{style:{marginLeft:'auto',display:'flex',gap:8}},
-                    q && list.some(function(a){return a.quoteId===q.id;}) ? React.createElement('button',{type:'button',onClick:function(){ setEditListQ(q); },title:'Editar todas las actividades en una lista',style:{border:'1px solid #C4B5FD',background:'#fff',borderRadius:8,padding:'8px 12px',fontSize:12,fontWeight:600,cursor:'pointer',color:'#6D28D9',whiteSpace:'nowrap'}},'✏️ Editar en lista'):null,
-                    React.createElement('button',{type:'button',onClick:function(){ if(q) ganttPDF(q); },style:{border:'1px solid #E2E8F0',background:'#fff',borderRadius:8,padding:'8px 12px',fontSize:12,fontWeight:600,cursor:'pointer',color:'#475569',whiteSpace:'nowrap'}},'📄 PDF'),
-                    React.createElement('button',{type:'button',onClick:function(){ if(q) ganttExcel(q); },style:{border:'1px solid #86EFAC',background:'#fff',borderRadius:8,padding:'8px 12px',fontSize:12,fontWeight:600,cursor:'pointer',color:'#16A34A',whiteSpace:'nowrap'}},'📊 Excel')
-                  )
-                ),
-                q ? React.createElement(GanttEditor,{
-                  q:q,
-                  acts:list.filter(function(a){return a.quoteId===q.id;}),
-                  personas:pers,
-                  onPatchAct:patchAct,
-                  onOpenAct:function(a){ setEditing(Object.assign({},a)); },
-                  onNueva:function(){ setBulkQ(q); },
-                  fechaLimite:q.fechaLimite||'',
-                  onSetLimite:function(v){ if(onPatchQuote) onPatchQuote(q.id,{fechaLimite:v}); },
-                  avisos:q.avisos||[],
-                  onSetAvisos:function(av){ if(onPatchQuote) onPatchQuote(q.id,{avisos:av}); }
-                }) : null
-              )
-        )
-      );
-    })() : null,
     // Carga múltiple de actividades
     bulkQ ? React.createElement(BulkAddActividades, {
       q: bulkQ,
