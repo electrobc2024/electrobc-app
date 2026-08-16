@@ -6525,6 +6525,7 @@ function PlanificacionView({ actividades, onSave, quotes, personas, planForQuote
   const [ganttOpen, setGanttOpen] = React.useState(false);
   const [ganttQid, setGanttQid] = React.useState('');
   const [bulkQ, setBulkQ] = React.useState(null);
+  const [editListQ, setEditListQ] = React.useState(null);
 
   const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
   const DOW = ['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
@@ -6993,6 +6994,7 @@ function PlanificacionView({ actividades, onSave, quotes, personas, planForQuote
                     buds.map(function(b){ var dir=[b.cliente&&b.cliente.calle,b.cliente&&b.cliente.numero].filter(Boolean).join(' '); return React.createElement('option',{key:b.id,value:b.id}, '#'+(b.numero||'')+' · '+(b.cliente&&b.cliente.nombre||'')+(dir?(' · '+dir):'')); })
                   ),
                   React.createElement('div',{style:{marginLeft:'auto',display:'flex',gap:8}},
+                    q && list.some(function(a){return a.quoteId===q.id;}) ? React.createElement('button',{type:'button',onClick:function(){ setEditListQ(q); },title:'Editar todas las actividades en una lista',style:{border:'1px solid #C4B5FD',background:'#fff',borderRadius:8,padding:'8px 12px',fontSize:12,fontWeight:600,cursor:'pointer',color:'#6D28D9',whiteSpace:'nowrap'}},'✏️ Editar en lista'):null,
                     React.createElement('button',{type:'button',onClick:function(){ if(q) ganttPDF(q); },style:{border:'1px solid #E2E8F0',background:'#fff',borderRadius:8,padding:'8px 12px',fontSize:12,fontWeight:600,cursor:'pointer',color:'#475569',whiteSpace:'nowrap'}},'📄 PDF'),
                     React.createElement('button',{type:'button',onClick:function(){ if(q) ganttExcel(q); },style:{border:'1px solid #86EFAC',background:'#fff',borderRadius:8,padding:'8px 12px',fontSize:12,fontWeight:600,cursor:'pointer',color:'#16A34A',whiteSpace:'nowrap'}},'📊 Excel')
                   )
@@ -7018,7 +7020,76 @@ function PlanificacionView({ actividades, onSave, quotes, personas, planForQuote
       q: bulkQ,
       onClose: function(){ setBulkQ(null); },
       onSaveAll: function(nuevas){ onSave(list.concat(nuevas)); setBulkQ(null); }
+    }) : null,
+    // Edición múltiple (en lista) de las actividades existentes
+    editListQ ? React.createElement(BulkEditActividades, {
+      q: editListQ,
+      acts: list.filter(function(a){return a.quoteId===editListQ.id;}),
+      quoteById: quoteById,
+      onClose: function(){ setEditListQ(null); },
+      onSaveAll: function(mapPatch, borrados){
+        var nl = list.filter(function(a){ return borrados.indexOf(a.id)<0; }).map(function(a){ return mapPatch[a.id]?Object.assign({},a,mapPatch[a.id]):a; });
+        onSave(nl); setEditListQ(null);
+      }
     }) : null
+  );
+}
+
+// ── Edición múltiple (en lista) de las actividades de un presupuesto ──
+function BulkEditActividades({ q, acts, quoteById, onClose, onSaveAll }){
+  var _r = React.useState((acts||[]).slice().sort(function(x,y){return String(x.fecha||'').localeCompare(String(y.fecha||''));}).map(function(a){ return {id:a.id, nombre:a.titulo||'', fecha:(a.fecha||'').slice(0,10), horasEst:String(a.horasEst||''), horasPorDia:String(a.horasPorDia||'8'), estado:a.estado||'programado', _durManual:!!a.durManual}; }));
+  var filas=_r[0], setFilas=_r[1];
+  var _d = React.useState([]); var borrados=_d[0], setBorrados=_d[1];
+  function setFila(i,patch){ setFilas(filas.map(function(f,ix){ return ix===i?Object.assign({},f,patch):f; })); }
+  function quitar(i){ var f=filas[i]; if(!confirm('¿Eliminar la actividad "'+(f.nombre||'(sin nombre)')+'"?')) return; setBorrados(borrados.concat([f.id])); setFilas(filas.filter(function(_,ix){return ix!==i;})); }
+  function guardar(){
+    var lim = q.fechaLimite||'';
+    var hoyS=_gYmd(new Date());
+    var mapPatch={};
+    for(var i=0;i<filas.length;i++){
+      var f=filas[i];
+      if(!f.fecha){ alert('Falta la fecha de inicio en la fila '+(i+1)+'.'); return; }
+      if(!(parseFloat(f.horasEst)>0)){ alert('Falta las horas estimadas en "'+(f.nombre||'(sin nombre)')+'".'); return; }
+      var patch={ titulo:(f.nombre||'').trim(), fecha:f.fecha, horasEst:String(parseFloat(f.horasEst)||0), horasPorDia:String(parseFloat(f.horasPorDia)||8), estado:f.estado };
+      // si editó horas, se suelta el candado de duración manual
+      var orig=(acts||[]).find(function(a){return a.id===f.id;})||{};
+      if(String(orig.horasEst||'')!==patch.horasEst || String(orig.horasPorDia||'8')!==patch.horasPorDia){ patch.durManual=false; patch.durDias=''; }
+      var merged=Object.assign({},orig,patch);
+      var dd=diasCubiertosAct(merged); var end=dd[dd.length-1];
+      if(f.estado==='hecho' && end>hoyS){ alert('No podés marcar "Hecho" a "'+(f.nombre||'')+'": termina el '+fmtFecha(end)+' (todavía no pasó).'); return; }
+      if(lim && end>lim){ alert('"'+(f.nombre||'')+'" termina el '+fmtFecha(end)+', después de la fecha límite ('+fmtFecha(lim)+'). Corré la fecha límite o acortala.'); return; }
+      mapPatch[f.id]=patch;
+    }
+    onSaveAll(mapPatch, borrados);
+  }
+  var inp={border:'1px solid #E2E8F0',borderRadius:7,padding:'7px 9px',fontSize:13,boxSizing:'border-box'};
+  var dir=[q.cliente&&q.cliente.calle,q.cliente&&q.cliente.numero].filter(Boolean).join(' ');
+  return React.createElement('div',{onMouseDown:onClose,style:{position:'fixed',inset:0,zIndex:10001,background:'rgba(0,0,0,0.5)',display:'flex',alignItems:'flex-start',justifyContent:'center',padding:'32px 16px',overflow:'auto'}},
+    React.createElement('div',{onMouseDown:function(e){e.stopPropagation();},style:{background:'#fff',borderRadius:14,width:820,maxWidth:'100%',padding:20,boxShadow:'0 10px 40px rgba(0,0,0,0.25)'}},
+      React.createElement('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:4}},
+        React.createElement('div',{style:{fontFamily:"'Oswald',system-ui",fontSize:18,fontWeight:700,color:NAVY}},'✏️ Editar actividades'),
+        React.createElement('button',{type:'button',onClick:onClose,style:{background:'none',border:'none',fontSize:18,color:'#94A3B8',cursor:'pointer'}},'✕')
+      ),
+      React.createElement('div',{style:{fontSize:12,color:'#64748B',marginBottom:14}},'Presupuesto #'+(q.numero||'')+(q.cliente&&q.cliente.nombre?(' · '+q.cliente.nombre):'')+(dir?(' · '+dir):'')+'. Editá todas juntas. Cada una mantiene su fecha de inicio (no se reordenan). Para mover en el tiempo también podés arrastrar en el cronograma.'),
+      filas.length===0 ? React.createElement('div',{style:{textAlign:'center',color:'#94A3B8',fontSize:13,padding:'20px 0'}},'No quedan actividades.') :
+      React.createElement('div',null,
+        React.createElement('div',{style:{display:'flex',gap:8,fontSize:10,fontWeight:700,color:'#94A3B8',textTransform:'uppercase',padding:'0 4px',marginBottom:4}},
+          React.createElement('div',{style:{flex:1}},'Actividad'), React.createElement('div',{style:{width:120,textAlign:'center'}},'Inicio'), React.createElement('div',{style:{width:64,textAlign:'center'}},'Horas'), React.createElement('div',{style:{width:60,textAlign:'center'}},'h/día'), React.createElement('div',{style:{width:118,textAlign:'center'}},'Estado'), React.createElement('div',{style:{width:24}})
+        ),
+        filas.map(function(f,i){ return React.createElement('div',{key:f.id,style:{display:'flex',gap:8,alignItems:'center',marginBottom:6}},
+          React.createElement('input',{type:'text',value:f.nombre,placeholder:'Nombre de la actividad',onChange:function(e){setFila(i,{nombre:e.target.value});},style:Object.assign({},inp,{flex:1})}),
+          React.createElement('input',{type:'date',value:f.fecha,onChange:function(e){setFila(i,{fecha:e.target.value});},style:Object.assign({},inp,{width:120})}),
+          React.createElement('input',{type:'number',min:'0',step:'0.5',value:f.horasEst,onChange:function(e){setFila(i,{horasEst:e.target.value});},style:Object.assign({},inp,{width:64,textAlign:'center'})}),
+          React.createElement('input',{type:'number',min:'1',step:'0.5',value:f.horasPorDia,onChange:function(e){setFila(i,{horasPorDia:e.target.value});},style:Object.assign({},inp,{width:60,textAlign:'center'})}),
+          React.createElement('select',{value:f.estado,onChange:function(e){setFila(i,{estado:e.target.value});},style:Object.assign({},inp,{width:118})}, [['programado','Programado'],['materiales','Materiales'],['hecho','Hecho']].map(function(o){return React.createElement('option',{key:o[0],value:o[0]},o[1]);})),
+          React.createElement('button',{type:'button',onClick:function(){quitar(i);},title:'Eliminar',style:{width:24,background:'none',border:'none',color:'#CBD5E1',cursor:'pointer',fontSize:16}},'✕')
+        ); })
+      ),
+      React.createElement('div',{style:{display:'flex',justifyContent:'flex-end',gap:8,marginTop:16}},
+        React.createElement('button',{type:'button',onClick:onClose,style:{background:'#fff',border:'1px solid #E2E8F0',borderRadius:8,padding:'9px 16px',fontSize:13,fontWeight:600,color:'#475569',cursor:'pointer'}},'Cancelar'),
+        React.createElement('button',{type:'button',onClick:guardar,style:{background:ORANGE,color:'#fff',border:'none',borderRadius:8,padding:'9px 18px',fontSize:13,fontWeight:700,cursor:'pointer'}},'Guardar cambios')
+      )
+    )
   );
 }
 
