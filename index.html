@@ -966,6 +966,34 @@ function gcalUrl(a, q, personas){
   var loc = q?[q.cliente&&q.cliente.calle,q.cliente&&q.cliente.numero,'La Plata'].filter(Boolean).join(' '):'';
   return 'https://calendar.google.com/calendar/render?action=TEMPLATE&text='+encodeURIComponent(titulo)+'&dates='+compact(dias[0])+'/'+compact(nextDay(dias[dias.length-1]))+'&details='+encodeURIComponent(det)+(loc?('&location='+encodeURIComponent(loc)):'');
 }
+// Genera y descarga un .ics con TODAS las actividades (para importar a Google Calendar de una)
+function descargarICS(acts, q, personas, nombreArch){
+  function esc(s){ return String(s||'').replace(/\\/g,'\\\\').replace(/;/g,'\\;').replace(/,/g,'\\,').replace(/\n/g,'\\n'); }
+  function compact(s){ return String(s).replace(/-/g,''); }
+  function nextDay(s){ var p=String(s).split('-'); var d=new Date(+p[0],+p[1]-1,+p[2]); d.setDate(d.getDate()+1); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+  var stamp=(new Date()).toISOString().replace(/[-:]/g,'').split('.')[0]+'Z';
+  var loc = q?[q.cliente&&q.cliente.calle,q.cliente&&q.cliente.numero,'La Plata'].filter(Boolean).join(' '):'';
+  var lines=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//ELECTRO BC//Cronograma//ES','CALSCALE:GREGORIAN'];
+  (acts||[]).forEach(function(a,i){
+    var dias=diasCubiertosAct(a); if(!dias.length) return;
+    var titulo=(a.titulo&&a.titulo.trim())?a.titulo.trim():(q?((q.cliente&&q.cliente.nombre)||'Actividad'):'Actividad');
+    var est=EST_ACT[a.estado]||EST_ACT.programado;
+    var per=(a.equipo||[]).map(function(id){ var p=(personas||[]).find(function(x){return x.id===id;}); return p?p.nombre:''; }).filter(Boolean).join(', ');
+    var det='Estado: '+est.label+(per?('\nEquipo: '+per):'')+(parseFloat(a.horasEst)>0?('\nHoras estimadas: '+a.horasEst):'')+(q?('\nPresupuesto #'+(q.numero||'')):'');
+    lines.push('BEGIN:VEVENT');
+    lines.push('UID:'+(a.id||('act'+i))+'-'+Date.now()+'@electrobc');
+    lines.push('DTSTAMP:'+stamp);
+    lines.push('DTSTART;VALUE=DATE:'+compact(dias[0]));
+    lines.push('DTEND;VALUE=DATE:'+compact(nextDay(dias[dias.length-1])));
+    lines.push('SUMMARY:'+esc(titulo));
+    lines.push('DESCRIPTION:'+esc(det));
+    if(loc) lines.push('LOCATION:'+esc(loc));
+    lines.push('END:VEVENT');
+  });
+  lines.push('END:VCALENDAR');
+  var blob=new Blob([lines.join('\r\n')],{type:'text/calendar;charset=utf-8'});
+  var url=URL.createObjectURL(blob); var link=document.createElement('a'); link.href=url; link.download=(nombreArch||'ELECTRO BC - Cronograma')+'.ics'; document.body.appendChild(link); link.click(); document.body.removeChild(link); setTimeout(function(){URL.revokeObjectURL(url);},1000);
+}
 // Selector compacto de equipo (chips + agregar) para las cargas múltiples
 function EquipoPicker({ personas, value, onChange }){
   var val = value||[];
@@ -7218,7 +7246,10 @@ function ResultadoGCal({ titulo, acts, q, personas, onClose }){
       React.createElement('div',{style:{fontFamily:"'Oswald',system-ui",fontSize:18,fontWeight:700,color:'#166534'}}, titulo),
       React.createElement('button',{type:'button',onClick:onClose,style:{background:'none',border:'none',fontSize:18,color:'#94A3B8',cursor:'pointer'}},'✕')
     ),
-    React.createElement('div',{style:{fontSize:12,color:'#64748B',marginBottom:14}},'Podés agregar cada actividad a Google Calendar (opcional):'),
+    React.createElement('div',{style:{fontSize:12,color:'#64748B',marginBottom:12}},'Podés agregar todas juntas descargando el archivo e importándolo a Google Calendar (Configuración → Importar), o agregar una por una:'),
+    React.createElement('div',{style:{marginBottom:14}},
+      React.createElement('button',{type:'button',onClick:function(){ descargarICS(acts, q, personas, 'ELECTRO BC - Cronograma Presupuesto '+(q&&q.numero||'')); },style:{display:'inline-flex',alignItems:'center',gap:8,background:'#1D4ED8',color:'#fff',border:'none',borderRadius:8,padding:'9px 16px',fontSize:13,fontWeight:700,cursor:'pointer'}}, '📅 Agregar TODAS a Google Calendar (.ics)')
+    ),
     React.createElement('div',{style:{display:'flex',flexDirection:'column',gap:8}}, (acts||[]).map(function(a,i){ var dias=diasCubiertosAct(a); var url=gcalUrl(a,q,personas); var tit=(a.titulo&&a.titulo.trim())||('Actividad '+(i+1)); return React.createElement('div',{key:a.id||i,style:{display:'flex',justifyContent:'space-between',alignItems:'center',gap:10,border:'1px solid #EDF1F6',borderRadius:10,padding:'8px 12px'}},
       React.createElement('div',{style:{minWidth:0}}, React.createElement('div',{style:{fontSize:13,fontWeight:700,color:NAVY,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}, tit), React.createElement('div',{style:{fontSize:11,color:'#94A3B8'}}, dias.length?(fmtFecha(dias[0])+(dias.length>1?(' → '+fmtFecha(dias[dias.length-1])):'')):'')),
       url? React.createElement('a',{href:url,target:'_blank',rel:'noopener',style:{flexShrink:0,display:'inline-flex',alignItems:'center',gap:6,fontSize:12,fontWeight:600,color:'#1D4ED8',background:'#EFF6FF',border:'1px solid #BFDBFE',borderRadius:8,padding:'7px 11px',textDecoration:'none'}}, '📅 Google Calendar'):null
