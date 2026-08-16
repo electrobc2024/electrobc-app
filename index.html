@@ -3134,6 +3134,21 @@ function ClientesView({
       var tok=linkDeAdmin(portMap,adm); var url=tok?portalUrl(tok):null;
       if(!url) return /*#__PURE__*/React.createElement("button",{type:"button",onMouseDown:function(e){e.preventDefault();},onClick:function(){ genLink(adm); },title:"Generar link de seguimiento (solo lectura) para este cliente/administración",style:{background:"none",border:"1px dashed "+ORANGE,borderRadius:6,padding:"5px 9px",fontSize:11,color:ORANGE,fontWeight:700,cursor:"pointer"}},"🔗 Generar link");
       return /*#__PURE__*/React.createElement("div",{style:{display:"flex",gap:5,alignItems:"center"}},
+        /*#__PURE__*/React.createElement("button",{type:"button",title:"Enviar el link por WhatsApp con un mensaje de bienvenida",onMouseDown:function(e){e.preventDefault();},onClick:function(){
+          var nom=((cl.nombre||'').trim().split(/\s+/)[0]||'');
+          var msg='Hola'+(nom?(' '+nom):'')+'! Te compartimos tu *Portal de seguimiento de ELECTRO BC*.\n\n'
+            +'Desde este link vas a poder ver, en tiempo real y sin instalar nada, todos tus presupuestos: estado, total, lo cobrado, lo pendiente, el avance de los trabajos y el PDF de cada uno.\n\n'
+            +'*Cómo usarlo:*\n'
+            +'1) Abrí el link.\n'
+            +'2) Tocá el número de cada presupuesto para ver o descargar el PDF.\n'
+            +'3) Filtrá por estado y mirá el progreso de pago de cada trabajo.\n'
+            +'4) Donde dice "Ver cronograma" ves la planificación de los trabajos.\n\n'
+            +'Es de solo lectura y se actualiza solo, así que podés volver cuando quieras. Te recomendamos guardarlo en favoritos.\n\n'
+            +'Link: '+url+'\n\n'
+            +'Cualquier duda, escribinos. Saludos, *ELECTRO BC - Servicios Integrales*.';
+          var base=(waLink(cl.telefono||cl.telefonoAdm)||'https://wa.me/');
+          window.open(base+'?text='+encodeURIComponent(msg),'_blank');
+        },style:{background:"#25D366",border:"none",borderRadius:6,padding:"5px 9px",fontSize:11,fontWeight:700,color:"#fff",cursor:"pointer"}},"WhatsApp"),
         /*#__PURE__*/React.createElement("button",{type:"button",title:url,onMouseDown:function(e){e.preventDefault();},onClick:function(){ try{ navigator.clipboard.writeText(url); alert("Link copiado."); }catch(e){ prompt("Copiá el link:",url); } },style:{background:ORANGE,border:"none",borderRadius:6,padding:"5px 9px",fontSize:11,fontWeight:700,color:"#fff",cursor:"pointer"}},"📋 Copiar"),
         /*#__PURE__*/React.createElement("button",{type:"button",title:"Abrir el portal",onMouseDown:function(e){e.preventDefault();},onClick:function(){ window.open(url,"_blank"); },style:{background:"none",border:"1px solid #E2E8F0",borderRadius:6,padding:"5px 9px",fontSize:11,color:"#475569",cursor:"pointer"}},"Abrir"),
         /*#__PURE__*/React.createElement("button",{type:"button",title:"Regenerar (el link anterior deja de funcionar)",onMouseDown:function(e){e.preventDefault();},onClick:function(){ if(confirm("¿Regenerar el link de "+adm+"? El anterior dejará de funcionar.")) regenLink(adm); },style:{background:"none",border:"none",color:"#B45309",cursor:"pointer",fontSize:14}},"↻")
