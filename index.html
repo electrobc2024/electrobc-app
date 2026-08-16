@@ -8611,28 +8611,6 @@ function MovimientosPdfOverlay({onClose, data}){
             );
           }))
         ),
-        (data.rentData && data.rentData.filas && data.rentData.filas.length) ? React.createElement("div",{className:"dash-avoid",style:{...cardS, pageBreakBefore:"always", breakBefore:"page"}},
-          React.createElement("div",{style:{fontSize:12,fontWeight:700,color:NAVY,marginBottom:4}},"💰 Rentabilidad por presupuesto (histórico)"),
-          React.createElement("div",{style:{fontSize:9,color:"#94A3B8",marginBottom:8}},"Cobrado − costo real (materiales al "+(data.margenMat!=null?data.margenMat:30)+"% de margen + mano de obra real). Ordenado por rentabilidad."),
-          React.createElement("table",{style:{width:"100%",borderCollapse:"collapse"}},
-            React.createElement("thead",null,React.createElement("tr",null,
-              ["N°","Cliente","Cobrado","Costo mat.","Costo M.O.","Rentab.","Margen"].map(function(h,i){ return React.createElement("th",{key:i,style:{...thS,textAlign:i>=2?"right":"left"}},h); })
-            )),
-            React.createElement("tbody",null, data.rentData.filas.map(function(f,i){ var rc=f.rent>=0?"#166534":"#B91C1C"; return React.createElement("tr",{key:i,style:{borderBottom:"1px solid #F1F5F9"}},
-              React.createElement("td",{style:{padding:"5px 8px",fontSize:11,fontWeight:700,color:ORANGE}},"#"+f.numero),
-              React.createElement("td",{style:{padding:"5px 8px",fontSize:11,color:"#1E293B"}},f.cliente),
-              React.createElement("td",{style:{padding:"5px 8px",fontSize:11,textAlign:"right",color:"#475569"}},"$ "+fmt(f.cob)),
-              React.createElement("td",{style:{padding:"5px 8px",fontSize:11,textAlign:"right",color:"#475569"}},"$ "+fmt(f.cm)),
-              React.createElement("td",{style:{padding:"5px 8px",fontSize:11,textAlign:"right",color:"#475569"}},"$ "+fmt(f.cmo)),
-              React.createElement("td",{style:{padding:"5px 8px",fontSize:11,textAlign:"right",fontWeight:700,color:rc}},(f.rent<0?"- ":"")+"$ "+fmt(f.rent)),
-              React.createElement("td",{style:{padding:"5px 8px",fontSize:11,textAlign:"right",fontWeight:700,color:rc}},(f.cob>0?Math.round(f.pct)+"%":"—"))
-            ); }))
-          ),
-          React.createElement("div",{style:{display:"flex",justifyContent:"space-between",marginTop:8,paddingTop:8,borderTop:"2px solid #E2E8F0",fontSize:12}},
-            React.createElement("span",{style:{fontWeight:700,color:NAVY}},"Total"),
-            React.createElement("span",{style:{fontWeight:700,color:(data.rentData.tRent>=0?"#166534":"#B91C1C")}}, "Cobrado $ "+fmt(data.rentData.tCob)+"  ·  Rentab. "+(data.rentData.tRent<0?"- ":"")+"$ "+fmt(data.rentData.tRent))
-          )
-        ) : null,
         (data.rentData) ? React.createElement("div",{className:"dash-avoid",style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginTop:12}},
           React.createElement("div",{style:cardS},
             React.createElement("div",{style:{fontSize:12,fontWeight:700,color:NAVY,marginBottom:8}},"⏱ Tiempo promedio de cobro"),
@@ -9037,7 +9015,13 @@ function IngresosView({quotes, egresos, onSaveEgresos, clients, catalog, persona
       ),
       // KPI cards analíticos (aprobación / materiales)
       React.createElement('div',{style:{display:'grid',gridTemplateColumns:isMobile?'repeat(1,1fr)':'repeat(3,1fr)',gap:12,marginBottom:20}},
-        _allCards.slice(4).map(kpiCard)
+        _allCards.slice(4).map(kpiCard),
+        React.createElement('div',{key:'_tcobro',style:Object.assign({},card,{marginBottom:0})},
+          React.createElement('div',{style:{fontSize:10,color:'#94A3B8',fontWeight:700,textTransform:'uppercase',marginBottom:4}},'⏱ Tiempo promedio de cobro'),
+          rentData.promCobro==null
+            ? React.createElement('div',{style:{fontSize:12,color:'#94A3B8'}},'Sin datos suficientes')
+            : React.createElement('div',null, React.createElement('div',{style:{fontFamily:"'Oswald',system-ui",fontSize:22,fontWeight:700,color:NAVY}}, rentData.promCobro+' días'), React.createElement('div',{style:{fontSize:9,color:'#94A3B8',marginTop:3}},'Aceptación → cobro total ('+rentData.diasN+' presup.)'))
+        )
       ),
       React.createElement('div',{style:{fontSize:10,color:'#94A3B8',marginBottom:16,lineHeight:1.4}},'🟢 Bien · 🟡 Revisar · 🔴 Atención — El semáforo es una guía orientativa con umbrales de referencia para una empresa de servicios chica; no reemplaza el análisis de un contador con tus números reales.'),
             // Egresos por categoría + Ganancia GJF
@@ -9120,57 +9104,14 @@ function IngresosView({quotes, egresos, onSaveEgresos, clients, catalog, persona
             dashAnosVer:dashAnosVer
           }),
           (function(){
-            var filas=rentData.filas, ranking=rentData.ranking;
-            var th={padding:'7px 8px',fontSize:10,fontWeight:700,color:'#94A3B8',textTransform:'uppercase',textAlign:'left',borderBottom:'1px solid #E2E8F0',whiteSpace:'nowrap',background:'#F8FAFC',position:'sticky',top:0};
-            var td={padding:'7px 8px',fontSize:12,color:'#475569',borderBottom:'1px solid #F1F5F9',whiteSpace:'nowrap'};
-            var rcol=function(v){ return v>=0?'#166534':'#B91C1C'; };
-            return React.createElement('div',{style:{display:'grid',gridTemplateColumns:'1fr',gap:12,marginTop:12}},
-              React.createElement('div',{style:Object.assign({},card)},
-                React.createElement('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap',gap:8,marginBottom:8}},
-                  React.createElement('div',{style:{fontSize:13,fontWeight:700,color:NAVY}},'\u{1F4B0} Rentabilidad por presupuesto (histórico)'),
-                  React.createElement('label',{style:{display:'flex',alignItems:'center',gap:6,fontSize:12,color:'#64748B'}}, 'Margen materiales', React.createElement('input',{type:'number',min:'0',step:'1',value:margenMat,onChange:function(e){setMargen(e.target.value);},style:{width:64,border:'1px solid #E2E8F0',borderRadius:6,padding:'5px 7px',fontSize:12}}), '%')
-                ),
-                React.createElement('div',{style:{fontSize:10,color:'#94A3B8',marginBottom:8}},'Cobrado − costo real. Materiales: precio ÷ (1+margen). Mano de obra: horas reales × valor hora promedio del equipo. Ordenado por rentabilidad.'),
-                filas.length===0 ? React.createElement('div',{style:{color:'#94A3B8',fontSize:12,textAlign:'center',padding:'16px 0'}},'No hay presupuestos aceptados todavía.') :
-                React.createElement('div',{style:{overflowX:'auto',overflowY:'auto',maxHeight:300,border:'1px solid #F1F5F9',borderRadius:8}}, React.createElement('table',{style:{width:'100%',borderCollapse:'collapse',minWidth:560}},
-                  React.createElement('thead',null,React.createElement('tr',null,
-                    React.createElement('th',{style:th},'N°'), React.createElement('th',{style:th},'Cliente'),
-                    React.createElement('th',{style:Object.assign({},th,{textAlign:'right'})},'Cobrado'),
-                    React.createElement('th',{style:Object.assign({},th,{textAlign:'right'})},'Costo mat.'),
-                    React.createElement('th',{style:Object.assign({},th,{textAlign:'right'})},'Costo M.O.'),
-                    React.createElement('th',{style:Object.assign({},th,{textAlign:'right'})},'Rentab.'),
-                    React.createElement('th',{style:Object.assign({},th,{textAlign:'right'})},'Margen')
-                  )),
-                  React.createElement('tbody',null, filas.map(function(f){ return React.createElement('tr',{key:f.id},
-                    React.createElement('td',{style:Object.assign({},td,{fontWeight:700,color:ORANGE})}, '#'+(f.numero||'')),
-                    React.createElement('td',{style:td}, f.cliente),
-                    React.createElement('td',{style:Object.assign({},td,{textAlign:'right'})}, fmt(f.cob)),
-                    React.createElement('td',{style:Object.assign({},td,{textAlign:'right'})}, fmt(f.cm)),
-                    React.createElement('td',{style:Object.assign({},td,{textAlign:'right'})}, fmt(f.cmo)),
-                    React.createElement('td',{style:Object.assign({},td,{textAlign:'right',fontWeight:700,color:rcol(f.rent)})}, fmt(f.rent)),
-                    React.createElement('td',{style:Object.assign({},td,{textAlign:'right',fontWeight:700,color:rcol(f.rent)})}, (f.cob>0?Math.round(f.pct)+'%':'—'))
-                  ); }))
-                )),
-                filas.length>0 ? React.createElement('div',{style:{display:'flex',justifyContent:'space-between',gap:10,marginTop:8,paddingTop:8,borderTop:'2px solid #E2E8F0',fontSize:12}},
-                  React.createElement('span',{style:{fontWeight:700,color:NAVY}},'Total'),
-                  React.createElement('span',null, React.createElement('span',{style:{color:'#94A3B8',marginRight:8}},'Cobrado '+fmt(rentData.tCob)), React.createElement('span',{style:{fontWeight:700,color:rcol(rentData.tRent)}}, 'Rentab. '+fmt(rentData.tRent)+(rentData.tCob>0?(' ('+Math.round(rentData.tRent/rentData.tCob*100)+'%)'):'')))
-                ) : null
-              ),
-              React.createElement('div',{style:{display:'grid',gridTemplateColumns:isMobile?'1fr':'1fr 1fr',gap:12}},
-                React.createElement('div',{style:Object.assign({},card)},
-                  React.createElement('div',{style:{fontSize:13,fontWeight:700,color:NAVY,marginBottom:8}},'⏱ Tiempo promedio de cobro'),
-                  rentData.promCobro==null ? React.createElement('div',{style:{color:'#94A3B8',fontSize:12}},'Todavía no hay presupuestos aceptados y cobrados por completo.') :
-                  React.createElement('div',null, React.createElement('div',{style:{fontSize:30,fontWeight:800,color:NAVY,fontFamily:"'Oswald',system-ui"}}, rentData.promCobro+' días'), React.createElement('div',{style:{fontSize:11,color:'#94A3B8'}}, 'Desde la aceptación hasta el cobro total ('+rentData.diasN+' presupuesto(s)).'))
-                ),
-                React.createElement('div',{style:Object.assign({},card)},
-                  React.createElement('div',{style:{fontSize:13,fontWeight:700,color:NAVY,marginBottom:8}},'\u{1F3C6} Ranking de clientes (por cobrado)'),
-                  ranking.length===0 ? React.createElement('div',{style:{color:'#94A3B8',fontSize:12}},'Sin cobros registrados.') :
-                  React.createElement('div',null, ranking.map(function(r,i){ return React.createElement('div',{key:r.nom,style:{display:'flex',justifyContent:'space-between',alignItems:'baseline',gap:8,padding:'5px 0',borderBottom:i<ranking.length-1?'1px solid #F1F5F9':'none'}},
-                    React.createElement('span',{style:{fontSize:12,color:'#475569',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}, (i+1)+'. '+r.nom),
-                    React.createElement('span',{style:{fontSize:12,fontWeight:700,color:NAVY,flexShrink:0}}, fmt(r.cob))
-                  ); }))
-                )
-              )
+            var ranking=rentData.ranking;
+            return React.createElement('div',{style:Object.assign({},card,{marginTop:12})},
+              React.createElement('div',{style:{fontSize:13,fontWeight:700,color:NAVY,marginBottom:8}},'\u{1F3C6} Ranking de clientes (por cobrado)'),
+              ranking.length===0 ? React.createElement('div',{style:{color:'#94A3B8',fontSize:12}},'Sin cobros registrados.') :
+              React.createElement('div',null, ranking.map(function(r,i){ return React.createElement('div',{key:r.nom,style:{display:'flex',justifyContent:'space-between',alignItems:'baseline',gap:8,padding:'5px 0',borderBottom:i<ranking.length-1?'1px solid #F1F5F9':'none'}},
+                React.createElement('span',{style:{fontSize:12,color:'#475569',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}, (i+1)+'. '+r.nom),
+                React.createElement('span',{style:{fontSize:12,fontWeight:700,color:NAVY,flexShrink:0}}, fmt(r.cob))
+              ); }))
             );
           })()
           )
