@@ -6799,7 +6799,7 @@ function PlanificacionView({ actividades, onSave, quotes, personas, planForQuote
         return React.createElement('div',{key:i,onClick:function(){ nueva(ymd(d)); },
           onDragOver:function(e){ if(calDrag.current){ e.preventDefault(); e.dataTransfer.dropEffect='move'; } },
           onDrop:function(e){ e.preventDefault(); soltarEnDia(ymd(d)); },
-          style:{background:'#fff',border:'1px solid '+(sameDay(d,hoy)?ORANGE:'#E2E8F0'),borderRadius:10,padding:8,minHeight:200,cursor:'pointer'}},
+          style:{background:'#fff',border:'1px solid '+(sameDay(d,hoy)?ORANGE:'#E2E8F0'),borderRadius:10,padding:8,minHeight:'clamp(240px, calc(100vh - 300px), 900px)',cursor:'pointer'}},
           React.createElement('div',{style:{fontSize:11,fontWeight:700,color:sameDay(d,hoy)?ORANGE:'#64748B',marginBottom:6,textAlign:'center'}}, DOW[i]+' '+d.getDate()),
           acts.map(function(a){ return chip(a, ymd(d), {big:true}); }),
           acts.length===0? React.createElement('div',{style:{fontSize:10,color:'#CBD5E1',textAlign:'center',marginTop:8}}, '+'):null
@@ -6871,7 +6871,7 @@ function PlanificacionView({ actividades, onSave, quotes, personas, planForQuote
     return React.createElement('div',null,
       // Resumen de carga por persona
       cargaArr.length? React.createElement('div',{style:{display:'flex',gap:8,flexWrap:'wrap',marginBottom:10}}, cargaArr.map(function(c){ var over=c.h>8.001; return React.createElement('div',{key:c.pid,style:{background:over?'#FEF2F2':'#F8FAFC',border:'1px solid '+(over?'#FCA5A5':'#E2E8F0'),borderRadius:20,padding:'4px 11px',fontSize:12,color:over?'#B91C1C':'#475569',fontWeight:600}}, persLabel(c.pid)+': '+(Math.round(c.h*10)/10)+'h / 8h'); })):null,
-      React.createElement('div',{style:{background:'#fff',border:'1px solid '+(sameDay(ref,hoy)?ORANGE:'#E2E8F0'),borderRadius:10,padding:14,minHeight:200}},
+      React.createElement('div',{style:{background:'#fff',border:'1px solid '+(sameDay(ref,hoy)?ORANGE:'#E2E8F0'),borderRadius:10,padding:14,minHeight:'clamp(280px, calc(100vh - 320px), 1000px)'}},
         acts.length===0
           ? React.createElement('div',{style:{textAlign:'center',color:'#94A3B8',fontSize:13,padding:'30px 0'}}, 'Sin actividades este día. Tocá "Nueva actividad" para agregar.')
           : React.createElement('div',{style:{display:'flex',flexDirection:'column',gap:8}}, acts.map(function(a){ var est=EST_ACT[a.estado]||EST_ACT.por_planificar; var h=horasDelDiaAct(a,s);
@@ -6894,18 +6894,18 @@ function PlanificacionView({ actividades, onSave, quotes, personas, planForQuote
     var dayHas = {};
     list.forEach(function(a){ diasDe(a).forEach(function(s){ if(s.slice(0,4)===String(year)){ (dayHas[s]=dayHas[s]||[]).push(a.color); } }); });
     var meses=[]; for(var mo=0;mo<12;mo++) meses.push(mo);
-    return React.createElement('div',{style:{display:'grid',gridTemplateColumns:'repeat(auto-fill, minmax(220px,1fr))',gap:12}},
+    return React.createElement('div',{style:{display:'grid',gridTemplateColumns:'repeat(auto-fill, minmax(300px,1fr))',gap:14}},
       meses.map(function(mo){
         var first=new Date(year,mo,1), start=startOfWeek(first), cells=[]; for(var i=0;i<42;i++) cells.push(addDays(start,i));
-        return React.createElement('div',{key:mo,style:{background:'#fff',border:'1px solid #E2E8F0',borderRadius:10,padding:8}},
-          React.createElement('div',{onClick:function(){ setRef(new Date(year,mo,1)); setView('mes'); },style:{fontSize:12,fontWeight:700,color:NAVY,marginBottom:6,cursor:'pointer',textAlign:'center'}}, MESES[mo]),
-          React.createElement('div',{style:{display:'grid',gridTemplateColumns:'repeat(7,1fr)',gap:2}},
-            DOW.map(function(dd){ return React.createElement('div',{key:'h'+dd,style:{fontSize:8,color:'#CBD5E1',textAlign:'center',fontWeight:700}}, dd.charAt(0)); }),
+        return React.createElement('div',{key:mo,style:{background:'#fff',border:'1px solid #E2E8F0',borderRadius:10,padding:12}},
+          React.createElement('div',{onClick:function(){ setRef(new Date(year,mo,1)); setView('mes'); },style:{fontSize:14,fontWeight:700,color:NAVY,marginBottom:8,cursor:'pointer',textAlign:'center'}}, MESES[mo]),
+          React.createElement('div',{style:{display:'grid',gridTemplateColumns:'repeat(7,1fr)',gap:3}},
+            DOW.map(function(dd){ return React.createElement('div',{key:'h'+dd,style:{fontSize:9,color:'#CBD5E1',textAlign:'center',fontWeight:700}}, dd.charAt(0)); }),
             cells.map(function(d,i){ var inM=d.getMonth()===mo; var s=ymd(d); var has=dayHas[s]; var esHoy=sameDay(d,hoy);
               return React.createElement('div',{key:i,onClick:function(){ if(!inM)return; var nd=new Date(d); nd.setHours(0,0,0,0); setRef(nd); setView('dia'); },
-                style:{fontSize:9,textAlign:'center',padding:'3px 0',borderRadius:4,cursor:inM?'pointer':'default',fontWeight:esHoy?800:500,color:inM?(esHoy?'#fff':'#475569'):'#E2E8F0',background:esHoy?ORANGE:((has&&inM)?'#FEF3C7':'transparent'),position:'relative'}},
+                style:{fontSize:11,textAlign:'center',padding:'7px 0',borderRadius:5,cursor:inM?'pointer':'default',fontWeight:esHoy?800:500,color:inM?(esHoy?'#fff':'#475569'):'#E2E8F0',background:esHoy?ORANGE:((has&&inM)?'#FEF3C7':'transparent'),position:'relative'}},
                 d.getDate(),
-                (has&&inM&&!esHoy)? React.createElement('span',{style:{position:'absolute',bottom:1,left:'50%',transform:'translateX(-50%)',width:4,height:4,borderRadius:'50%',background:has[0]||ORANGE}}):null
+                (has&&inM&&!esHoy)? React.createElement('span',{style:{position:'absolute',bottom:2,left:'50%',transform:'translateX(-50%)',width:5,height:5,borderRadius:'50%',background:has[0]||ORANGE}}):null
               );
             })
           )
@@ -6936,11 +6936,9 @@ function PlanificacionView({ actividades, onSave, quotes, personas, planForQuote
     if(!dr) return;
     var a = list.find(function(x){return x.id===dr.id;}); if(!a) return;
     if(a.estado==='hecho'){ alert('Esta actividad está en "Hecho", no se puede mover. Cambiá el estado a Programado para reprogramarla.'); return; }
-    var origStart = (a.fecha||'').slice(0,10);
-    var nf;
-    if(dr.grab && origStart){ var delta=Math.round((parseYmd(dropYmd)-parseYmd(dr.grab))/86400000); if(!delta) return; nf=ymd(addDays(parseYmd(origStart), delta)); }
-    else { nf=dropYmd; }
-    var merged=Object.assign({}, a, {fecha:nf});
+    // Soltar = nueva fecha de inicio: toda la actividad (aunque dure varios días) se mueve en bloque
+    if((a.fecha||'').slice(0,10)===dropYmd) return;
+    var merged=Object.assign({}, a, {fecha:dropYmd});
     var q=a.quoteId?quoteById(a.quoteId):null;
     if(q && q.fechaLimite){ var dd=diasCubiertosAct(merged); var end=dd[dd.length-1]; if(end>q.fechaLimite){ alert('No se puede mover ahí: la actividad terminaría el '+fmtFecha(end)+', después de la fecha límite ('+fmtFecha(q.fechaLimite)+').'); return; } }
     patchAct(merged);
