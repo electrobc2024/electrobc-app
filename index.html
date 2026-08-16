@@ -788,7 +788,10 @@ const savePersonas = async d => {
   } catch { try { await db.set(PKEY, JSON.stringify(d)); } catch {} }
 };
 // ── Actividades / Planificación ──
-const COLORS_ACT = ['#F26B1D','#2563EB','#16A34A','#9333EA','#DC2626','#0891B2','#CA8A04','#DB2777','#475569'];
+// Paleta de color de la actividad — SIN los colores de estado (ámbar programado / azul materiales / verde hecho) para no confundir
+const COLORS_ACT = ['#F26B1D','#9333EA','#DB2777','#DC2626','#0891B2','#475569','#7C3AED','#B45309','#1E293B'];
+// Remapeo de colores viejos que chocaban con los estados → nuevos, distintos
+const COLOR_REMAP = { '#2563EB':'#9333EA', '#16A34A':'#0891B2', '#CA8A04':'#475569' };
 const EST_ACT = {
   por_planificar: { label: 'Por planificar', color: '#B91C1C', bg: '#FEF2F2', dot: '#DC2626' },
   programado:     { label: 'Programado',     color: '#B45309', bg: '#FFFBEB', dot: '#F59E0B' },
@@ -801,7 +804,7 @@ var MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','
 // Tipos de aviso / corte de suministro (para marcar días a avisar con anticipación en el cronograma)
 var TIPO_AVISO = { luz:{i:'⚡',l:'Corte de luz',c:'#CA8A04'}, agua:{i:'💧',l:'Corte de agua',c:'#0891B2'}, gas:{i:'🔥',l:'Corte de gas',c:'#DC2626'}, otro:{i:'⚠',l:'Aviso / imprevisto',c:'#B45309'} };
 // Color por tipo de cliente (para actividades vinculadas a presupuesto)
-const COLOR_POR_TIPO = { particular:'#16A34A', admin:'#2563EB', empresa:'#9333EA', licitacion:'#CA8A04' };
+const COLOR_POR_TIPO = { particular:'#0891B2', admin:'#9333EA', empresa:'#DB2777', licitacion:'#475569' };
 // Cuadradito de color para reflejar el color en Google Calendar / WhatsApp (que no soportan color real)
 function colorEmoji(c){
   var m = {'#F26B1D':'🟧','#2563EB':'🟦','#16A34A':'🟩','#9333EA':'🟪','#DC2626':'🟥','#0891B2':'🟦','#CA8A04':'🟨','#DB2777':'🟪','#475569':'⬛'};
@@ -981,6 +984,8 @@ const loadActividades = async () => {
     const r = await db.get(AKEY);
     var arr = r ? JSON.parse(r.value) : [];
     if(!Array.isArray(arr)) arr = [];
+    // Remapear colores viejos que chocaban con los colores de estado
+    arr = arr.map(function(a){ return (a && COLOR_REMAP[a.color]) ? Object.assign({}, a, {color:COLOR_REMAP[a.color]}) : a; });
     setSyncBase(AKEY, arr);
     return arr;
   } catch { return []; }
