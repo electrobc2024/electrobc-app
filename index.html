@@ -6435,7 +6435,11 @@ function BackupView({ quotes, catalog, clients, egresos, personas, onRestore }){
 
 // ── Gantt interactivo (arrastrar barras: mover / estirar; editar nombre; fecha límite) ──
 function GanttEditor({ q, acts, personas, onPatchAct, onOpenAct, fechaLimite, onSetLimite, onNueva, avisos, onSetAvisos, grouped, quoteById }){
-  var COLW=42, ROWH=46, NAMEW=280;
+  var ROWH=46, NAMEW=280;
+  var wrapRef = React.useRef(null);
+  var _cw = React.useState(0); var cw=_cw[0], setCw=_cw[1];
+  React.useEffect(function(){ function m(){ if(wrapRef.current) setCw(wrapRef.current.clientWidth); } m(); window.addEventListener('resize',m); return function(){ window.removeEventListener('resize',m); }; },[]);
+  var COLW=42; // se recalcula según el ancho disponible más abajo
   var _av = React.useState({fecha:'',tipo:'luz',nota:''}); var avForm=_av[0], setAvForm=_av[1];
   function estColor(a){ return (EST_ACT[a.estado]||EST_ACT.programado).dot; }
   var AV = avisos || [];
@@ -6495,6 +6499,9 @@ function GanttEditor({ q, acts, personas, onPatchAct, onOpenAct, fechaLimite, on
   var minS=ds.reduce(function(m,x){return x<m?x:m;},ds[0]); var maxS=ds.reduce(function(m,x){return x>m?x:m;},ds[0]);
   var d0=_gParse(minS); var d1=_gParse(maxS); var pad=8;
   var totalDays=Math.round((d1-d0)/86400000)+1+pad;
+  // estirar las columnas para ocupar todo el ancho disponible (si el rango es corto, las columnas se ensanchan)
+  var availW = cw>0 ? cw : 1100;
+  COLW = Math.min(96, Math.max(30, Math.floor((availW - NAMEW)/totalDays)));
   var cols=[]; for(var i=0;i<totalDays;i++){ var dcur=_gAdd(d0,i); cols.push({ymd:_gYmd(dcur), d:dcur, we:(dcur.getDay()===0||dcur.getDay()===6)}); }
   var bands=[]; var cur=null; cols.forEach(function(c){ var mk=c.d.getFullYear()+'-'+c.d.getMonth(); if(!cur||cur.mk!==mk){ cur={mk:mk,label:MESES[c.d.getMonth()]+' '+c.d.getFullYear(),n:0}; bands.push(cur);} cur.n++; });
   var bodyW=totalDays*COLW;
@@ -6513,7 +6520,7 @@ function GanttEditor({ q, acts, personas, onPatchAct, onOpenAct, fechaLimite, on
   function startResize(r,e){ if(e.button!==0)return; if(r.a.estado==='hecho'){ alert('Esta actividad está en "Hecho", no se puede cambiar su duración. Cambiá el estado a Programado si necesitás reprogramarla.'); return; } e.preventDefault(); e.stopPropagation(); var a=r.a; var cal=Math.round((_gParse(r.end)-_gParse(r.start))/86400000)+1; setDrag({id:a.id,mode:'resize',startX:e.clientX,origCal:cal,startYmd:r.start,sat:!!a.trabajaSab,dom:!!a.trabajaDom,hDia:a.horasPorDia,hSab:a.horasSab}); }
 
   var thName={width:NAMEW,flexShrink:0,position:'sticky',left:0,zIndex:3,background:'#F8FAFC'};
-  return React.createElement('div',null,
+  return React.createElement('div',{ref:wrapRef},
     GROUPED?null:React.createElement('div',{style:{display:'flex',gap:10,alignItems:'center',flexWrap:'wrap',marginBottom:10}},
       React.createElement('button',{type:'button',onClick:onNueva,style:{background:ORANGE,color:'#fff',border:'none',borderRadius:8,padding:'8px 12px',fontSize:12,fontWeight:700,cursor:'pointer'}},'➕ Agregar actividad'),
       React.createElement('div',{style:{marginLeft:'auto',display:'flex',alignItems:'center',gap:6}},
