@@ -7770,9 +7770,16 @@ function App() {
     });
   }, [persist]);
   const handleDelete = useCallback(async id => {
-    if (!confirm("¿Eliminar?")) return;
-    await persist(quotes.filter(q => q.id !== id));
-  }, [quotes, persist]);
+    var cur = quotesRef.current;
+    var del = cur.find(function(q){ return q.id===id; });
+    // ¿Es una recotización? (tiene un presupuesto original que quedó marcado "recotizado")
+    var orig = (del && del.recotizadoDe) ? cur.find(function(q){ return q.numero===del.recotizadoDe && q.status==='recotizado' && (q.recotizadoPor==null || q.recotizadoPor===del.numero); }) : null;
+    var msg = orig ? ('¿Eliminar la recotización #'+(del.numero||'')+'?\n\nEl presupuesto original #'+(orig.numero||'')+' vuelve a quedar "Para recotizar".') : '¿Eliminar?';
+    if (!confirm(msg)) return;
+    var nl = cur.filter(function(q){ return q.id!==id; });
+    if(orig){ nl = nl.map(function(q){ if(q.id===orig.id){ var c=Object.assign({},q,{status:'espera'}); delete c.recotizadoPor; return c; } return q; }); }
+    await persist(nl);
+  }, [quotesRef, persist]);
   const handleDuplicate = useCallback(async function(orig) {
     var cur = quotesRef.current;
     var maxN = cur.reduce(function(m,q){return Math.max(m,parseInt(q.numero||0));},0);
