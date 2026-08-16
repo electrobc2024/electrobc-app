@@ -9081,9 +9081,7 @@ function PortalView({ token }){
     ['espera','En espera','#B45309','#FFFBEB','#FDE68A'],
     ['recotizar','Para recotizar','#C2410C','#FFF7ED','#FED7AA'],
     ['aceptado','Aceptado','#166534','#F0FDF4','#BBF7D0'],
-    ['rechazado','Rechazado','#B91C1C','#FEF2F2','#FECACA'],
-    ['cobrado','Cobrado','#166534','#ECFDF5','#A7F3D0'],
-    ['pendiente','Pendiente de cobro','#B91C1C','#FEF2F2','#FECACA']
+    ['rechazado','Rechazado','#B91C1C','#FEF2F2','#FECACA']
   ];
   var visibles=mine.filter(function(q){ return coincide(q, pf) && coincideTipo(q); });
   var _estOrd={espera:1,recotizar:2,recotizado:3,generado:4,revision:5,aceptado:6,rechazado:7};
@@ -9103,7 +9101,7 @@ function PortalView({ token }){
           [
             ['🗂 Estados','Las tarjetas de arriba (En espera, Para recotizar, Aceptado, etc.) muestran cuántos presupuestos hay en cada estado. Tocá una para filtrar la tabla por ese estado.'],
             ['⚡ Tipo de trabajo','Filtrá por rubro: electricidad, pintura o plomería. Podés combinar varios.'],
-            ['💰 Estado de cuenta','Total presupuestado, lo que ya está cobrado y lo que queda pendiente de cobro, sumando todos tus trabajos aceptados.'],
+            ['💰 Estado de cuenta','Total presupuestado, lo cobrado y lo pendiente de cobro, sumando tus trabajos aceptados. Tocá "Cobrado" o "Pendiente de cobro" para filtrar la tabla por esos presupuestos.'],
             ['📊 Progreso de pago','En cada presupuesto ves el porcentaje cobrado y cuánto resta.'],
             ['🔀 Ordenar','Tocá los títulos N°, Fecha, Estado o Total para ordenar la tabla como prefieras.'],
             ['📄 Ver el PDF','Tocá el N° de cada presupuesto para ver o descargar el presupuesto en PDF.'],
@@ -9118,10 +9116,10 @@ function PortalView({ token }){
     React.createElement('div',{style:{display:'flex',gap:8,flexWrap:'wrap',marginBottom:14}}, cardsDef.map(function(cd){ var n=mine.filter(function(q){return coincide(q,cd[0]);}).length; var on=pf===cd[0]; return React.createElement('button',{key:cd[0],type:'button',onClick:function(){setPf(cd[0]);},style:{flex:'1 1 130px',textAlign:'left',cursor:'pointer',background:on?cd[3]:'#fff',border:'2px solid '+(on?cd[4]:'#E2E8F0'),borderRadius:10,padding:'8px 12px'}}, React.createElement('div',{style:{fontSize:10,fontWeight:700,color:cd[2],textTransform:'uppercase'}},cd[1]), React.createElement('div',{style:{fontSize:20,fontWeight:700,color:cd[2],fontFamily:"'Oswald',system-ui"}}, n)); })),
     // resumen
     React.createElement('div',{style:{display:'flex',gap:10,flexWrap:'wrap',marginBottom:14}},
-      [['Total presupuestado','$ '+Math.round(totFact).toLocaleString('es-AR'),'#0369A1'],
-       ['Cobrado','$ '+Math.round(totCob).toLocaleString('es-AR'),'#166534'],
-       ['Pendiente de cobro','$ '+Math.round(deuda).toLocaleString('es-AR'), deuda>0?'#B91C1C':'#166534']
-      ].map(function(k){ return React.createElement('div',{key:k[0],style:{background:'#fff',border:'1px solid #E2E8F0',borderRadius:10,padding:'10px 14px',flex:'1 1 160px'}}, React.createElement('div',{style:{fontSize:10,color:'#94A3B8',fontWeight:700,textTransform:'uppercase'}},k[0]), React.createElement('div',{style:{fontSize:19,fontWeight:700,color:k[2],fontFamily:"'Oswald',system-ui"}},k[1])); })
+      [['Total presupuestado','$ '+Math.round(totFact).toLocaleString('es-AR'),'#0369A1','aceptado'],
+       ['Cobrado','$ '+Math.round(totCob).toLocaleString('es-AR'),'#166534','cobrado'],
+       ['Pendiente de cobro','$ '+Math.round(deuda).toLocaleString('es-AR'), deuda>0?'#B91C1C':'#166534','pendiente']
+      ].map(function(k){ var on=pf===k[3]; return React.createElement('button',{key:k[0],type:'button',onClick:function(){ setPf(on?'todos':k[3]); },title:'Filtrar por '+k[0],style:{textAlign:'left',cursor:'pointer',background:on?'#F8FAFC':'#fff',border:'2px solid '+(on?k[2]:'#E2E8F0'),borderRadius:10,padding:'10px 14px',flex:'1 1 160px'}}, React.createElement('div',{style:{fontSize:10,color:'#94A3B8',fontWeight:700,textTransform:'uppercase'}},k[0]), React.createElement('div',{style:{fontSize:19,fontWeight:700,color:k[2],fontFamily:"'Oswald',system-ui"}},k[1])); })
     ),
     // filtro por tipo de trabajo (debajo del resumen)
     React.createElement('div',{style:{display:'flex',gap:6,flexWrap:'wrap',alignItems:'center',marginBottom:14}},
