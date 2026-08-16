@@ -4055,28 +4055,19 @@ function PdfOverlay({
       marginBottom: 12,
       textAlign: "center"
     }
-  }, filename, ".pdf"), /*#__PURE__*/React.createElement("div", {
-    style: {
-      width: fit.scale < 1 ? Math.round(780 * fit.scale) : "100%",
-      maxWidth: 780,
-      height: (fit.scale < 1 && fit.h) ? fit.h : undefined,
-      overflow: "hidden"
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      width: 780,
-      transform: fit.scale < 1 ? ("scale(" + fit.scale + ")") : "none",
-      transformOrigin: "top left"
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    id: "pdf-preview-area",
-    ref: sheetRef,
-    style: {
-      width: 780
-    }
-  }, /*#__PURE__*/React.createElement(PrintDoc, {
-    q: quote
-  })))));
+  }, filename, ".pdf"),
+  (fit.scale < 0.95
+    ? /*#__PURE__*/React.createElement("div", {
+        style: { width: Math.round(780 * fit.scale), maxWidth: "100%", height: (fit.h || undefined), overflow: "hidden" }
+      }, /*#__PURE__*/React.createElement("div", {
+        style: { width: 780, transform: "scale(" + fit.scale + ")", transformOrigin: "top left" }
+      }, /*#__PURE__*/React.createElement("div", {
+        id: "pdf-preview-area", ref: sheetRef, style: { width: 780 }
+      }, /*#__PURE__*/React.createElement(PrintDoc, { q: quote }))))
+    : /*#__PURE__*/React.createElement("div", {
+        id: "pdf-preview-area", ref: sheetRef, style: { width: "100%", maxWidth: 780 }
+      }, /*#__PURE__*/React.createElement(PrintDoc, { q: quote }))
+  ));
 }
 
 // ── PaymentsPanel ─────────────────────────────────────────────────────────────
