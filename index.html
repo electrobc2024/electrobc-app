@@ -6826,15 +6826,17 @@ function PlanificacionView({ actividades, onSave, quotes, personas, planForQuote
   return React.createElement(IngresosPane, null,
     React.createElement(PageHeader, { title: '🗓 Planificación de actividades', subtitle: 'Programá los trabajos aceptados y las tareas del equipo: fijales día, asignales quién los hace, colores y estado. Vista de calendario mensual, semanal y diaria.', right:
       React.createElement('div',{style:{display:'flex',gap:8,alignItems:'center',flexShrink:0}},
-        list.length? React.createElement('button',{type:'button',onClick:function(){ var b=ganttBudgets(); setGanttQid(b.length?b[0].id:''); setGanttOpen(true); },title:'Ver y descargar el cronograma (Gantt) de un presupuesto',style:{background:'#fff',border:'1px solid #C4B5FD',borderRadius:8,padding:'9px 12px',fontSize:12,fontWeight:600,cursor:'pointer',color:'#6D28D9',whiteSpace:'nowrap'}}, '📊 Cronograma'):null,
         list.length? React.createElement('button',{type:'button',onClick:borrarTodas,title:'Borrar todas las actividades',style:{background:'none',border:'1px solid #FECACA',borderRadius:8,padding:'9px 12px',fontSize:12,fontWeight:600,cursor:'pointer',color:'#DC2626',whiteSpace:'nowrap'}}, '🗑 Borrar todas'):null,
         React.createElement('button',{type:'button',onClick:function(){ nueva(''); },style:{backgroundColor:ORANGE,color:'#fff',border:'none',borderRadius:8,padding:'9px 16px',fontSize:13,fontWeight:700,cursor:'pointer',whiteSpace:'nowrap'}}, '➕ Nueva actividad')
       )
     }),
     // Barra: toggle de vista + navegación
     React.createElement('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',gap:10,flexWrap:'wrap',marginBottom:12}},
-      React.createElement('div',{style:{display:'flex',gap:4,background:'#F1F5F9',borderRadius:8,padding:3}},
-        [['anio','Año'],['mes','Mes'],['semana','Semana'],['dia','Día']].map(function(v){ var act=view===v[0]; return React.createElement('button',{key:v[0],type:'button',onClick:function(){setView(v[0]);},style:{border:'none',borderRadius:6,padding:'6px 14px',fontSize:12,fontWeight:700,cursor:'pointer',background:act?'#fff':'transparent',color:act?NAVY:'#64748B',boxShadow:act?'0 1px 2px rgba(0,0,0,0.08)':'none'}}, v[1]); })
+      React.createElement('div',{style:{display:'flex',gap:8,alignItems:'center'}},
+        React.createElement('div',{style:{display:'flex',gap:4,background:'#F1F5F9',borderRadius:8,padding:3}},
+          [['anio','Año'],['mes','Mes'],['semana','Semana'],['dia','Día']].map(function(v){ var act=view===v[0]; return React.createElement('button',{key:v[0],type:'button',onClick:function(){setView(v[0]);},style:{border:'none',borderRadius:6,padding:'6px 14px',fontSize:12,fontWeight:700,cursor:'pointer',background:act?'#fff':'transparent',color:act?NAVY:'#64748B',boxShadow:act?'0 1px 2px rgba(0,0,0,0.08)':'none'}}, v[1]); })
+        ),
+        list.length? React.createElement('button',{type:'button',onClick:function(){ var b=ganttBudgets(); setGanttQid(b.length?b[0].id:''); setGanttOpen(true); },title:'Cronograma (Gantt) por presupuesto',style:{background:'#fff',border:'1px solid #C4B5FD',borderRadius:8,padding:'7px 12px',fontSize:12,fontWeight:600,cursor:'pointer',color:'#6D28D9',whiteSpace:'nowrap'}}, '📊 Cronograma'):null
       ),
       React.createElement('div',{style:{display:'flex',alignItems:'center',gap:8}},
         React.createElement('button',{type:'button',onClick:function(){navega(-1);},style:{border:'1px solid #E2E8F0',background:'#fff',borderRadius:6,width:30,height:30,cursor:'pointer',fontWeight:800}},'‹'),
@@ -8896,6 +8898,8 @@ function PortalView({ token }){
   const [pt,setPt]=React.useState([]);
   const [personas,setPersonas]=React.useState([]);
   const [cronQ,setCronQ]=React.useState(null);
+  const [sortBy,setSortBy]=React.useState('numero');
+  const [sortDir,setSortDir]=React.useState('desc');
   React.useEffect(function(){
     (async function(){
       try{
@@ -8951,24 +8955,28 @@ function PortalView({ token }){
     ['rechazado','Rechazado','#B91C1C','#FEF2F2','#FECACA']
   ];
   var visibles=mine.filter(function(q){ return coincide(q, pf) && coincideTipo(q); });
+  var _estOrd={espera:1,recotizar:2,recotizado:3,generado:4,revision:5,aceptado:6,rechazado:7};
+  function sortVal(q){ if(sortBy==='numero') return parseInt(q.numero)||0; if(sortBy==='fecha') return String(q.fecha||''); if(sortBy==='estado') return _estOrd[effectiveStatus(q)]||9; if(sortBy==='total') return calcSub(q.mdo)+calcSub(q.mat); return 0; }
+  visibles=visibles.slice().sort(function(a,b){ var x=sortVal(a), y=sortVal(b); var r = x<y?-1:(x>y?1:0); return sortDir==='asc'?r:-r; });
+  function thSort(key,label,extra){ var on=sortBy===key; return React.createElement('th',{style:Object.assign({},thS,{cursor:'pointer',userSelect:'none'},extra||{}),onClick:function(){ if(sortBy===key){ setSortDir(sortDir==='asc'?'desc':'asc'); } else { setSortBy(key); setSortDir('asc'); } },title:'Ordenar por '+label}, label+(on?(sortDir==='asc'?' ▲':' ▼'):' ⇅')); }
 
   return wrap(React.createElement('div',null,
     React.createElement('div',{style:{fontFamily:"'Oswald',system-ui",fontSize:22,fontWeight:700,color:NAVY,marginBottom:2}}, admin),
     React.createElement('div',{style:{fontSize:13,color:'#64748B',marginBottom:14}},'Seguimiento de presupuestos y estado de cuenta en tiempo real.'),
     // tarjetas de estado (filtro)
     React.createElement('div',{style:{display:'flex',gap:8,flexWrap:'wrap',marginBottom:14}}, cardsDef.map(function(cd){ var n=mine.filter(function(q){return coincide(q,cd[0]);}).length; var on=pf===cd[0]; return React.createElement('button',{key:cd[0],type:'button',onClick:function(){setPf(cd[0]);},style:{flex:'1 1 130px',textAlign:'left',cursor:'pointer',background:on?cd[3]:'#fff',border:'2px solid '+(on?cd[4]:'#E2E8F0'),borderRadius:10,padding:'8px 12px'}}, React.createElement('div',{style:{fontSize:10,fontWeight:700,color:cd[2],textTransform:'uppercase'}},cd[1]), React.createElement('div',{style:{fontSize:20,fontWeight:700,color:cd[2],fontFamily:"'Oswald',system-ui"}}, n)); })),
-    // filtro por tipo de trabajo
-    React.createElement('div',{style:{display:'flex',gap:6,flexWrap:'wrap',alignItems:'center',marginBottom:14}},
-      React.createElement('span',{style:{fontSize:9,fontWeight:700,color:'#94A3B8',textTransform:'uppercase',letterSpacing:'0.06em',marginRight:2}},'Tipo:'),
-      ['electricidad','pintura','plomeria'].map(function(t){ var on=pt.indexOf(t)>=0; var m=tipoMeta(t); return React.createElement('button',{key:t,type:'button',onClick:function(){ setPt(on?pt.filter(function(x){return x!==t;}):pt.concat([t])); },style:{padding:'5px 11px',borderRadius:20,fontSize:12,fontWeight:on?700:500,cursor:'pointer',border:'1.5px solid '+(on?m.fg:'#E2E8F0'),backgroundColor:on?m.bg:'#fff',color:on?m.fg:'#64748B',whiteSpace:'nowrap'}}, m.i+' '+m.l); }),
-      pt.length>0 && React.createElement('button',{type:'button',onClick:function(){setPt([]);},title:'Limpiar tipo',style:{background:'none',border:'none',color:'#94A3B8',cursor:'pointer',fontSize:13}},'✕')
-    ),
     // resumen
-    React.createElement('div',{style:{display:'flex',gap:10,flexWrap:'wrap',marginBottom:16}},
+    React.createElement('div',{style:{display:'flex',gap:10,flexWrap:'wrap',marginBottom:14}},
       [['Total presupuestado','$ '+Math.round(totFact).toLocaleString('es-AR'),'#0369A1'],
        ['Cobrado','$ '+Math.round(totCob).toLocaleString('es-AR'),'#166534'],
        ['Pendiente de cobro','$ '+Math.round(deuda).toLocaleString('es-AR'), deuda>0?'#B91C1C':'#166534']
       ].map(function(k){ return React.createElement('div',{key:k[0],style:{background:'#fff',border:'1px solid #E2E8F0',borderRadius:10,padding:'10px 14px',flex:'1 1 160px'}}, React.createElement('div',{style:{fontSize:10,color:'#94A3B8',fontWeight:700,textTransform:'uppercase'}},k[0]), React.createElement('div',{style:{fontSize:19,fontWeight:700,color:k[2],fontFamily:"'Oswald',system-ui"}},k[1])); })
+    ),
+    // filtro por tipo de trabajo (debajo del resumen)
+    React.createElement('div',{style:{display:'flex',gap:6,flexWrap:'wrap',alignItems:'center',marginBottom:14}},
+      React.createElement('span',{style:{fontSize:9,fontWeight:700,color:'#94A3B8',textTransform:'uppercase',letterSpacing:'0.06em',marginRight:2}},'Tipo:'),
+      ['electricidad','pintura','plomeria'].map(function(t){ var on=pt.indexOf(t)>=0; var m=tipoMeta(t); return React.createElement('button',{key:t,type:'button',onClick:function(){ setPt(on?pt.filter(function(x){return x!==t;}):pt.concat([t])); },style:{padding:'5px 11px',borderRadius:20,fontSize:12,fontWeight:on?700:500,cursor:'pointer',border:'1.5px solid '+(on?m.fg:'#E2E8F0'),backgroundColor:on?m.bg:'#fff',color:on?m.fg:'#64748B',whiteSpace:'nowrap'}}, m.i+' '+m.l); }),
+      pt.length>0 && React.createElement('button',{type:'button',onClick:function(){setPt([]);},title:'Limpiar tipo',style:{background:'none',border:'none',color:'#94A3B8',cursor:'pointer',fontSize:13}},'✕')
     ),
     // tabla
     visibles.length===0
@@ -8976,11 +8984,11 @@ function PortalView({ token }){
       : React.createElement('div',{style:{background:'#fff',border:'1px solid #E2E8F0',borderRadius:12,overflow:'hidden'}},
           React.createElement('div',{style:{overflowX:'auto'}}, React.createElement('table',{style:{width:'100%',borderCollapse:'collapse',minWidth:840}},
             React.createElement('thead',null,React.createElement('tr',{style:{background:'#F8FAFC'}},
-              React.createElement('th',{style:thS},'N°'),
-              React.createElement('th',{style:thS},'Fecha'),
+              thSort('numero','N°'),
+              thSort('fecha','Fecha'),
               React.createElement('th',{style:thS},'Dirección'),
-              React.createElement('th',{style:thS},'Estado'),
-              React.createElement('th',{style:Object.assign({},thS,{textAlign:'right'})},'Total'),
+              thSort('estado','Estado'),
+              thSort('total','Total',{textAlign:'right'}),
               React.createElement('th',{style:Object.assign({},thS,{minWidth:150})},'Progreso de pago'),
               React.createElement('th',{style:thS},'Trabajo'),
               React.createElement('th',{style:Object.assign({},thS,{textAlign:'center'})},'Cronograma')
@@ -9003,13 +9011,13 @@ function PortalView({ token }){
         ),
     React.createElement('div',{style:{fontSize:11,color:'#94A3B8',marginTop:14,textAlign:'center'}},'Este tablero es de solo lectura y se actualiza automáticamente. Tocá el N° de cada presupuesto para ver o descargar el PDF.'),
     pdfQuote ? React.createElement(PdfOverlay,{ quote: pdfQuote, onClose:function(){ setPdfQuote(null); }, onMarkSent:function(){}, soloPdf:true }) : null,
-    cronQ ? React.createElement('div',{onMouseDown:function(){setCronQ(null);},style:{position:'fixed',inset:0,zIndex:10000,background:'rgba(0,0,0,0.55)',display:'flex',alignItems:'flex-start',justifyContent:'center',padding:'32px 16px',overflow:'auto'}},
-      React.createElement('div',{onMouseDown:function(e){e.stopPropagation();},style:{background:'#fff',borderRadius:14,width:1040,maxWidth:'100%',padding:20,boxShadow:'0 10px 40px rgba(0,0,0,0.3)'}},
-        React.createElement('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}},
-          React.createElement('div',{style:{fontFamily:"'Oswald',system-ui",fontSize:18,fontWeight:700,color:NAVY}},'📅 Cronograma — Presupuesto #'+(cronQ.numero||'')),
-          React.createElement('button',{type:'button',onClick:function(){setCronQ(null);},style:{background:'none',border:'none',fontSize:18,color:'#94A3B8',cursor:'pointer'}},'✕')
-        ),
-        React.createElement('div',{style:{overflowX:'auto',border:'1px solid #E2E8F0',borderRadius:10,padding:14}},
+    cronQ ? React.createElement('div',{onMouseDown:function(){setCronQ(null);},style:{position:'fixed',inset:0,zIndex:10000,backgroundColor:'rgba(0,0,0,0.85)',display:'flex',flexDirection:'column',alignItems:'center',overflowY:'auto',padding:'20px 16px'}},
+      React.createElement('div',{onMouseDown:function(e){e.stopPropagation();},style:{display:'flex',gap:10,marginBottom:14,alignItems:'center',justifyContent:'space-between',backgroundColor:'rgba(255,255,255,0.07)',borderRadius:12,padding:'12px 18px',width:'100%',maxWidth:900}},
+        React.createElement('div',{style:{color:'#fff',fontFamily:"'Oswald',system-ui",fontSize:16,fontWeight:700}},'📅 Cronograma — Presupuesto #'+(cronQ.numero||'')),
+        React.createElement('button',{type:'button',onClick:function(){setCronQ(null);},style:{display:'inline-flex',alignItems:'center',gap:8,borderRadius:9,padding:'10px 20px',fontSize:14,fontWeight:700,border:'none',cursor:'pointer',backgroundColor:'#fff',color:NAVY}},'✕ Cerrar')
+      ),
+      React.createElement('div',{onMouseDown:function(e){e.stopPropagation();},style:{background:'#fff',borderRadius:8,padding:20,width:'100%',maxWidth:900,boxShadow:'0 10px 40px rgba(0,0,0,0.4)'}},
+        React.createElement('div',{style:{overflowX:'auto'}},
           React.createElement('div',{style:{minWidth:640},dangerouslySetInnerHTML:{__html: ganttHTMLG(cronQ, acts, personas)}})
         )
       )
