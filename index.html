@@ -4093,6 +4093,26 @@ function PdfOverlay({
   ));
 }
 
+// ── Previsualización de factura (PDF o imagen) ──
+function FacturaOverlay({ fac, onClose }){
+  if(!fac || !fac.dataUrl) return null;
+  var isPdf = ((fac.mime||'').indexOf('pdf')>=0) || /\.pdf(\?|$)/i.test(fac.name||'') || /^data:application\/pdf/.test(fac.dataUrl);
+  var btn = {display:'inline-flex',alignItems:'center',gap:6,borderRadius:8,padding:'8px 16px',fontSize:13,fontWeight:700,border:'none',cursor:'pointer',textDecoration:'none'};
+  return React.createElement('div',{onMouseDown:onClose,style:{position:'fixed',inset:0,zIndex:10002,background:'rgba(0,0,0,0.85)',display:'flex',flexDirection:'column',alignItems:'center',padding:'14px'}},
+    React.createElement('div',{onMouseDown:function(e){e.stopPropagation();},style:{display:'flex',gap:10,justifyContent:'space-between',alignItems:'center',width:'100%',maxWidth:900,marginBottom:10}},
+      React.createElement('div',{style:{color:'#fff',fontSize:14,fontWeight:700,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}, '📄 '+(fac.name||'Factura')),
+      React.createElement('div',{style:{display:'flex',gap:8,flexShrink:0}},
+        React.createElement('a',{href:fac.dataUrl,download:(fac.name||'factura'),style:Object.assign({},btn,{background:NAVY,color:'#fff'})}, '💾 Descargar'),
+        React.createElement('button',{type:'button',onClick:onClose,style:Object.assign({},btn,{background:'#fff',color:NAVY})}, '✕ Cerrar')
+      )
+    ),
+    React.createElement('div',{onMouseDown:function(e){e.stopPropagation();},style:{flex:1,width:'100%',maxWidth:900,background:'#fff',borderRadius:8,overflow:'hidden'}},
+      isPdf ? React.createElement('iframe',{title:'Factura',src:fac.dataUrl,style:{width:'100%',height:'100%',border:'none'}})
+            : React.createElement('div',{style:{width:'100%',height:'100%',overflow:'auto',display:'flex',justifyContent:'center',alignItems:'flex-start',padding:10,boxSizing:'border-box'}}, React.createElement('img',{src:fac.dataUrl,alt:'Factura',style:{maxWidth:'100%',height:'auto'}}))
+    )
+  );
+}
+
 // ── PaymentsPanel ─────────────────────────────────────────────────────────────
 function PaymentsPanel({
   qid,
@@ -4332,6 +4352,10 @@ function Tracker({
   onStatusChange,
   onUpdatePagos,
   setPrintQuote,
+  facturas,
+  onUploadFactura,
+  onRemoveFactura,
+  onOpenFactura,
   onGoToClient,
   highlightId,
   onClearHighlight
@@ -4980,7 +5004,12 @@ function Tracker({
         fontSize: 11,
         color: "#DC2626"
       }
-    }, "\u2715")))),
+    }, "\u2715"),
+    (facturas && facturas[q.id])
+      ? [ /*#__PURE__*/React.createElement("button",{key:"fv",className:"ebtip","data-tip":"Ver factura",onClick:function(){ onOpenFactura&&onOpenFactura(q.id); },style:{background:"#ECFDF5",border:"1px solid #86EFAC",borderRadius:5,padding:"4px 8px",fontSize:11,color:"#16A34A"}},"\uD83E\uDDFE"),
+          /*#__PURE__*/React.createElement("button",{key:"fr",className:"ebtip","data-tip":"Quitar factura",onClick:function(){ onRemoveFactura&&onRemoveFactura(q.id); },style:{background:"none",border:"1px solid #FECACA",borderRadius:5,padding:"4px 6px",fontSize:10,color:"#DC2626"}},"\uD83E\uDDFE\u2715") ]
+      : /*#__PURE__*/React.createElement("label",{key:"fu",className:"ebtip","data-tip":"Cargar factura (PDF o imagen)",style:{display:"inline-flex",alignItems:"center",border:"1px dashed #CBD5E1",borderRadius:5,padding:"4px 8px",fontSize:11,color:"#64748B",cursor:"pointer"}},"\uD83E\uDDFE", /*#__PURE__*/React.createElement("input",{type:"file",accept:"application/pdf,image/*",style:{display:"none"},onChange:function(e){ var f=e.target.files&&e.target.files[0]; if(f) onUploadFactura&&onUploadFactura(q.id, f); e.target.value=""; }}))
+    ))),
     isExp && /*#__PURE__*/React.createElement("tr", {
       key: q.id + "e",
       style: { backgroundColor: "#F8FAFC" }
@@ -7629,6 +7658,33 @@ function App() {
     setActividades(list);
     saveActividades(list).catch(()=>{});
   };
+  // ── Facturas por presupuesto (archivo PDF/imagen, guardado aparte del listado) ──
+  const [facturas, setFacturas] = useState({});            // índice { quoteId: {name, mime, at} }
+  const [facturaView, setFacturaView] = useState(null);    // {name, mime, dataUrl} en previsualización
+  React.useEffect(function(){ (async()=>{ try{ var r=await db.get('ebc-facturas-idx-v1'); setFacturas(r?JSON.parse(r.value):{}); }catch(e){} })(); }, []);
+  const uploadFactura = (qid, file) => {
+    if(!file) return;
+    if(file.size > 8*1024*1024){ alert('El archivo es muy grande (máx 8 MB). Comprimilo o subí una versión más liviana.'); return; }
+    var reader=new FileReader();
+    reader.onload=function(){
+      var dataUrl=reader.result;
+      sbSet('ebc-fact-'+qid, dataUrl).catch(function(){});
+      try{ localStorage.setItem('ebc-fact-'+qid, dataUrl); }catch(e){}
+      setFacturas(function(prev){ var idx=Object.assign({},prev); idx[qid]={name:file.name, mime:file.type, at:new Date().toISOString()}; try{ db.set('ebc-facturas-idx-v1', JSON.stringify(idx)); }catch(e){} return idx; });
+    };
+    reader.onerror=function(){ alert('No se pudo leer el archivo.'); };
+    reader.readAsDataURL(file);
+  };
+  const removeFactura = (qid) => {
+    if(!confirm('¿Quitar la factura de este presupuesto?')) return;
+    sbSet('ebc-fact-'+qid, '').catch(function(){});
+    try{ localStorage.removeItem('ebc-fact-'+qid); }catch(e){}
+    setFacturas(function(prev){ var idx=Object.assign({},prev); delete idx[qid]; try{ db.set('ebc-facturas-idx-v1', JSON.stringify(idx)); }catch(e){} return idx; });
+  };
+  const openFactura = async (qid) => {
+    var meta=facturas[qid]||{};
+    try{ var dataUrl=await sbGet('ebc-fact-'+qid); if(!dataUrl){ try{ dataUrl=localStorage.getItem('ebc-fact-'+qid); }catch(e){} } if(!dataUrl){ alert('No se encontró el archivo de la factura.'); return; } setFacturaView({name:meta.name||'Factura', mime:meta.mime||'', dataUrl:dataUrl}); }catch(e){ alert('No se pudo abrir la factura.'); }
+  };
   const [planForQuote, setPlanForQuote] = useState(null);
   const goToPlan = (qid) => { setPlanForQuote(qid); setView('planificacion'); };
   const handleRestore = (data) => {
@@ -8075,6 +8131,10 @@ function App() {
     onStatusChange: handleStatus,
     onUpdatePagos: handlePagos,
     setPrintQuote: q => setPdfQuote(q),
+    facturas: facturas,
+    onUploadFactura: uploadFactura,
+    onRemoveFactura: removeFactura,
+    onOpenFactura: openFactura,
     onGoToClient: nombre => {
       setClientsFilter(nombre);
       setView("clients");
@@ -8114,6 +8174,9 @@ function App() {
     quote: pdfQuote,
     onClose: () => { setPdfQuote(null); setQuote(mkQuote(nextN(quotesRef.current))); window.scrollTo(0,0); },
     onMarkSent: handleMarkSent
+  }), facturaView && /*#__PURE__*/React.createElement(FacturaOverlay, {
+    fac: facturaView,
+    onClose: () => setFacturaView(null)
   }), showConsol && /*#__PURE__*/React.createElement("div",{
     style:{position:"fixed",inset:0,zIndex:10000,backgroundColor:"rgba(0,0,0,0.6)",display:"flex",alignItems:"center",justifyContent:"center",padding:20},
     onClick:function(){setShowConsol(false);}
@@ -9427,6 +9490,9 @@ function PortalView({ token }){
   const [pt,setPt]=React.useState([]);
   const [personas,setPersonas]=React.useState([]);
   const [cronQ,setCronQ]=React.useState(null);
+  const [facturasIdx,setFacturasIdx]=React.useState({});
+  const [facView,setFacView]=React.useState(null);
+  const verFactura=async function(q){ try{ var dataUrl=await sbGet('ebc-fact-'+q.id); if(!dataUrl){ alert('La factura no está disponible.'); return; } var meta=facturasIdx[q.id]||{}; setFacView({name:meta.name||'Factura', mime:meta.mime||'', dataUrl:dataUrl}); }catch(e){ alert('No se pudo abrir la factura.'); } };
   const [sortBy,setSortBy]=React.useState('numero');
   const [sortDir,setSortDir]=React.useState('desc');
   const [showHelp,setShowHelp]=React.useState(false);
@@ -9441,6 +9507,7 @@ function PortalView({ token }){
         var qs=await loadQ().catch(function(){return [];});
         var ac=await loadActividades().catch(function(){return [];});
         var pe=await loadPersonas().catch(function(){return [];});
+        try{ var fx=await db.get('ebc-facturas-idx-v1'); setFacturasIdx(fx?JSON.parse(fx.value):{}); }catch(e){}
         setAdmin(adm); setQuotes(Array.isArray(qs)?qs:[]); setActs(Array.isArray(ac)?ac:[]); setPersonas(Array.isArray(pe)?pe:[]); setLd(false);
       }catch(e){ setErr('No se pudo cargar la información.'); setLd(false); }
     })();
@@ -9553,7 +9620,8 @@ function PortalView({ token }){
             React.createElement('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',gap:10,marginTop:10,paddingTop:10,borderTop:'1px solid #F1F5F9'}},
               ea? React.createElement('span',{style:{fontSize:10,fontWeight:700,padding:'2px 8px',borderRadius:20,color:ea.color,background:ea.bg,border:'1px solid '+ea.dot}}, ea.label) : React.createElement('span',{style:{fontSize:11,color:'#CBD5E1'}},'Sin trabajo'),
               tieneAct ? React.createElement('button',{type:'button',onClick:function(){setCronQ(q);},style:{background:'none',border:'none',color:ORANGE,fontWeight:700,cursor:'pointer',textDecoration:'underline',fontSize:12,padding:0,whiteSpace:'nowrap'}}, '📅 Ver cronograma') : React.createElement('span',{style:{fontSize:11,color:'#94A3B8',fontStyle:'italic'}},'Sin programar')
-            )
+            ),
+            facturasIdx[q.id] ? React.createElement('button',{type:'button',onClick:function(){verFactura(q);},style:{marginTop:8,background:'#ECFDF5',border:'1px solid #86EFAC',borderRadius:8,padding:'7px 10px',fontSize:12,fontWeight:700,color:'#16A34A',cursor:'pointer',width:'100%'}},'🧾 Ver factura') : null
           );
         }))
       : React.createElement('div',{style:{background:'#fff',border:'1px solid #E2E8F0',borderRadius:12,overflow:'hidden'}},
@@ -9572,7 +9640,7 @@ function PortalView({ token }){
               var t=calcSub(q.mdo)+calcSub(q.mat); var c=cobradoDe(q); var saldo=Math.max(0,t-c);
               var st=STATUS_MAP[effectiveStatus(q)]||STATUS_MAP[q.status]||STATUS_MAP.generado; var ea=estAct(q);
               return React.createElement('tr',{key:q.id},
-                React.createElement('td',{style:tdS}, React.createElement('button',{type:'button',onClick:function(){setPdfQuote(q);},title:'Ver / descargar PDF',style:{background:'none',border:'none',color:ORANGE,fontWeight:700,cursor:'pointer',textDecoration:'underline',fontSize:12,padding:0}}, '#'+(q.numero||''))),
+                React.createElement('td',{style:tdS}, React.createElement('div',null, React.createElement('button',{type:'button',onClick:function(){setPdfQuote(q);},title:'Ver / descargar PDF',style:{background:'none',border:'none',color:ORANGE,fontWeight:700,cursor:'pointer',textDecoration:'underline',fontSize:12,padding:0}}, '#'+(q.numero||'')), facturasIdx[q.id]?React.createElement('div',null, React.createElement('button',{type:'button',onClick:function(){verFactura(q);},title:'Ver la factura',style:{background:'none',border:'none',color:'#16A34A',fontWeight:700,cursor:'pointer',textDecoration:'underline',fontSize:10,padding:0,marginTop:3,whiteSpace:'nowrap'}},'🧾 Factura')):null)),
                 React.createElement('td',{style:tdS}, fmtFecha(q.fecha)),
                 React.createElement('td',{style:tdS}, [q.cliente&&q.cliente.calle,q.cliente&&q.cliente.numero,q.cliente&&q.cliente.depto?('Dto '+q.cliente.depto):''].filter(Boolean).join(' ')||'—'),
                 React.createElement('td',{style:tdS}, React.createElement('span',{title:isVencido(q)?'Venció el plazo de espera — hay que recotizar':'',style:{fontSize:10,fontWeight:700,padding:'2px 8px',borderRadius:20,color:st.fg,background:st.bg,border:'1px solid '+st.br}}, st.label+(isVencido(q)?' ⏰':''))),
@@ -9586,6 +9654,7 @@ function PortalView({ token }){
         ),
     React.createElement('div',{style:{fontSize:11,color:'#94A3B8',marginTop:14,textAlign:'center'}},'Este tablero es de solo lectura y se actualiza automáticamente. Tocá el N° de cada presupuesto para ver o descargar el PDF.'),
     pdfQuote ? React.createElement(PdfOverlay,{ quote: pdfQuote, onClose:function(){ setPdfQuote(null); }, onMarkSent:function(){}, soloPdf:true }) : null,
+    facView ? React.createElement(FacturaOverlay,{ fac: facView, onClose:function(){ setFacView(null); } }) : null,
     cronQ ? React.createElement('div',{onMouseDown:function(){setCronQ(null);},style:{position:'fixed',inset:0,zIndex:10000,backgroundColor:'rgba(0,0,0,0.85)',display:'flex',flexDirection:'column',alignItems:'center',overflowY:'auto',padding:'20px 16px'}},
       React.createElement('div',{onMouseDown:function(e){e.stopPropagation();},style:{display:'flex',gap:10,marginBottom:14,alignItems:'center',justifyContent:'space-between',backgroundColor:'rgba(255,255,255,0.07)',borderRadius:12,padding:'12px 18px',width:'100%',maxWidth:1500}},
         React.createElement('div',{style:{color:'#fff',fontFamily:"'Oswald',system-ui",fontSize:16,fontWeight:700}},'📅 Cronograma — Presupuesto #'+(cronQ.numero||'')),
