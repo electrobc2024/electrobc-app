@@ -2599,7 +2599,7 @@ function ClientesView({
   const linkDeAdmin = (m, adm) => { for(var t in m){ if(m[t]===adm) return t; } return null; };
   const slugAdm = (s) => String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,42) || 'cliente';
   const numDeAdm = (adm) => { var cl=(clients||[]).find(function(c){ return ((c.administracion||'').trim()||(c.nombre||'').trim())===adm; }); return (cl && typeof cl.num==='number') ? cl.num : null; };
-  const tokenLegible = (m, adm, sufijo) => { var num=numDeAdm(adm); var base=slugAdm(adm)+(num!=null?('-'+num):'')+(sufijo?('-'+sufijo):''); var t=base, i=2; while(m[t] && m[t]!==adm){ t=base+'-'+i; i++; } return t; };
+  const tokenLegible = (m, adm, sufijo) => { var base=slugAdm(adm)+(sufijo?('-'+sufijo):''); var t=base, i=2; while(m[t] && m[t]!==adm){ t=base+'-'+i; i++; } return t; };
   const genLink = (adm) => { var m=Object.assign({},portMap||{}); var tok=linkDeAdmin(m,adm); if(!tok){ tok=tokenLegible(m, adm, ''); m[tok]=adm; guardarPortMap(m); } return tok; };
   const regenLink = (adm) => { var m=Object.assign({},portMap||{}); Object.keys(m).forEach(function(t){ if(m[t]===adm) delete m[t]; }); var tok=tokenLegible(m, adm, Math.random().toString(36).slice(2,4)); m[tok]=adm; guardarPortMap(m); };
   const portalUrl = (tok) => (typeof window!=='undefined'?window.location.origin:'')+'/?portal='+tok;
