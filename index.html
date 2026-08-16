@@ -3928,6 +3928,20 @@ function PdfOverlay({
   if (!quote || !quote.cliente) return null;
   const filename = pdfName(quote);
   const [status, setStatus] = useState("idle");
+  const sheetRef = useRef(null);
+  const [fit, setFit] = useState({ scale: 1, h: 0 });
+  useEffect(function(){
+    function calc(){
+      var avail = Math.min((typeof window!=='undefined'?window.innerWidth:800) - 28, 780);
+      var s = Math.min(1, avail/780);
+      var natH = sheetRef.current ? sheetRef.current.offsetHeight : 0;
+      setFit({ scale: s, h: (s<1 && natH) ? Math.ceil(natH*s) : 0 });
+    }
+    calc();
+    var t1=setTimeout(calc, 250), t2=setTimeout(calc, 900);
+    window.addEventListener('resize', calc);
+    return function(){ clearTimeout(t1); clearTimeout(t2); window.removeEventListener('resize', calc); };
+  }, [quote]);
   const downloadPdf = async () => {
     setStatus("loading");
     try {
@@ -4045,14 +4059,27 @@ function PdfOverlay({
       textAlign: "center"
     }
   }, filename, ".pdf"), /*#__PURE__*/React.createElement("div", {
-    id: "pdf-preview-area",
     style: {
-      width: "100%",
-      maxWidth: 780
+      width: fit.scale < 1 ? Math.round(780 * fit.scale) : "100%",
+      maxWidth: 780,
+      height: (fit.scale < 1 && fit.h) ? fit.h : undefined,
+      overflow: "hidden"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      width: 780,
+      transform: fit.scale < 1 ? ("scale(" + fit.scale + ")") : "none",
+      transformOrigin: "top left"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    id: "pdf-preview-area",
+    ref: sheetRef,
+    style: {
+      width: 780
     }
   }, /*#__PURE__*/React.createElement(PrintDoc, {
     q: quote
-  })));
+  })))));
 }
 
 // ── PaymentsPanel ─────────────────────────────────────────────────────────────
