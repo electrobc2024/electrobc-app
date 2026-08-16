@@ -6613,6 +6613,7 @@ function PlanificacionView({ actividades, onSave, quotes, personas, planForQuote
   const [ganttQid, setGanttQid] = React.useState('');
   const [bulkQ, setBulkQ] = React.useState(null);
   const [editListQ, setEditListQ] = React.useState(null);
+  const [editAll, setEditAll] = React.useState(false);
 
   const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
   const DOW = ['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
@@ -7011,6 +7012,7 @@ function PlanificacionView({ actividades, onSave, quotes, personas, planForQuote
   return React.createElement(IngresosPane, null,
     React.createElement(PageHeader, { title: '🗓 Planificación de actividades', subtitle: 'Programá los trabajos aceptados y las tareas del equipo: fijales día, asignales quién los hace, colores y estado. Vista de calendario mensual, semanal y diaria.', right:
       React.createElement('div',{style:{display:'flex',gap:8,alignItems:'center',flexShrink:0}},
+        list.length? React.createElement('button',{type:'button',onClick:function(){ setEditAll(true); },title:'Editar todas las actividades en una lista',style:{background:'#fff',border:'1px solid #C4B5FD',borderRadius:8,padding:'9px 12px',fontSize:12,fontWeight:600,cursor:'pointer',color:'#6D28D9',whiteSpace:'nowrap'}}, '✏️ Editar en lista'):null,
         React.createElement('button',{type:'button',onClick:function(){ nueva(''); },style:{backgroundColor:ORANGE,color:'#fff',border:'none',borderRadius:8,padding:'9px 16px',fontSize:13,fontWeight:700,cursor:'pointer',whiteSpace:'nowrap'}}, '➕ Nueva actividad')
       )
     }),
@@ -7115,7 +7117,7 @@ function PlanificacionView({ actividades, onSave, quotes, personas, planForQuote
       onClose: function(){ setBulkQ(null); },
       onSaveAll: function(nuevas){ onSave(list.concat(nuevas)); }
     }) : null,
-    // Edición múltiple (en lista) de las actividades existentes
+    // Edición múltiple (en lista) de las actividades de un presupuesto
     editListQ ? React.createElement(BulkEditActividades, {
       q: editListQ,
       acts: list.filter(function(a){return a.quoteId===editListQ.id;}),
@@ -7126,20 +7128,33 @@ function PlanificacionView({ actividades, onSave, quotes, personas, planForQuote
         var nl = list.filter(function(a){ return borrados.indexOf(a.id)<0; }).map(function(a){ return mapPatch[a.id]?Object.assign({},a,mapPatch[a.id]):a; });
         onSave(nl);
       }
+    }) : null,
+    // Edición múltiple (en lista) de TODAS las actividades
+    editAll ? React.createElement(BulkEditActividades, {
+      all: true,
+      acts: list,
+      personas: pers,
+      quoteById: quoteById,
+      onClose: function(){ setEditAll(false); },
+      onSaveAll: function(mapPatch, borrados){
+        var nl = list.filter(function(a){ return borrados.indexOf(a.id)<0; }).map(function(a){ return mapPatch[a.id]?Object.assign({},a,mapPatch[a.id]):a; });
+        onSave(nl);
+      }
     }) : null
   );
 }
 
-// ── Edición múltiple (en lista) de las actividades de un presupuesto ──
-function BulkEditActividades({ q, acts, personas, quoteById, onClose, onSaveAll }){
-  var _r = React.useState((acts||[]).slice().sort(function(x,y){return String(x.fecha||'').localeCompare(String(y.fecha||''));}).map(function(a){ return {id:a.id, nombre:a.titulo||'', fecha:(a.fecha||'').slice(0,10), horasEst:String(a.horasEst||''), horasPorDia:String(a.horasPorDia||'8'), estado:a.estado||'programado', equipo:(a.equipo||[]).slice(), _durManual:!!a.durManual}; }));
+// ── Edición múltiple (en lista) de las actividades (de un presupuesto o de todos) ──
+function BulkEditActividades({ q, acts, personas, quoteById, all, onClose, onSaveAll }){
+  function qDe(a){ return all ? (quoteById?quoteById(a.quoteId):null) : q; }
+  var _r = React.useState((acts||[]).slice().sort(function(x,y){ if(all){ var qx=qDe(x),qy=qDe(y); var nx=parseInt(qx&&qx.numero)||0, ny=parseInt(qy&&qy.numero)||0; if(nx!==ny) return nx-ny; } return String(x.fecha||'').localeCompare(String(y.fecha||'')); }).map(function(a){ return {id:a.id, quoteId:a.quoteId, nombre:a.titulo||'', fecha:(a.fecha||'').slice(0,10), horasEst:String(a.horasEst||''), horasPorDia:String(a.horasPorDia||'8'), estado:a.estado||'programado', equipo:(a.equipo||[]).slice(), _durManual:!!a.durManual}; }));
   var filas=_r[0], setFilas=_r[1];
   var _d = React.useState([]); var borrados=_d[0], setBorrados=_d[1];
   var _res = React.useState(null); var resultado=_res[0], setResultado=_res[1];
+  function rowQ(f){ return all ? (quoteById?quoteById(f.quoteId):null) : q; }
   function setFila(i,patch){ setFilas(filas.map(function(f,ix){ return ix===i?Object.assign({},f,patch):f; })); }
   function quitar(i){ var f=filas[i]; if(!confirm('¿Eliminar la actividad "'+(f.nombre||'(sin nombre)')+'"?')) return; setBorrados(borrados.concat([f.id])); setFilas(filas.filter(function(_,ix){return ix!==i;})); }
   function guardar(){
-    var lim = q.fechaLimite||'';
     var hoyS=_gYmd(new Date());
     var mapPatch={}; var mergedList=[];
     for(var i=0;i<filas.length;i++){
@@ -7152,6 +7167,7 @@ function BulkEditActividades({ q, acts, personas, quoteById, onClose, onSaveAll 
       if(String(orig.horasEst||'')!==patch.horasEst || String(orig.horasPorDia||'8')!==patch.horasPorDia){ patch.durManual=false; patch.durDias=''; }
       var merged=Object.assign({},orig,patch);
       var dd=diasCubiertosAct(merged); var end=dd[dd.length-1];
+      var _rq=rowQ(f); var lim=(_rq&&_rq.fechaLimite)||'';
       if(f.estado==='hecho' && end>hoyS){ alert('No podés marcar "Hecho" a "'+(f.nombre||'')+'": termina el '+fmtFecha(end)+' (todavía no pasó).'); return; }
       if(lim && end>lim){ alert('"'+(f.nombre||'')+'" termina el '+fmtFecha(end)+', después de la fecha límite ('+fmtFecha(lim)+'). Corré la fecha límite o acortala.'); return; }
       mapPatch[f.id]=patch; mergedList.push(merged);
@@ -7160,20 +7176,21 @@ function BulkEditActividades({ q, acts, personas, quoteById, onClose, onSaveAll 
     setResultado(mergedList);
   }
   var inp={border:'1px solid #E2E8F0',borderRadius:7,padding:'7px 9px',fontSize:13,boxSizing:'border-box'};
-  var dir=[q.cliente&&q.cliente.calle,q.cliente&&q.cliente.numero].filter(Boolean).join(' ');
+  var dir=all?'':[q.cliente&&q.cliente.calle,q.cliente&&q.cliente.numero].filter(Boolean).join(' ');
   if(resultado){ return React.createElement('div',{onMouseDown:onClose,style:{position:'fixed',inset:0,zIndex:10001,background:'rgba(0,0,0,0.5)',display:'flex',alignItems:'flex-start',justifyContent:'center',padding:'32px 16px',overflow:'auto'}},
-    React.createElement(ResultadoGCal,{ titulo:'✅ Cambios guardados', acts:resultado, q:q, personas:personas, onClose:onClose })
+    React.createElement(ResultadoGCal,{ titulo:'✅ Cambios guardados', acts:resultado, q:(all?null:q), personas:personas, onClose:onClose })
   ); }
   return React.createElement('div',{onMouseDown:onClose,style:{position:'fixed',inset:0,zIndex:10001,background:'rgba(0,0,0,0.5)',display:'flex',alignItems:'flex-start',justifyContent:'center',padding:'32px 16px',overflow:'auto'}},
-    React.createElement('div',{onMouseDown:function(e){e.stopPropagation();},style:{background:'#fff',borderRadius:14,width:840,maxWidth:'100%',padding:20,boxShadow:'0 10px 40px rgba(0,0,0,0.25)'}},
+    React.createElement('div',{onMouseDown:function(e){e.stopPropagation();},style:{background:'#fff',borderRadius:14,width:880,maxWidth:'100%',padding:20,boxShadow:'0 10px 40px rgba(0,0,0,0.25)'}},
       React.createElement('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:4}},
         React.createElement('div',{style:{fontFamily:"'Oswald',system-ui",fontSize:18,fontWeight:700,color:NAVY}},'✏️ Editar actividades'),
         React.createElement('button',{type:'button',onClick:onClose,style:{background:'none',border:'none',fontSize:18,color:'#94A3B8',cursor:'pointer'}},'✕')
       ),
-      React.createElement('div',{style:{fontSize:12,color:'#64748B',marginBottom:14}},'Presupuesto #'+(q.numero||'')+(q.cliente&&q.cliente.nombre?(' · '+q.cliente.nombre):'')+(dir?(' · '+dir):'')+'. Editá todas juntas. Cada una mantiene su fecha de inicio (no se reordenan). Para mover en el tiempo también podés arrastrar en el cronograma.'),
+      React.createElement('div',{style:{fontSize:12,color:'#64748B',marginBottom:14}}, all ? 'Todas las actividades planificadas. Editalas juntas; cada una mantiene su fecha de inicio (no se reordenan). Para moverlas en el tiempo también podés arrastrar en el calendario o el cronograma.' : ('Presupuesto #'+(q.numero||'')+(q.cliente&&q.cliente.nombre?(' · '+q.cliente.nombre):'')+(dir?(' · '+dir):'')+'. Editá todas juntas. Cada una mantiene su fecha de inicio.')),
       filas.length===0 ? React.createElement('div',{style:{textAlign:'center',color:'#94A3B8',fontSize:13,padding:'20px 0'}},'No quedan actividades.') :
       React.createElement('div',null,
-        filas.map(function(f,i){ return React.createElement('div',{key:f.id,style:{border:'1px solid #EDF1F6',borderRadius:10,padding:'8px 10px',marginBottom:8}},
+        filas.map(function(f,i){ var frq=rowQ(f); return React.createElement('div',{key:f.id,style:{border:'1px solid #EDF1F6',borderRadius:10,padding:'8px 10px',marginBottom:8}},
+          all? React.createElement('div',{style:{fontSize:10,fontWeight:700,color:'#6D28D9',marginBottom:5}}, frq?('#'+(frq.numero||'')+' · '+((frq.cliente&&(frq.cliente.administracion||frq.cliente.nombre))||'')):'Actividad suelta'):null,
           React.createElement('div',{style:{display:'flex',gap:8,alignItems:'center',marginBottom:6}},
             React.createElement('input',{type:'text',value:f.nombre,placeholder:'Nombre de la actividad',onChange:function(e){setFila(i,{nombre:e.target.value});},style:Object.assign({},inp,{flex:1})}),
             React.createElement('input',{type:'date',title:'Inicio',value:f.fecha,onChange:function(e){setFila(i,{fecha:e.target.value});},style:Object.assign({},inp,{width:118})}),
