@@ -65,7 +65,8 @@ const SKEY = "ebc-quotes-v6",
   EKEY = "ebc-egresos-v2",
   PKEY = "ebc-personas-v1",
   BKEY = "ebc-backups-v1",
-  AKEY = "ebc-actividades-v1";
+  AKEY = "ebc-actividades-v1",
+  PDKEY = "ebc-pedidos-v1";
 
 // Configurar con el enlace de invitación al grupo de WhatsApp de presupuestos
 const WA_GRUPO = "https://chat.whatsapp.com/IphhQd8vcU7HA4bgOALkyY?mode=gi_t";
@@ -794,6 +795,22 @@ const savePersonas = async d => {
     var merged = await sbMergeArr(PKEY, d);
     await db.set(PKEY, JSON.stringify(merged));
   } catch { try { await db.set(PKEY, JSON.stringify(d)); } catch {} }
+};
+// ── Pedidos por cotizar (leads: proyectos a ir a ver / cotizar) ──
+const mkPedido = () => ({ id: uid(), nombre: "", celular: "", direccion: "", descripcion: "", estado: "pendiente", fecha: new Date().toISOString(), autor: ebcUser() });
+const loadPedidos = async () => {
+  try {
+    const r = await db.get(PDKEY);
+    var arr = r ? JSON.parse(r.value) : [];
+    setSyncBase(PDKEY, arr);
+    return arr;
+  } catch { return []; }
+};
+const savePedidos = async d => {
+  try {
+    var merged = await sbMergeArr(PDKEY, d);
+    await db.set(PDKEY, JSON.stringify(merged));
+  } catch { try { await db.set(PDKEY, JSON.stringify(d)); } catch {} }
 };
 // ── Actividades / Planificación ──
 // Paleta de color de la actividad — SIN los colores de estado (ámbar programado / azul materiales / verde hecho) para no confundir
@@ -6410,12 +6427,106 @@ function PersonasView({ personas, onSave, egresos }){
   );
 }
 
+// ── Pedidos por cotizar (leads a ir a ver) ──
+function PedidosView({ pedidos, onSave, onConvertir }){
+  const NAVY = "#0A0F1E", ORANGE = "#F26B1D";
+  const isMobile = useIsMobile();
+  const list = pedidos || [];
+  const [form, setForm] = React.useState(mkPedido());
+  const [editId, setEditId] = React.useState(null);
+  const [showForm, setShowForm] = React.useState(false);
+  const [verCerrados, setVerCerrados] = React.useState(false);
+  const inp = {border:'1px solid #E2E8F0',borderRadius:6,padding:'8px 10px',fontSize:13,width:'100%',backgroundColor:'#fff',boxSizing:'border-box'};
+  const lbl = function(t, req){ return React.createElement('div',{style:{fontSize:11,fontWeight:600,color:'#64748B',marginBottom:3}}, t, req?React.createElement('span',{style:{color:'#DC2626',fontWeight:700}},' *'):null); };
+  const waNum = function(c){ return String(c||'').replace(/[^0-9]/g,''); };
+  function editar(p){ setEditId(p.id); setForm(Object.assign({}, mkPedido(), p)); setShowForm(true); if(typeof window!=='undefined') window.scrollTo({top:0,behavior:'smooth'}); }
+  function guardar(){
+    if(!form.nombre || !form.nombre.trim()){ alert('Poné al menos el nombre / cliente.'); return; }
+    if(editId){
+      onSave(list.map(function(p){ return p.id===editId ? Object.assign({}, p, {nombre:form.nombre.trim(), celular:(form.celular||'').trim(), direccion:(form.direccion||'').trim(), descripcion:(form.descripcion||'').trim()}) : p; }));
+    } else {
+      var nuevo = Object.assign({}, mkPedido(), {nombre:form.nombre.trim(), celular:(form.celular||'').trim(), direccion:(form.direccion||'').trim(), descripcion:(form.descripcion||'').trim()});
+      onSave([nuevo].concat(list));
+    }
+    setForm(mkPedido()); setEditId(null); setShowForm(false);
+  }
+  function setEstado(p, est){ onSave(list.map(function(x){ return x.id===p.id ? Object.assign({}, x, {estado:est}) : x; })); }
+  function borrar(p){ if(!confirm('¿Borrar el pedido de "'+(p.nombre||'')+'"? No se puede deshacer.')) return; onSave(list.filter(function(x){ return x.id!==p.id; })); }
+  var pendientes = list.filter(function(p){ return (p.estado||'pendiente')==='pendiente'; });
+  var cerrados = list.filter(function(p){ return (p.estado||'pendiente')!=='pendiente'; });
+  var visibles = verCerrados ? list : pendientes;
+  var estMap = { pendiente:{label:'Por cotizar', fg:'#9A3412', bg:'#FFF7ED', br:'#FDBA74'}, cotizado:{label:'Cotizado', fg:'#065F46', bg:'#ECFDF5', br:'#6EE7B7'}, descartado:{label:'Descartado', fg:'#991B1B', bg:'#FEF2F2', br:'#FCA5A5'} };
+  return React.createElement(IngresosPane, null,
+    React.createElement(PageHeader, { title: '📌 Por cotizar', subtitle: 'Proyectos que hay que ir a ver para cotizar (lo que hoy anotan por WhatsApp). Cargalos acá para no perderlos y pasalos a presupuesto cuando los coticen.', right:
+      React.createElement('button',{type:'button',onClick:function(){ if(editId){setEditId(null);} setForm(mkPedido()); setShowForm(function(s){return !s;}); },style:{backgroundColor:showForm?'#fff':ORANGE,color:showForm?ORANGE:'#fff',border:'1px solid '+ORANGE,borderRadius:8,padding:'9px 16px',fontSize:13,fontWeight:700,cursor:'pointer',whiteSpace:'nowrap',flexShrink:0}}, showForm?'✕ Cerrar':'➕ Nuevo pedido')
+    }),
+    React.createElement('div',{style:{display:'grid',gridTemplateColumns:isMobile?'1fr 1fr':'220px 220px',gap:10,marginBottom:16}},
+      React.createElement('div',{style:{backgroundColor:'#FFF7ED',border:'1px solid #FED7AA',borderRadius:10,padding:'12px 14px'}},
+        React.createElement('div',{style:{fontSize:10,fontWeight:700,color:'#B45309',textTransform:'uppercase',marginBottom:3}},'📌 Por cotizar'),
+        React.createElement('div',{style:{fontFamily:"'Oswald',system-ui",fontSize:20,fontWeight:700,color:NAVY}}, String(pendientes.length))
+      ),
+      React.createElement('div',{style:{backgroundColor:'#ECFDF5',border:'1px solid #A7F3D0',borderRadius:10,padding:'12px 14px'}},
+        React.createElement('div',{style:{fontSize:10,fontWeight:700,color:'#047857',textTransform:'uppercase',marginBottom:3}},'✓ Cotizados / cerrados'),
+        React.createElement('div',{style:{fontFamily:"'Oswald',system-ui",fontSize:20,fontWeight:700,color:NAVY}}, String(cerrados.length))
+      )
+    ),
+    showForm && React.createElement('div',{style:{backgroundColor:'#fff',border:'1px solid #E2E8F0',borderRadius:12,padding:16,marginBottom:18}},
+      React.createElement('div',{style:{fontSize:13,fontWeight:700,color:NAVY,marginBottom:12}}, editId?'✏️ Editar pedido':'➕ Nuevo pedido por cotizar'),
+      React.createElement('div',{style:{display:'grid',gridTemplateColumns:isMobile?'1fr':'1fr 1fr',gap:12,marginBottom:12}},
+        React.createElement('div',null, lbl('Nombre / Cliente', true), React.createElement('input',{style:inp,spellCheck:true,autoCapitalize:'words',value:form.nombre||'',onChange:function(e){setForm(Object.assign({},form,{nombre:e.target.value}));},onBlur:function(e){var v=e.target.value;if(v){var c=capitalize(v);if(c!==v)setForm(Object.assign({},form,{nombre:c}));}},placeholder:'Ej: Juan Pérez'})),
+        React.createElement('div',null, lbl('Celular'), React.createElement('input',{style:inp,type:'tel',value:form.celular||'',onChange:function(e){setForm(Object.assign({},form,{celular:e.target.value}));},placeholder:'Ej: 11 2345 6789'})),
+        React.createElement('div',{style:{gridColumn:isMobile?'auto':'1/-1'}}, lbl('Dirección'), React.createElement('input',{style:inp,spellCheck:true,autoCapitalize:'sentences',value:form.direccion||'',onChange:function(e){setForm(Object.assign({},form,{direccion:e.target.value}));},placeholder:'Ej: Av. Siempre Viva 742, 3° B'})),
+        React.createElement('div',{style:{gridColumn:isMobile?'auto':'1/-1'}}, lbl('Descripción del trabajo'), React.createElement('textarea',{style:Object.assign({},inp,{minHeight:64,resize:'vertical',lineHeight:1.5}),spellCheck:true,autoCapitalize:'sentences',value:form.descripcion||'',onChange:function(e){setForm(Object.assign({},form,{descripcion:e.target.value}));},onBlur:function(e){var v=e.target.value;if(v){var c=v.charAt(0).toUpperCase()+v.slice(1);if(c!==v)setForm(Object.assign({},form,{descripcion:c}));}},placeholder:'Qué hay que ir a ver / cotizar'}))
+      ),
+      React.createElement('div',{style:{display:'flex',gap:8,justifyContent:'flex-end'}},
+        React.createElement('button',{type:'button',onClick:function(){setForm(mkPedido());setEditId(null);setShowForm(false);},style:{background:'none',border:'1px solid #E2E8F0',borderRadius:8,padding:'8px 16px',fontSize:13,color:'#64748B',cursor:'pointer'}},'Cancelar'),
+        React.createElement('button',{type:'button',onClick:guardar,style:{backgroundColor:ORANGE,color:'#fff',border:'none',borderRadius:8,padding:'8px 20px',fontSize:13,fontWeight:700,cursor:'pointer'}}, editId?'✓ Guardar':'✓ Agregar pedido')
+      )
+    ),
+    cerrados.length>0 ? React.createElement('label',{style:{fontSize:12,color:'#475569',display:'inline-flex',alignItems:'center',gap:6,cursor:'pointer',marginBottom:10}}, React.createElement('input',{type:'checkbox',checked:verCerrados,onChange:function(e){setVerCerrados(e.target.checked);}}), 'Ver también los cotizados / descartados') : null,
+    visibles.length===0
+      ? React.createElement('div',{style:{backgroundColor:'#fff',border:'1px solid #E2E8F0',borderRadius:12,padding:'40px',textAlign:'center',color:'#94A3B8',fontSize:14}}, list.length===0?'Todavía no cargaste pedidos. Tocá "Nuevo pedido" para anotar el primero.':'No hay pedidos por cotizar 👌')
+      : React.createElement('div',{style:{display:'flex',flexDirection:'column',gap:12}},
+          visibles.map(function(p){
+            var est = estMap[p.estado||'pendiente'] || estMap.pendiente;
+            var num = waNum(p.celular);
+            return React.createElement('div',{key:p.id,style:{backgroundColor:'#fff',border:'1px solid #E2E8F0',borderRadius:12,padding:16,opacity:(p.estado&&p.estado!=='pendiente')?0.72:1}},
+              React.createElement('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'flex-start',gap:10,flexWrap:'wrap'}},
+                React.createElement('div',{style:{minWidth:0}},
+                  React.createElement('div',{style:{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}},
+                    React.createElement('span',{style:{fontSize:16,fontWeight:700,color:NAVY}}, p.nombre||'(sin nombre)'),
+                    React.createElement('span',{style:{fontSize:11,fontWeight:700,color:est.fg,background:est.bg,border:'1px solid '+est.br,borderRadius:20,padding:'2px 9px'}}, est.label)
+                  ),
+                  p.direccion? React.createElement('div',{style:{fontSize:12,color:'#475569',marginTop:5}}, '📍 '+p.direccion):null,
+                  p.descripcion? React.createElement('div',{style:{fontSize:12,color:'#64748B',marginTop:4,whiteSpace:'pre-wrap',lineHeight:1.5}}, p.descripcion):null,
+                  React.createElement('div',{style:{fontSize:10,color:'#94A3B8',marginTop:6}}, 'Cargado '+fmtFecha(p.fecha)+(p.autor?(' · '+ebcUserLabel(p.autor)):''))
+                ),
+                p.celular? React.createElement('div',{style:{display:'flex',gap:6,flexShrink:0}},
+                  React.createElement('a',{href:'tel:'+num,style:{textDecoration:'none',border:'1px solid #E2E8F0',borderRadius:8,padding:'6px 10px',fontSize:12,color:'#475569',whiteSpace:'nowrap'}}, '📞 '+p.celular),
+                  num? React.createElement('a',{href:'https://wa.me/'+num,target:'_blank',rel:'noopener',style:{textDecoration:'none',border:'1px solid #86EFAC',borderRadius:8,padding:'6px 10px',fontSize:12,color:'#16A34A',fontWeight:600,whiteSpace:'nowrap'}}, 'WhatsApp'):null
+                ):null
+              ),
+              React.createElement('div',{style:{display:'flex',gap:6,flexWrap:'wrap',marginTop:12,paddingTop:12,borderTop:'1px solid #F1F5F9'}},
+                React.createElement('button',{type:'button',onClick:function(){ onConvertir(p); },style:{background:NAVY,color:'#fff',border:'none',borderRadius:6,padding:'6px 12px',fontSize:12,fontWeight:700,cursor:'pointer'}},'➜ Convertir en presupuesto'),
+                React.createElement('button',{type:'button',onClick:function(){editar(p);},style:{background:'none',border:'1px solid #E2E8F0',borderRadius:6,padding:'6px 11px',fontSize:12,color:'#475569',cursor:'pointer'}},'✏️ Editar'),
+                (p.estado||'pendiente')==='pendiente'
+                  ? React.createElement('button',{type:'button',onClick:function(){setEstado(p,'cotizado');},style:{background:'none',border:'1px solid #6EE7B7',borderRadius:6,padding:'6px 11px',fontSize:12,color:'#065F46',cursor:'pointer',fontWeight:600}},'✓ Marcar cotizado')
+                  : React.createElement('button',{type:'button',onClick:function(){setEstado(p,'pendiente');},style:{background:'none',border:'1px solid #FDBA74',borderRadius:6,padding:'6px 11px',fontSize:12,color:'#9A3412',cursor:'pointer',fontWeight:600}},'↩ Reabrir'),
+                (p.estado||'pendiente')==='pendiente'? React.createElement('button',{type:'button',onClick:function(){setEstado(p,'descartado');},style:{background:'none',border:'1px solid #E2E8F0',borderRadius:6,padding:'6px 11px',fontSize:12,color:'#B45309',cursor:'pointer'}},'Descartar'):null,
+                React.createElement('button',{type:'button',onClick:function(){borrar(p);},style:{background:'none',border:'1px solid #FECACA',borderRadius:6,padding:'6px 11px',fontSize:12,color:'#DC2626',cursor:'pointer',marginLeft:'auto'}},'🗑')
+              )
+            );
+          })
+        )
+  );
+}
+
 // ── Inicio: tablero de alertas + recordatorios ──
 var ALERT_KEYS = { precios:'ebc-alert-precios-v1', factura:'ebc-alert-factura-v1', pagos:'ebc-alert-pagos-v1' };
 function _ymd(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
 function _ultimoSabado(d){ var x=new Date(d.getFullYear(),d.getMonth(),d.getDate()); x.setDate(x.getDate()-((x.getDay()+1)%7)); return _ymd(x); }
 function _diasEntre(a,b){ return Math.round((new Date(b)-new Date(a))/86400000); }
-function InicioView({ quotes, actividades, facturas, onGoTracker, onGoTrackerFilter, onGoPlan, setView }){
+function InicioView({ quotes, actividades, facturas, pedidos, onGoTracker, onGoTrackerFilter, onGoPlan, setView }){
   var hoyD=new Date(); var hoy=_ymd(hoyD);
   var mesAct=hoy.slice(0,7);
   var cobDe=function(q){ return (q.pagos||[]).reduce(function(s,p){ var m=parseFloat(p.monto||0); if(p.moneda==='USD') m=m*(parseFloat(p.tcambio)||0); return s+m; },0); };
@@ -6430,6 +6541,7 @@ function InicioView({ quotes, actividades, facturas, onGoTracker, onGoTrackerFil
   var actsDeQuote=function(qid){ return (actividades||[]).some(function(a){ return a.quoteId===qid; }); };
   var sinArrancar=(quotes||[]).filter(function(q){ return q.status==='aceptado' && !actsDeQuote(q.id); }).sort(byNumDesc);
   var borradores=(quotes||[]).filter(function(q){ return q.status==='generado'; }).sort(byNumDesc);
+  var porCotizar=(pedidos||[]).filter(function(p){ return (p.estado||'pendiente')==='pendiente'; }).sort(function(a,b){ return String(b.fecha||'').localeCompare(String(a.fecha||'')); });
   var actsHoy=(actividades||[]).filter(function(a){ return diasCubiertosAct(a).indexOf(hoy)>=0; });
   var atrasadas=(actividades||[]).filter(function(a){ if(a.estado==='hecho') return false; var dc=diasCubiertosAct(a); var last=dc.length?dc[dc.length-1]:null; return last && last<hoy; }).sort(function(a,b){ var da=diasCubiertosAct(a), db2=diasCubiertosAct(b); return (da[da.length-1]||'').localeCompare(db2[db2.length-1]||''); });
   var card={backgroundColor:'#fff',borderRadius:12,border:'1px solid #E2E8F0',padding:'16px 18px',display:'flex',flexDirection:'column'};
@@ -6453,6 +6565,7 @@ function InicioView({ quotes, actividades, facturas, onGoTracker, onGoTrackerFil
   var itemsEnv=enviados.slice(0,5).map(function(q){ return filaPres(q, fmtFecha(q.fecha)); });
   var itemsArr=sinArrancar.slice(0,5).map(function(q){ return filaPres(q, fmtM(totDe(q))); });
   var itemsBor=borradores.slice(0,5).map(function(q){ return filaPres(q, fmtFecha(q.fecha)); });
+  var itemsPed=porCotizar.slice(0,5).map(function(p){ return React.createElement('div',{key:p.id,onClick:function(){ setView('pedidos'); },style:rowItem}, React.createElement('span',{style:{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}, React.createElement('b',{style:{color:ORANGE}}, p.nombre||'—'), p.direccion?('  '+p.direccion):''), React.createElement('span',{style:{fontSize:11,color:'#94A3B8',whiteSpace:'nowrap'}}, fmtFecha(p.fecha))); });
   var itemsActs=actsHoy.slice(0,6).map(function(a){ var per=(a.equipo||[]).length; return React.createElement('div',{key:a.id,onClick:function(){ onGoPlan(); },style:rowItem}, React.createElement('span',{style:{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}, tituloAct(a)), React.createElement('span',{style:{fontSize:11,color:'#94A3B8',whiteSpace:'nowrap'}}, (EST_ACT[a.estado]||EST_ACT.programado).label+(per?(' · '+per+'p'):''))); });
   var itemsAtr=atrasadas.slice(0,6).map(function(a){ var dc=diasCubiertosAct(a); var last=dc[dc.length-1]; return React.createElement('div',{key:a.id,onClick:function(){ onGoPlan(); },style:rowItem}, React.createElement('span',{style:{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}, tituloAct(a)), React.createElement('span',{style:{fontSize:11,fontWeight:700,color:'#B91C1C',whiteSpace:'nowrap'}}, 'venció '+fmtFecha(last))); });
 
@@ -6494,6 +6607,7 @@ function InicioView({ quotes, actividades, facturas, onGoTracker, onGoTrackerFil
     React.createElement(PageHeader, { title: '🏠 Inicio', subtitle: 'Lo que necesita tu atención hoy: cobros, recotizaciones, envíos sin respuesta, trabajos por arrancar y la agenda del día.' }),
     banners.length? React.createElement('div',{style:{marginBottom:16}}, banners):null,
     React.createElement('div',{style:{display:'grid',gridTemplateColumns:'repeat(auto-fit, minmax(300px, 1fr))',gap:16}},
+      bloque('📌','Por cotizar', String(porCotizar.length), (porCotizar.length>0?'#9A3412':'#166534'), itemsPed, '#EA580C', function(){ setView('pedidos'); }),
       bloque('💰','Pendiente de cobro', fmtM(totDeuda), (totDeuda>0?'#B91C1C':'#166534'), itemsDeuda, '#F26B1D', function(){ onGoTrackerFilter('cobro'); }),
       bloque('⏰','Para recotizar', String(recotizar.length), (recotizar.length>0?'#C2410C':'#166534'), itemsReco, '#CA8A04', function(){ onGoTrackerFilter('recotizar'); }),
       bloque('📤','Enviados sin respuesta', String(enviados.length), (enviados.length>0?'#B45309':'#166534'), itemsEnv, '#B45309', function(){ onGoTrackerFilter('espera'); }),
@@ -6505,7 +6619,7 @@ function InicioView({ quotes, actividades, facturas, onGoTracker, onGoTrackerFil
   );
 }
 
-function BackupView({ quotes, catalog, clients, egresos, personas, autoBackups, onRestore }){
+function BackupView({ quotes, catalog, clients, egresos, personas, pedidos, autoBackups, onRestore }){
   async function restaurarAuto(e){ if(!confirm('¿Restaurar la copia automática del '+fmtFecha(e.fecha)+'?\n\nReemplaza TODOS los datos actuales por los de esa fecha.')) return; try{ var r=await db.get(e.key); var data=r?JSON.parse(r.value):null; if(!data){ alert('No se encontró el archivo de la copia.'); return; } onRestore(data); alert('Datos restaurados de la copia del '+fmtFecha(e.fecha)+'.'); }catch(err){ alert('No se pudo restaurar la copia.'); } }
   async function descargarAuto(e){ try{ var r=await db.get(e.key); var data=r?JSON.parse(r.value):null; if(!data){ alert('No se encontró el archivo de la copia.'); return; } descargar('ELECTRO BC - Backup automatico '+fmtFechaFile(e.fecha)+'.json', data); }catch(err){ alert('No se pudo descargar la copia.'); } }
   const [hist, setHist] = React.useState(function(){ try { return JSON.parse(localStorage.getItem(BKEY)||"[]"); } catch(e){ return []; } });
@@ -6527,7 +6641,7 @@ function BackupView({ quotes, catalog, clients, egresos, personas, autoBackups, 
   }
   function nData(q,c,e,p){ return {presupuestos:(q||[]).length, clientes:(c||[]).length, manoObra:((catalog&&catalog.mdo)||[]).length, materiales:((catalog&&catalog.mat)||[]).length, movimientos:(e||[]).length, personas:(p||[]).length}; }
   function backupCompleto(){
-    var data={meta:{app:'ELECTRO BC',tipo:'completa',version:3,fecha:new Date().toISOString(),autor:ebcUser()},quotes:quotes,catalog:catalog,clients:clients,egresos:egresos,personas:personas};
+    var data={meta:{app:'ELECTRO BC',tipo:'completa',version:3,fecha:new Date().toISOString(),autor:ebcUser()},quotes:quotes,catalog:catalog,clients:clients,egresos:egresos,personas:personas,pedidos:pedidos};
     descargar('ELECTRO BC - Backup completo - '+fmtFechaFile(_to)+'.json', data);
     logBackup({fecha:new Date().toISOString(),tipo:'Completa',periodo:'Todo',autor:ebcUser(),n:nData(quotes,clients,egresos,personas)});
   }
@@ -6536,7 +6650,7 @@ function BackupView({ quotes, catalog, clients, egresos, personas, autoBackups, 
     var inPer=function(f){ if(!f) return false; var d=String(f).slice(0,10); if(bFrom&&d<bFrom) return false; if(bTo&&d>bTo) return false; return true; };
     var q=(quotes||[]).filter(function(x){return inPer(x.fecha);});
     var e=(egresos||[]).filter(function(x){return inPer(x.fecha);});
-    var data={meta:{app:'ELECTRO BC',tipo:'periodo',version:3,fecha:new Date().toISOString(),autor:ebcUser(),desde:bFrom,hasta:bTo},quotes:q,catalog:catalog,clients:clients,egresos:e,personas:personas};
+    var data={meta:{app:'ELECTRO BC',tipo:'periodo',version:3,fecha:new Date().toISOString(),autor:ebcUser(),desde:bFrom,hasta:bTo},quotes:q,catalog:catalog,clients:clients,egresos:e,personas:personas,pedidos:pedidos};
     descargar('ELECTRO BC - Backup '+fmtFechaFile(bFrom)+' a '+fmtFechaFile(bTo)+'.json', data);
     logBackup({fecha:new Date().toISOString(),tipo:'Período',periodo:fmtFecha(bFrom)+' al '+fmtFecha(bTo),autor:ebcUser(),n:nData(q,clients,e,personas)});
   }
@@ -7793,6 +7907,28 @@ function App() {
     setActividades(list);
     saveActividades(list).catch(()=>{});
   };
+  const [pedidos, setPedidos] = useState([]);
+  React.useEffect(function(){
+    loadPedidos().then(function(val){ if (Array.isArray(val)) setPedidos(val); }).catch(function(){});
+  }, []);
+  const handlePedidos = async (list) => {
+    setPedidos(list);
+    savePedidos(list).catch(()=>{});
+  };
+  const pedidoAPresupuesto = (pd) => {
+    var cur = quotesRef.current || [];
+    var maxNum = cur.reduce(function(m,q){ var n=parseInt(q.numero,10)||0; return n>m?n:m; }, 0);
+    var nq = mkQuote(String(maxNum + 1).padStart(4, "0"));
+    nq.cliente.nombre = pd.nombre || "";
+    nq.cliente.telefono = pd.celular || "";
+    nq.cliente.calle = pd.direccion || "";
+    if(pd.descripcion) nq.referencia = pd.descripcion;
+    nq.desdePedido = pd.id;
+    setQuote(nq);
+    setView("form");
+    // Marcar el pedido como cotizado
+    handlePedidos((pedidos||[]).map(function(x){ return x.id===pd.id ? Object.assign({}, x, {estado:"cotizado"}) : x; }));
+  };
   // ── Facturas por presupuesto (archivo PDF/imagen, guardado aparte del listado) ──
   const [facturas, setFacturas] = useState({});            // índice { quoteId: {name, mime, at} }
   const [facturaView, setFacturaView] = useState(null);    // {name, mime, dataUrl} en previsualización
@@ -7828,6 +7964,7 @@ function App() {
     if(Array.isArray(data.clients)){ var cls=assignNums(data.clients); setClients(cls); try{localStorage.setItem(CLKEY,JSON.stringify(cls));}catch(e){} db.set(CLKEY,JSON.stringify(cls)).catch(()=>{}); }
     if(Array.isArray(data.egresos)){ saveEgresos(data.egresos); }
     if(Array.isArray(data.personas)){ handlePersonas(data.personas); }
+    if(Array.isArray(data.pedidos)){ handlePedidos(data.pedidos); }
   };
   React.useEffect(function(){window.__ebc_quotes=quotes;window.__ebc_highlight=function(id){setTrackerHighlight(id);setView("tracker");};},[quotes]);
   const deepLinkDone = useRef(false);
@@ -7889,7 +8026,7 @@ function App() {
         var d=new Date(); var today=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
         var r=await db.get('ebc-autobk-idx-v1'); var idx=r?JSON.parse(r.value):[];
         if(idx.some(function(e){return e.fecha===today;})) { setAutoBackups(idx); return; }
-        var snap={ meta:{app:'ELECTRO BC',tipo:'auto',fecha:new Date().toISOString()}, quotes:quotesRef.current, catalog:catalog, clients:clients, egresos:egresos, personas:personas };
+        var snap={ meta:{app:'ELECTRO BC',tipo:'auto',fecha:new Date().toISOString()}, quotes:quotesRef.current, catalog:catalog, clients:clients, egresos:egresos, personas:personas, pedidos:pedidos };
         var key='ebc-autobk-'+today;
         await db.set(key, JSON.stringify(snap));
         var n={presupuestos:(quotesRef.current||[]).length, clientes:(clients||[]).length, manoObra:((catalog&&catalog.mdo)||[]).length, materiales:((catalog&&catalog.mat)||[]).length, movimientos:(egresos||[]).length, personas:(personas||[]).length};
@@ -8091,6 +8228,7 @@ function App() {
   }, "Cargando\u2026");
   const navMain = [
     {id:"inicio",  label:"🏠 Inicio"},
+    {id:"pedidos", label:"📌 Por cotizar"},
     {id:"form",    label:"📋 Nuevo Presupuesto"},
     {id:"clients", label:"👤 Clientes"},
     {id:"catMdo",  label:"👷 Mano de Obra"},
@@ -8249,7 +8387,12 @@ function App() {
     onGoTracker: function(id){ setTrackerHighlight(id); setView("tracker"); },
     onGoTrackerFilter: function(key){ setTrackerHighlight(null); setTrackerFilter(key); setView("tracker"); },
     onGoPlan: function(){ setView("planificacion"); },
+    pedidos: pedidos,
     setView: setView
+  }), view === "pedidos" && /*#__PURE__*/React.createElement(PedidosView, {
+    pedidos: pedidos,
+    onSave: handlePedidos,
+    onConvertir: pedidoAPresupuesto
   }), view === "form" && /*#__PURE__*/React.createElement(QuoteForm, {
     quote: quote,
     setQuote: setQuote,
@@ -8326,6 +8469,7 @@ function App() {
     clients: clients,
     egresos: egresos,
     personas: personas,
+    pedidos: pedidos,
     autoBackups: autoBackups,
     onRestore: handleRestore
   }), view === "planificacion" && /*#__PURE__*/React.createElement(PlanificacionView, {
