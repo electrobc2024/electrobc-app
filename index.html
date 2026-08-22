@@ -6401,7 +6401,9 @@ function PersonasView({ personas, onSave, egresos }){
   );
 }
 
-function BackupView({ quotes, catalog, clients, egresos, personas, onRestore }){
+function BackupView({ quotes, catalog, clients, egresos, personas, autoBackups, onRestore }){
+  async function restaurarAuto(e){ if(!confirm('¿Restaurar la copia automática del '+fmtFecha(e.fecha)+'?\n\nReemplaza TODOS los datos actuales por los de esa fecha.')) return; try{ var r=await db.get(e.key); var data=r?JSON.parse(r.value):null; if(!data){ alert('No se encontró el archivo de la copia.'); return; } onRestore(data); alert('Datos restaurados de la copia del '+fmtFecha(e.fecha)+'.'); }catch(err){ alert('No se pudo restaurar la copia.'); } }
+  async function descargarAuto(e){ try{ var r=await db.get(e.key); var data=r?JSON.parse(r.value):null; if(!data){ alert('No se encontró el archivo de la copia.'); return; } descargar('ELECTRO BC - Backup automatico '+fmtFechaFile(e.fecha)+'.json', data); }catch(err){ alert('No se pudo descargar la copia.'); } }
   const [hist, setHist] = React.useState(function(){ try { return JSON.parse(localStorage.getItem(BKEY)||"[]"); } catch(e){ return []; } });
   const _from = (function(){ var n=new Date(); return n.getFullYear()+"-"+String(n.getMonth()+1).padStart(2,'0')+"-01"; })();
   const _to = new Date().toISOString().slice(0,10);
@@ -6476,6 +6478,32 @@ function BackupView({ quotes, catalog, clients, egresos, personas, onRestore }){
           React.createElement('button',{type:'button',onClick:backupPeriodo,style:{background:NAVY,border:'none',borderRadius:8,padding:'10px 18px',fontSize:13,fontWeight:700,color:'#fff',cursor:'pointer'}},'⬇ Descargar copia del período')
         )
       )
+    ),
+    // Copias automáticas (en la nube)
+    React.createElement('div',{style:card},
+      React.createElement('div',{style:{fontSize:14,fontWeight:700,color:NAVY,marginBottom:4}},'☁ Copias automáticas (en la nube)'),
+      React.createElement('div',{style:{fontSize:12,color:'#64748B',marginBottom:12}},'La app guarda sola una copia completa por día al abrirla. Se conservan las últimas 7. Podés restaurar o descargar cualquiera.'),
+      (!autoBackups || autoBackups.length===0)
+        ? React.createElement('div',{style:{fontSize:12,color:'#94A3B8'}},'Todavía no hay copias automáticas. Se crea una la próxima vez que abras la app.')
+        : React.createElement('div',{style:{overflowX:'auto'}}, React.createElement('table',{style:{width:'100%',borderCollapse:'collapse'}},
+            React.createElement('thead',null,React.createElement('tr',null,
+              React.createElement('th',{style:thS},'Fecha'),
+              React.createElement('th',{style:Object.assign({},thS,{textAlign:'right'})},'Presup.'),
+              React.createElement('th',{style:Object.assign({},thS,{textAlign:'right'})},'Clientes'),
+              React.createElement('th',{style:Object.assign({},thS,{textAlign:'right'})},'Movim.'),
+              React.createElement('th',{style:Object.assign({},thS,{textAlign:'right'})},'Acciones')
+            )),
+            React.createElement('tbody',null, autoBackups.map(function(e,i){ var n=e.n||{}; return React.createElement('tr',{key:e.key||i},
+              React.createElement('td',{style:Object.assign({},tdS,{fontWeight:600,color:'#475569'})}, fmtFecha(e.fecha)),
+              React.createElement('td',{style:Object.assign({},tdS,{textAlign:'right'})}, n.presupuestos!=null?n.presupuestos:'—'),
+              React.createElement('td',{style:Object.assign({},tdS,{textAlign:'right'})}, n.clientes!=null?n.clientes:'—'),
+              React.createElement('td',{style:Object.assign({},tdS,{textAlign:'right'})}, n.movimientos!=null?n.movimientos:'—'),
+              React.createElement('td',{style:Object.assign({},tdS,{textAlign:'right',whiteSpace:'nowrap'})},
+                React.createElement('button',{type:'button',onClick:function(){descargarAuto(e);},style:{background:'none',border:'1px solid #E2E8F0',borderRadius:6,padding:'4px 9px',fontSize:11,color:'#475569',cursor:'pointer',marginRight:6}},'⬇ Descargar'),
+                React.createElement('button',{type:'button',onClick:function(){restaurarAuto(e);},style:{background:'none',border:'1px solid #FDBA74',borderRadius:6,padding:'4px 9px',fontSize:11,color:'#B45309',cursor:'pointer'}},'↩ Restaurar')
+              )
+            ); }))
+          ))
     ),
     // Historial
     React.createElement('div',{style:card},
@@ -7744,6 +7772,30 @@ function App() {
     saveQ(nl).catch(() => {});
   }, []);
   quotesRef.current = quotes;
+  // ── Backup automático diario a la nube (rolling, últimos 7) ──
+  const [autoBackups, setAutoBackups] = useState([]);
+  React.useEffect(function(){ (async()=>{ try{ var r=await db.get('ebc-autobk-idx-v1'); setAutoBackups(r?JSON.parse(r.value):[]); }catch(e){} })(); }, []);
+  const autoBkDone = useRef(false);
+  React.useEffect(function(){
+    if(loading || autoBkDone.current) return;
+    autoBkDone.current = true;
+    (async()=>{
+      try{
+        var d=new Date(); var today=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+        var r=await db.get('ebc-autobk-idx-v1'); var idx=r?JSON.parse(r.value):[];
+        if(idx.some(function(e){return e.fecha===today;})) { setAutoBackups(idx); return; }
+        var snap={ meta:{app:'ELECTRO BC',tipo:'auto',fecha:new Date().toISOString()}, quotes:quotesRef.current, catalog:catalog, clients:clients, egresos:egresos, personas:personas };
+        var key='ebc-autobk-'+today;
+        await db.set(key, JSON.stringify(snap));
+        var n={presupuestos:(quotesRef.current||[]).length, clientes:(clients||[]).length, manoObra:((catalog&&catalog.mdo)||[]).length, materiales:((catalog&&catalog.mat)||[]).length, movimientos:(egresos||[]).length, personas:(personas||[]).length};
+        idx.unshift({fecha:today, at:new Date().toISOString(), key:key, n:n});
+        var keep=idx.slice(0,7), drop=idx.slice(7);
+        drop.forEach(function(e){ if(e.key) db.set(e.key,'').catch(function(){}); });
+        await db.set('ebc-autobk-idx-v1', JSON.stringify(keep));
+        setAutoBackups(keep);
+      }catch(e){}
+    })();
+  }, [loading]);
   const handleSave = statusRaw => {
     if (!quote) return;
     const status = statusRaw === "generar" ? "generado" : statusRaw;
@@ -8158,6 +8210,7 @@ function App() {
     clients: clients,
     egresos: egresos,
     personas: personas,
+    autoBackups: autoBackups,
     onRestore: handleRestore
   }), view === "planificacion" && /*#__PURE__*/React.createElement(PlanificacionView, {
     actividades: actividades,
