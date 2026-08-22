@@ -6401,6 +6401,47 @@ function PersonasView({ personas, onSave, egresos }){
   );
 }
 
+// ── Inicio: tablero de alertas ──
+function InicioView({ quotes, actividades, facturas, onGoTracker, onGoPlan, setView }){
+  var hoy=(function(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})();
+  var cobDe=function(q){ return (q.pagos||[]).reduce(function(s,p){ var m=parseFloat(p.monto||0); if(p.moneda==='USD') m=m*(parseFloat(p.tcambio)||0); return s+m; },0); };
+  var totDe=function(q){ return calcSub(q.mdo)+calcSub(q.mat); };
+  var fmtM=function(n){ return '$ '+Math.round(n||0).toLocaleString('es-AR'); };
+  var deudas=(quotes||[]).filter(function(q){ return q.status==='aceptado' && (totDe(q)-cobDe(q))>1; }).map(function(q){ return {q:q, saldo:totDe(q)-cobDe(q)}; }).sort(function(a,b){ return b.saldo-a.saldo; });
+  var totDeuda=deudas.reduce(function(s,d){ return s+d.saldo; },0);
+  var recotizar=(quotes||[]).filter(function(q){ return effectiveStatus(q)==='recotizar'; }).sort(function(a,b){ return String(b.numero||'').localeCompare(String(a.numero||'')); });
+  var actsHoy=(actividades||[]).filter(function(a){ return diasCubiertosAct(a).indexOf(hoy)>=0; });
+  var facPend=(quotes||[]).filter(function(q){ return q.status==='aceptado' && !(facturas&&facturas[q.id]); }).sort(function(a,b){ return String(b.numero||'').localeCompare(String(a.numero||'')); });
+  var card={backgroundColor:'#fff',borderRadius:12,border:'1px solid #E2E8F0',padding:'16px 18px',display:'flex',flexDirection:'column'};
+  var rowItem={display:'flex',justifyContent:'space-between',alignItems:'baseline',gap:8,fontSize:12,padding:'5px 0',borderBottom:'1px solid #F1F5F9',cursor:'pointer'};
+  function tituloAct(a){ if(a.titulo&&a.titulo.trim()) return a.titulo.trim(); var q=a.quoteId?(quotes||[]).find(function(x){return x.id===a.quoteId;}):null; return q?((q.cliente&&q.cliente.nombre)||'Actividad'):'(sin título)'; }
+  function bloque(icon, titulo, valor, valorColor, items, accent, verTodos){
+    return React.createElement('div',{style:Object.assign({},card,{borderTop:'3px solid '+accent})},
+      React.createElement('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'baseline',marginBottom:8}},
+        React.createElement('div',{style:{fontSize:13,fontWeight:700,color:NAVY}}, icon+' '+titulo),
+        React.createElement('div',{style:{fontSize:18,fontWeight:800,color:valorColor,fontFamily:"'Oswald',system-ui"}}, valor)
+      ),
+      items.length===0
+        ? React.createElement('div',{style:{fontSize:12,color:'#94A3B8',padding:'8px 0'}},'Nada pendiente acá 👌')
+        : React.createElement('div',null, items),
+      verTodos && items.length>0 ? React.createElement('button',{type:'button',onClick:verTodos,style:{marginTop:10,background:'none',border:'none',color:accent,fontWeight:700,fontSize:12,cursor:'pointer',textAlign:'left',padding:0}},'Ver todos →') : null
+    );
+  }
+  var itemsDeuda=deudas.slice(0,5).map(function(d){ return React.createElement('div',{key:d.q.id,onClick:function(){ onGoTracker(d.q.id); },style:rowItem}, React.createElement('span',null, React.createElement('b',{style:{color:ORANGE}},'#'+(d.q.numero||'')), '  '+((d.q.cliente&&d.q.cliente.nombre)||'—')), React.createElement('span',{style:{fontWeight:700,color:'#B91C1C',whiteSpace:'nowrap'}}, fmtM(d.saldo))); });
+  var itemsReco=recotizar.slice(0,5).map(function(q){ return React.createElement('div',{key:q.id,onClick:function(){ onGoTracker(q.id); },style:rowItem}, React.createElement('span',null, React.createElement('b',{style:{color:ORANGE}},'#'+(q.numero||'')), '  '+((q.cliente&&q.cliente.nombre)||'—')), React.createElement('span',{style:{fontSize:11,color:'#94A3B8',whiteSpace:'nowrap'}}, fmtFecha(q.fecha))); });
+  var itemsActs=actsHoy.slice(0,6).map(function(a){ var per=(a.equipo||[]).length; return React.createElement('div',{key:a.id,onClick:function(){ onGoPlan(); },style:rowItem}, React.createElement('span',{style:{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}, tituloAct(a)), React.createElement('span',{style:{fontSize:11,color:'#94A3B8',whiteSpace:'nowrap'}}, (EST_ACT[a.estado]||EST_ACT.programado).label+(per?(' · '+per+'p'):''))); });
+  var itemsFac=facPend.slice(0,5).map(function(q){ return React.createElement('div',{key:q.id,onClick:function(){ onGoTracker(q.id); },style:rowItem}, React.createElement('span',null, React.createElement('b',{style:{color:ORANGE}},'#'+(q.numero||'')), '  '+((q.cliente&&q.cliente.nombre)||'—')), React.createElement('span',{style:{fontSize:11,color:'#94A3B8',whiteSpace:'nowrap'}}, fmtM(totDe(q)))); });
+  return React.createElement(Pane, null,
+    React.createElement(PageHeader, { title: '🏠 Inicio', subtitle: 'Lo que necesita tu atención hoy: cobros pendientes, presupuestos por recotizar, actividades del día y facturas por cargar.' }),
+    React.createElement('div',{style:{display:'grid',gridTemplateColumns:'repeat(auto-fit, minmax(300px, 1fr))',gap:16}},
+      bloque('💰','Pendiente de cobro', fmtM(totDeuda), (totDeuda>0?'#B91C1C':'#166534'), itemsDeuda, '#F26B1D', function(){ setView('dashboard'); }),
+      bloque('⏰','Para recotizar', String(recotizar.length), (recotizar.length>0?'#C2410C':'#166534'), itemsReco, '#CA8A04', function(){ setView('tracker'); }),
+      bloque('🗓','Actividades de hoy', String(actsHoy.length), NAVY, itemsActs, '#2563EB', function(){ setView('planificacion'); }),
+      bloque('🧾','Facturas por cargar', String(facPend.length), (facPend.length>0?'#B45309':'#166534'), itemsFac, '#16A34A', function(){ setView('tracker'); })
+    )
+  );
+}
+
 function BackupView({ quotes, catalog, clients, egresos, personas, autoBackups, onRestore }){
   async function restaurarAuto(e){ if(!confirm('¿Restaurar la copia automática del '+fmtFecha(e.fecha)+'?\n\nReemplaza TODOS los datos actuales por los de esa fecha.')) return; try{ var r=await db.get(e.key); var data=r?JSON.parse(r.value):null; if(!data){ alert('No se encontró el archivo de la copia.'); return; } onRestore(data); alert('Datos restaurados de la copia del '+fmtFecha(e.fecha)+'.'); }catch(err){ alert('No se pudo restaurar la copia.'); } }
   async function descargarAuto(e){ try{ var r=await db.get(e.key); var data=r?JSON.parse(r.value):null; if(!data){ alert('No se encontró el archivo de la copia.'); return; } descargar('ELECTRO BC - Backup automatico '+fmtFechaFile(e.fecha)+'.json', data); }catch(err){ alert('No se pudo descargar la copia.'); } }
@@ -7624,7 +7665,7 @@ function ActividadEditor({ act, onChange, onSave, onDelete, onClose, quotesAcept
 
 function App() {
   const [menuOpen, setMenuOpen] = React.useState(false);
-  const [view, setView] = useState(() => { try { var v = localStorage.getItem("ebc-last-view"); return v || "form"; } catch(e){ return "form"; } });
+  const [view, setView] = useState("inicio");
   React.useEffect(function(){ try { localStorage.setItem("ebc-last-view", view); } catch(e){} }, [view]);
   const [quotes, setQuotes] = useState([]);
   const [quote, setQuote] = useState(null);
@@ -7985,6 +8026,7 @@ function App() {
     }
   }, "Cargando\u2026");
   const navMain = [
+    {id:"inicio",  label:"🏠 Inicio"},
     {id:"form",    label:"📋 Nuevo Presupuesto"},
     {id:"clients", label:"👤 Clientes"},
     {id:"catMdo",  label:"👷 Mano de Obra"},
@@ -8136,7 +8178,14 @@ function App() {
       overflow: "hidden",
       backgroundColor: "#EEF0F5"
     }
-  }, view === "form" && /*#__PURE__*/React.createElement(QuoteForm, {
+  }, view === "inicio" && /*#__PURE__*/React.createElement(InicioView, {
+    quotes: quotes,
+    actividades: actividades,
+    facturas: facturas,
+    onGoTracker: function(id){ setTrackerHighlight(id); setView("tracker"); },
+    onGoPlan: function(){ setView("planificacion"); },
+    setView: setView
+  }), view === "form" && /*#__PURE__*/React.createElement(QuoteForm, {
     quote: quote,
     setQuote: setQuote,
     onSave: handleSave,
