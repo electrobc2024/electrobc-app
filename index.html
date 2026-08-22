@@ -797,7 +797,7 @@ const savePersonas = async d => {
   } catch { try { await db.set(PKEY, JSON.stringify(d)); } catch {} }
 };
 // ── Pedidos por cotizar (leads: proyectos a ir a ver / cotizar) ──
-const mkPedido = () => ({ id: uid(), nombre: "", celular: "", direccion: "", descripcion: "", estado: "pendiente", fecha: new Date().toISOString(), autor: ebcUser() });
+const mkPedido = () => ({ id: uid(), nombre: "", celular: "", direccion: "", descripcion: "", notas: "", estado: "pendiente", fecha: new Date().toISOString(), autor: ebcUser() });
 const loadPedidos = async () => {
   try {
     const r = await db.get(PDKEY);
@@ -5389,6 +5389,7 @@ function QuoteForm({
   const [errors, setErrors] = useState([]);
   const [touched, setTouch] = useState({});
   const [clientFromList, setClientFromList] = useState(false);
+  const [showNotasVisita, setShowNotasVisita] = React.useState(true);
   const upd = (f, v) => setQuote(q => ({
     ...q,
     [f]: v
@@ -5604,7 +5605,16 @@ const updCli = (f, v) => {
   return /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement(FloatingError, {
     errors: errors,
     onClose: () => setErrors([])
-  }), /*#__PURE__*/React.createElement(Pane, null, /*#__PURE__*/React.createElement(PageHeader, { title: "📋 Nuevo Presupuesto", subtitle: "Creá y editá presupuestos de mano de obra y materiales para tus clientes." }), /*#__PURE__*/React.createElement(CardBox, {
+  }), /*#__PURE__*/React.createElement(Pane, null, /*#__PURE__*/React.createElement(PageHeader, { title: "📋 Nuevo Presupuesto", subtitle: "Creá y editá presupuestos de mano de obra y materiales para tus clientes." }),
+  (quote.notasVisita && String(quote.notasVisita).trim()) ? /*#__PURE__*/React.createElement("div", {
+    style: { backgroundColor: "#FFFBEB", border: "1px solid #FCD34D", borderRadius: 12, padding: "12px 16px", marginBottom: 16 }
+  }, /*#__PURE__*/React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 } },
+      /*#__PURE__*/React.createElement("div", { style: { fontSize: 12, fontWeight: 800, color: "#92400E" } }, "📝 Notas de la visita (referencia — no se imprime)"),
+      /*#__PURE__*/React.createElement("button", { type: "button", onClick: function(){ setShowNotasVisita(function(s){return !s;}); }, style: { background: "none", border: "none", color: "#B45309", fontSize: 12, fontWeight: 700, cursor: "pointer" } }, showNotasVisita ? "Ocultar" : "Mostrar")
+    ),
+    showNotasVisita ? /*#__PURE__*/React.createElement("div", { style: { fontSize: 13, color: "#475569", whiteSpace: "pre-wrap", lineHeight: 1.5, marginTop: 8 } }, quote.notasVisita) : null
+  ) : null,
+  /*#__PURE__*/React.createElement(CardBox, {
     title: "Encabezado del Presupuesto",
     accent: ORANGE
   }, /*#__PURE__*/React.createElement("div", {
@@ -6443,9 +6453,9 @@ function PedidosView({ pedidos, onSave, onConvertir }){
   function guardar(){
     if(!form.nombre || !form.nombre.trim()){ alert('Poné al menos el nombre / cliente.'); return; }
     if(editId){
-      onSave(list.map(function(p){ return p.id===editId ? Object.assign({}, p, {nombre:form.nombre.trim(), celular:(form.celular||'').trim(), direccion:(form.direccion||'').trim(), descripcion:(form.descripcion||'').trim()}) : p; }));
+      onSave(list.map(function(p){ return p.id===editId ? Object.assign({}, p, {nombre:form.nombre.trim(), celular:(form.celular||'').trim(), direccion:(form.direccion||'').trim(), descripcion:(form.descripcion||'').trim(), notas:(form.notas||'').trim()}) : p; }));
     } else {
-      var nuevo = Object.assign({}, mkPedido(), {nombre:form.nombre.trim(), celular:(form.celular||'').trim(), direccion:(form.direccion||'').trim(), descripcion:(form.descripcion||'').trim()});
+      var nuevo = Object.assign({}, mkPedido(), {nombre:form.nombre.trim(), celular:(form.celular||'').trim(), direccion:(form.direccion||'').trim(), descripcion:(form.descripcion||'').trim(), notas:(form.notas||'').trim()});
       onSave([nuevo].concat(list));
     }
     setForm(mkPedido()); setEditId(null); setShowForm(false);
@@ -6476,7 +6486,8 @@ function PedidosView({ pedidos, onSave, onConvertir }){
         React.createElement('div',null, lbl('Nombre / Cliente', true), React.createElement('input',{style:inp,spellCheck:true,autoCapitalize:'words',value:form.nombre||'',onChange:function(e){setForm(Object.assign({},form,{nombre:e.target.value}));},onBlur:function(e){var v=e.target.value;if(v){var c=capitalize(v);if(c!==v)setForm(Object.assign({},form,{nombre:c}));}},placeholder:'Ej: Juan Pérez'})),
         React.createElement('div',null, lbl('Celular'), React.createElement('input',{style:inp,type:'tel',value:form.celular||'',onChange:function(e){setForm(Object.assign({},form,{celular:e.target.value}));},placeholder:'Ej: 11 2345 6789'})),
         React.createElement('div',{style:{gridColumn:isMobile?'auto':'1/-1'}}, lbl('Dirección'), React.createElement('input',{style:inp,spellCheck:true,autoCapitalize:'sentences',value:form.direccion||'',onChange:function(e){setForm(Object.assign({},form,{direccion:e.target.value}));},placeholder:'Ej: Av. Siempre Viva 742, 3° B'})),
-        React.createElement('div',{style:{gridColumn:isMobile?'auto':'1/-1'}}, lbl('Descripción del trabajo'), React.createElement('textarea',{style:Object.assign({},inp,{minHeight:64,resize:'vertical',lineHeight:1.5}),spellCheck:true,autoCapitalize:'sentences',value:form.descripcion||'',onChange:function(e){setForm(Object.assign({},form,{descripcion:e.target.value}));},onBlur:function(e){var v=e.target.value;if(v){var c=v.charAt(0).toUpperCase()+v.slice(1);if(c!==v)setForm(Object.assign({},form,{descripcion:c}));}},placeholder:'Qué hay que ir a ver / cotizar'}))
+        React.createElement('div',{style:{gridColumn:isMobile?'auto':'1/-1'}}, lbl('Descripción del trabajo'), React.createElement('textarea',{style:Object.assign({},inp,{minHeight:52,resize:'vertical',lineHeight:1.5}),spellCheck:true,autoCapitalize:'sentences',value:form.descripcion||'',onChange:function(e){setForm(Object.assign({},form,{descripcion:e.target.value}));},onBlur:function(e){var v=e.target.value;if(v){var c=v.charAt(0).toUpperCase()+v.slice(1);if(c!==v)setForm(Object.assign({},form,{descripcion:c}));}},placeholder:'Qué hay que ir a ver / cotizar'})),
+        React.createElement('div',{style:{gridColumn:isMobile?'auto':'1/-1'}}, lbl('Notas de la visita (relevamiento)'), React.createElement('textarea',{style:Object.assign({},inp,{minHeight:96,resize:'vertical',lineHeight:1.5}),spellCheck:true,autoCapitalize:'sentences',value:form.notas||'',onChange:function(e){setForm(Object.assign({},form,{notas:e.target.value}));},placeholder:'Lo que se releva en el lugar para después cotizar: materiales, mano de obra, medidas, cantidades, observaciones...'}), React.createElement('div',{style:{fontSize:10,color:'#94A3B8',marginTop:3}},'Estas notas te van a aparecer como referencia al pasar el pedido a presupuesto (no se imprimen).'))
       ),
       React.createElement('div',{style:{display:'flex',gap:8,justifyContent:'flex-end'}},
         React.createElement('button',{type:'button',onClick:function(){setForm(mkPedido());setEditId(null);setShowForm(false);},style:{background:'none',border:'1px solid #E2E8F0',borderRadius:8,padding:'8px 16px',fontSize:13,color:'#64748B',cursor:'pointer'}},'Cancelar'),
@@ -6499,6 +6510,7 @@ function PedidosView({ pedidos, onSave, onConvertir }){
                   ),
                   p.direccion? React.createElement('div',{style:{fontSize:12,color:'#475569',marginTop:5}}, '📍 '+p.direccion):null,
                   p.descripcion? React.createElement('div',{style:{fontSize:12,color:'#64748B',marginTop:4,whiteSpace:'pre-wrap',lineHeight:1.5}}, p.descripcion):null,
+                  p.notas? React.createElement('div',{style:{fontSize:12,color:'#475569',marginTop:8,whiteSpace:'pre-wrap',lineHeight:1.5,background:'#F8FAFC',border:'1px solid #E2E8F0',borderRadius:8,padding:'8px 10px'}}, React.createElement('span',{style:{fontSize:10,fontWeight:700,color:'#94A3B8',textTransform:'uppercase',display:'block',marginBottom:3}},'📝 Notas de la visita'), p.notas):null,
                   React.createElement('div',{style:{fontSize:10,color:'#94A3B8',marginTop:6}}, 'Cargado '+fmtFecha(p.fecha)+(p.autor?(' · '+ebcUserLabel(p.autor)):''))
                 ),
                 p.celular? React.createElement('div',{style:{display:'flex',gap:6,flexShrink:0}},
@@ -7923,6 +7935,7 @@ function App() {
     nq.cliente.telefono = pd.celular || "";
     nq.cliente.calle = pd.direccion || "";
     if(pd.descripcion) nq.referencia = pd.descripcion;
+    nq.notasVisita = [pd.descripcion, pd.notas].filter(Boolean).join('\n\n');
     nq.desdePedido = pd.id;
     setQuote(nq);
     setView("form");
