@@ -7611,6 +7611,8 @@ function App() {
   const [pdfQuote, setPdfQuote] = useState(null);
   const [clientsFilter, setClientsFilter] = useState("");
   const [trackerHighlight, setTrackerHighlight] = useState(null);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQ, setSearchQ] = useState("");
   // Consolidado: selector de rango de fechas
   const _mfrom = (function(){ var n=new Date(); return n.getFullYear()+"-"+String(n.getMonth()+1).padStart(2,'0')+"-01"; })();
   const _mto = new Date().toISOString().slice(0,10);
@@ -8027,10 +8029,15 @@ function App() {
         onClick:function(){ setShowConsol(true); },
         style:{display:"flex",alignItems:"center",gap:5,padding:"0 12px",marginLeft:8,background:ORANGE,border:"none",borderRadius:6,fontSize:12,fontWeight:700,color:"#fff",whiteSpace:"nowrap",cursor:"pointer",alignSelf:"center",height:32}
       },"📚 Descargar Consolidado")]);
-  })()), /*#__PURE__*/React.createElement("div", {
+  })()), /*#__PURE__*/React.createElement("button", {
+    title: "Buscar presupuestos, clientes o materiales",
+    onClick: function(){ setSearchQ(""); setSearchOpen(true); },
+    style: { display:"flex", alignItems:"center", gap:6, alignSelf:"center", flexShrink:0, background:"rgba(255,255,255,0.1)", border:"1px solid rgba(255,255,255,0.18)", color:"#fff", borderRadius:8, padding:"0 12px", height:34, cursor:"pointer", fontSize:13, marginLeft:"auto" }
+  }, "🔍", /*#__PURE__*/React.createElement("span",{className:"ebc-nav-desktop"},"Buscar")), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
-      alignItems: "center"
+      alignItems: "center",
+      marginLeft: 10
     }
   }, /*#__PURE__*/React.createElement("span", {
     style: {
@@ -8177,7 +8184,43 @@ function App() {
   }), facturaView && /*#__PURE__*/React.createElement(FacturaOverlay, {
     fac: facturaView,
     onClose: () => setFacturaView(null)
-  }), showConsol && /*#__PURE__*/React.createElement("div",{
+  }), searchOpen && (function(){
+    var qq = searchQ.trim().toLowerCase();
+    var norm = function(s){ return String(s||'').toLowerCase(); };
+    var presu = qq ? quotes.filter(function(x){ var c=x.cliente||{}; return norm('#'+(x.numero||'')).indexOf(qq)>=0 || ('#'+(x.numero||'')).indexOf(qq)>=0 || norm(x.numero).indexOf(qq)>=0 || norm(c.nombre).indexOf(qq)>=0 || norm(c.administracion).indexOf(qq)>=0 || norm([c.calle,c.numero].filter(Boolean).join(' ')).indexOf(qq)>=0; }).slice(0,8) : [];
+    var cli = qq ? clients.filter(function(c){ return norm(c.nombre).indexOf(qq)>=0 || norm(c.administracion).indexOf(qq)>=0 || norm(c.empresa).indexOf(qq)>=0; }).slice(0,8) : [];
+    var mats = qq ? (catalog.mat||[]).map(function(m){return {m:m,tipo:'mat'};}).concat((catalog.mdo||[]).map(function(m){return {m:m,tipo:'mdo'};})).filter(function(o){ return norm(o.m.nombre||o.m.desc).indexOf(qq)>=0; }).slice(0,8) : [];
+    var go = function(fn){ setSearchOpen(false); setSearchQ(""); fn(); };
+    var itemS = { padding:"9px 12px", borderRadius:8, cursor:"pointer", display:"flex", justifyContent:"space-between", alignItems:"center", gap:10, fontSize:13 };
+    var secTit = { fontSize:10, fontWeight:700, color:"#94A3B8", textTransform:"uppercase", letterSpacing:"0.06em", margin:"10px 4px 4px" };
+    return React.createElement("div",{onMouseDown:function(){ setSearchOpen(false); },style:{position:"fixed",inset:0,zIndex:10001,background:"rgba(0,0,0,0.5)",display:"flex",justifyContent:"center",alignItems:"flex-start",padding:"64px 16px",overflowY:"auto"}},
+      React.createElement("div",{onMouseDown:function(e){e.stopPropagation();},style:{background:"#fff",borderRadius:14,width:640,maxWidth:"100%",boxShadow:"0 20px 60px rgba(0,0,0,0.3)",overflow:"hidden"}},
+        React.createElement("div",{style:{display:"flex",alignItems:"center",gap:8,padding:"12px 14px",borderBottom:"1px solid #E2E8F0"}},
+          React.createElement("span",{style:{fontSize:16}},"🔍"),
+          React.createElement("input",{autoFocus:true,value:searchQ,onChange:function(e){setSearchQ(e.target.value);},placeholder:"Buscar N° de presupuesto, cliente, dirección o material…",style:{flex:1,border:"none",outline:"none",fontSize:15,color:"#1E293B"}}),
+          React.createElement("button",{type:"button",onClick:function(){setSearchOpen(false);},style:{background:"none",border:"none",fontSize:16,color:"#94A3B8",cursor:"pointer"}},"✕")
+        ),
+        React.createElement("div",{style:{maxHeight:"60vh",overflowY:"auto",padding:"6px 8px 12px"}},
+          !qq ? React.createElement("div",{style:{color:"#94A3B8",fontSize:13,textAlign:"center",padding:"24px 0"}},"Escribí para buscar en presupuestos, clientes y materiales.")
+          : (presu.length===0 && cli.length===0 && mats.length===0) ? React.createElement("div",{style:{color:"#94A3B8",fontSize:13,textAlign:"center",padding:"24px 0"}},"Sin resultados para \""+searchQ+"\".")
+          : React.createElement("div",null,
+            presu.length ? React.createElement("div",null, React.createElement("div",{style:secTit},"📄 Presupuestos"), presu.map(function(x){ var c=x.cliente||{}; var st=STATUS_MAP[effectiveStatus(x)]||STATUS_MAP[x.status]||STATUS_MAP.generado; return React.createElement("div",{key:x.id,onMouseEnter:function(e){e.currentTarget.style.background="#F1F5F9";},onMouseLeave:function(e){e.currentTarget.style.background="transparent";},onClick:function(){ go(function(){ setTrackerHighlight(x.id); setView("tracker"); }); },style:itemS},
+              React.createElement("span",null, React.createElement("b",{style:{color:ORANGE}},"#"+(x.numero||"")), "  "+(c.nombre||"—")+([c.calle,c.numero].filter(Boolean).length?("  ·  "+[c.calle,c.numero].filter(Boolean).join(" ")):"")),
+              React.createElement("span",{style:{fontSize:10,fontWeight:700,padding:"2px 8px",borderRadius:20,color:st.fg,background:st.bg,border:"1px solid "+st.br,whiteSpace:"nowrap"}},st.label)
+            ); })) : null,
+            cli.length ? React.createElement("div",null, React.createElement("div",{style:secTit},"👤 Clientes"), cli.map(function(c){ return React.createElement("div",{key:c.id,onMouseEnter:function(e){e.currentTarget.style.background="#F1F5F9";},onMouseLeave:function(e){e.currentTarget.style.background="transparent";},onClick:function(){ go(function(){ setClientsFilter(c.nombre); setView("clients"); }); },style:itemS},
+              React.createElement("span",null, React.createElement("b",{style:{color:NAVY}},c.nombre||"—"), (c.administracion&&c.administracion!==c.nombre)?("  ·  🏢 "+c.administracion):""),
+              React.createElement("span",{style:{fontSize:11,color:"#94A3B8"}}, c.telefono||c.telefonoAdm||"")
+            ); })) : null,
+            mats.length ? React.createElement("div",null, React.createElement("div",{style:secTit},"📦 Materiales / Mano de obra"), mats.map(function(o,i){ return React.createElement("div",{key:o.tipo+i,onMouseEnter:function(e){e.currentTarget.style.background="#F1F5F9";},onMouseLeave:function(e){e.currentTarget.style.background="transparent";},onClick:function(){ go(function(){ setView(o.tipo==="mat"?"catMat":"catMdo"); }); },style:itemS},
+              React.createElement("span",null, React.createElement("span",{style:{fontSize:10,fontWeight:700,color:"#64748B",marginRight:6}}, o.tipo==="mat"?"MAT":"MO"), (o.m.nombre||o.m.desc||"—")),
+              React.createElement("span",{style:{fontSize:12,fontWeight:700,color:NAVY}}, o.m.precioBase?("$ "+parseFloat(o.m.precioBase).toLocaleString("es-AR")):"")
+            ); })) : null
+          )
+        )
+      )
+    );
+  })(), showConsol && /*#__PURE__*/React.createElement("div",{
     style:{position:"fixed",inset:0,zIndex:10000,backgroundColor:"rgba(0,0,0,0.6)",display:"flex",alignItems:"center",justifyContent:"center",padding:20},
     onClick:function(){setShowConsol(false);}
   },
