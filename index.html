@@ -6504,12 +6504,11 @@ function InicioView({ quotes, actividades, facturas, onGoTracker, onGoPlan, setV
   var itemsActs=actsHoy.slice(0,6).map(function(a){ var per=(a.equipo||[]).length; return React.createElement('div',{key:a.id,onClick:function(){ onGoPlan(); },style:rowItem}, React.createElement('span',{style:{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}, tituloAct(a)), React.createElement('span',{style:{fontSize:11,color:'#94A3B8',whiteSpace:'nowrap'}}, (EST_ACT[a.estado]||EST_ACT.programado).label+(per?(' · '+per+'p'):''))); });
   var itemsFac=facPend.slice(0,5).map(function(q){ return React.createElement('div',{key:q.id,onClick:function(){ onGoTracker(q.id); },style:rowItem}, React.createElement('span',null, React.createElement('b',{style:{color:ORANGE}},'#'+(q.numero||'')), '  '+((q.cliente&&q.cliente.nombre)||'—')), React.createElement('span',{style:{fontSize:11,color:'#94A3B8',whiteSpace:'nowrap'}}, fmtM(totDe(q)))); });
   return React.createElement(Pane, null,
-    React.createElement(PageHeader, { title: '🏠 Inicio', subtitle: 'Lo que necesita tu atención hoy: cobros pendientes, presupuestos por recotizar, actividades del día y facturas por cargar.' }),
+    React.createElement(PageHeader, { title: '🏠 Inicio', subtitle: 'Lo que necesita tu atención hoy: cobros pendientes, presupuestos por recotizar y actividades del día.' }),
     React.createElement('div',{style:{display:'grid',gridTemplateColumns:'repeat(auto-fit, minmax(300px, 1fr))',gap:16}},
       bloque('💰','Pendiente de cobro', fmtM(totDeuda), (totDeuda>0?'#B91C1C':'#166534'), itemsDeuda, '#F26B1D', function(){ setView('dashboard'); }),
       bloque('⏰','Para recotizar', String(recotizar.length), (recotizar.length>0?'#C2410C':'#166534'), itemsReco, '#CA8A04', function(){ setView('tracker'); }),
-      bloque('🗓','Actividades de hoy', String(actsHoy.length), NAVY, itemsActs, '#2563EB', function(){ setView('planificacion'); }),
-      bloque('🧾','Facturas por cargar', String(facPend.length), (facPend.length>0?'#B45309':'#166534'), itemsFac, '#16A34A', function(){ setView('tracker'); })
+      bloque('🗓','Actividades de hoy', String(actsHoy.length), NAVY, itemsActs, '#2563EB', function(){ setView('planificacion'); })
     )
   );
 }
