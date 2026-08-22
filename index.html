@@ -4358,7 +4358,9 @@ function Tracker({
   onOpenFactura,
   onGoToClient,
   highlightId,
-  onClearHighlight
+  onClearHighlight,
+  incomingFilter,
+  onFilterUsed
 }) {
   const isMobile = useIsMobile();
   const [clientFilter, setClientFilter] = useState("");
@@ -4381,6 +4383,7 @@ function Tracker({
     }
   }, [highlightId]);
   const [filter, setFilter] = useState("todos");
+  useEffect(function(){ if(incomingFilter){ setFilter(incomingFilter); setClientFilter(""); setSearchTr(""); if(onFilterUsed) onFilterUsed(); } }, [incomingFilter]);
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [sortTr, setSortTr] = useState("num_desc");
@@ -4402,7 +4405,8 @@ function Tracker({
   });
   // unique client names for filter
   const clientNames = [...new Set(quotes.map(q => q.cliente.nombre).filter(Boolean))].sort();
-  const filtered = sorted.filter(q => filter === "todos" || q.status === filter || (filter === "recotizar" && isVencido(q)) || (filter === "recotizado" && q.status === "recotizado")).filter(q => !clientFilter || q.cliente.nombre === clientFilter).filter(q => !searchTr.trim() || (q.cliente.nombre || "").toLowerCase().includes(searchTr.toLowerCase()) || (q.cliente.administracion || "").toLowerCase().includes(searchTr.toLowerCase()) || (q.numero || "").includes(searchTr) || (q.referencia || "").toLowerCase().includes(searchTr.toLowerCase()) || [q.cliente.calle,q.cliente.numero,q.cliente.depto,q.cliente.entreCalles].filter(Boolean).join(" ").toLowerCase().includes(searchTr.toLowerCase())).filter(q => !searchDir.trim() || [q.cliente.calle, q.cliente.numero, q.cliente.depto, q.cliente.entreCalles].filter(Boolean).join(" ").toLowerCase().includes(searchDir.toLowerCase())).filter(function(q){if(!dateFrom&&!dateTo)return true;var fd=(q.fecha||"").slice(0,10);return(!dateFrom||fd>=dateFrom)&&(!dateTo||fd<=dateTo);}).filter(function(q){if(!tipoFilter.length)return true;var _tt=Array.isArray(q.tipoTrabajo)?q.tipoTrabajo:[q.tipoTrabajo||"electricidad"];return _tt.some(function(t){return tipoFilter.indexOf(t)>=0;});});
+  const _cobQ = q => (q.pagos||[]).reduce(function(a,p){var m=parseFloat(p.monto||0); if(p.moneda==='USD')m=m*parseFloat(p.tcambio||0); return a+m;},0);
+  const filtered = sorted.filter(q => filter === "todos" || q.status === filter || (filter === "recotizar" && isVencido(q)) || (filter === "recotizado" && q.status === "recotizado") || (filter === "cobro" && q.status === "aceptado" && (calcSub(q.mdo)+calcSub(q.mat) - _cobQ(q)) > 1)).filter(q => !clientFilter || q.cliente.nombre === clientFilter).filter(q => !searchTr.trim() || (q.cliente.nombre || "").toLowerCase().includes(searchTr.toLowerCase()) || (q.cliente.administracion || "").toLowerCase().includes(searchTr.toLowerCase()) || (q.numero || "").includes(searchTr) || (q.referencia || "").toLowerCase().includes(searchTr.toLowerCase()) || [q.cliente.calle,q.cliente.numero,q.cliente.depto,q.cliente.entreCalles].filter(Boolean).join(" ").toLowerCase().includes(searchTr.toLowerCase())).filter(q => !searchDir.trim() || [q.cliente.calle, q.cliente.numero, q.cliente.depto, q.cliente.entreCalles].filter(Boolean).join(" ").toLowerCase().includes(searchDir.toLowerCase())).filter(function(q){if(!dateFrom&&!dateTo)return true;var fd=(q.fecha||"").slice(0,10);return(!dateFrom||fd>=dateFrom)&&(!dateTo||fd<=dateTo);}).filter(function(q){if(!tipoFilter.length)return true;var _tt=Array.isArray(q.tipoTrabajo)?q.tipoTrabajo:[q.tipoTrabajo||"electricidad"];return _tt.some(function(t){return tipoFilter.indexOf(t)>=0;});});
   // per-client stats when filter active
   const clientStats = clientFilter ? {
     total: filtered.length,
@@ -4418,6 +4422,7 @@ function Tracker({
     espera: quotes.filter(q => q.status === "espera" && !isVencido(q)).length,
     recotizar: quotes.filter(q => isVencido(q)).length,
     aceptado: quotes.filter(q => q.status === "aceptado").length,
+    cobro: quotes.filter(q => q.status === "aceptado" && (calcSub(q.mdo)+calcSub(q.mat) - _cobQ(q)) > 1).length,
     rechazado: quotes.filter(q => q.status === "rechazado").length,
     recotizado: quotes.filter(q => q.status === "recotizado").length
   };
@@ -4463,6 +4468,10 @@ function Tracker({
     label: "Aceptado",
     count: counts.aceptado
   }, {
+    k: "cobro",
+    label: "Pendiente de cobro",
+    count: counts.cobro
+  }, {
     k: "rechazado",
     label: "Rechazado",
     count: counts.rechazado
@@ -4500,7 +4509,7 @@ function Tracker({
   /*#__PURE__*/React.createElement("div", {
     style: {display:"flex",flexWrap:"wrap",gap:10,marginBottom:16}
   }, filterOptions.map(function(o){
-    var c = STATUS_MAP[o.k];
+    var c = o.k === "cobro" ? {fg:"#B91C1C",bg:"#FEF2F2",br:"#FCA5A5"} : STATUS_MAP[o.k];
     var fg = c ? c.fg : NAVY;
     var bg = c ? c.bg : "#fff";
     var br = c ? (c.br || "#E2E8F0") : "#E2E8F0";
@@ -6473,17 +6482,28 @@ function PersonasView({ personas, onSave, egresos }){
   );
 }
 
-// ── Inicio: tablero de alertas ──
-function InicioView({ quotes, actividades, facturas, onGoTracker, onGoPlan, setView }){
-  var hoy=(function(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})();
+// ── Inicio: tablero de alertas + recordatorios ──
+var ALERT_KEYS = { precios:'ebc-alert-precios-v1', factura:'ebc-alert-factura-v1', pagos:'ebc-alert-pagos-v1' };
+function _ymd(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function _ultimoSabado(d){ var x=new Date(d.getFullYear(),d.getMonth(),d.getDate()); x.setDate(x.getDate()-((x.getDay()+1)%7)); return _ymd(x); }
+function _diasEntre(a,b){ return Math.round((new Date(b)-new Date(a))/86400000); }
+function InicioView({ quotes, actividades, facturas, onGoTracker, onGoTrackerFilter, onGoPlan, setView }){
+  var hoyD=new Date(); var hoy=_ymd(hoyD);
+  var mesAct=hoy.slice(0,7);
   var cobDe=function(q){ return (q.pagos||[]).reduce(function(s,p){ var m=parseFloat(p.monto||0); if(p.moneda==='USD') m=m*(parseFloat(p.tcambio)||0); return s+m; },0); };
   var totDe=function(q){ return calcSub(q.mdo)+calcSub(q.mat); };
   var fmtM=function(n){ return '$ '+Math.round(n||0).toLocaleString('es-AR'); };
+  var byNumDesc=function(a,b){ return (parseInt(b.numero,10)||0)-(parseInt(a.numero,10)||0); };
+  // ── Datos de las tarjetas ──
   var deudas=(quotes||[]).filter(function(q){ return q.status==='aceptado' && (totDe(q)-cobDe(q))>1; }).map(function(q){ return {q:q, saldo:totDe(q)-cobDe(q)}; }).sort(function(a,b){ return b.saldo-a.saldo; });
   var totDeuda=deudas.reduce(function(s,d){ return s+d.saldo; },0);
-  var recotizar=(quotes||[]).filter(function(q){ return effectiveStatus(q)==='recotizar'; }).sort(function(a,b){ return String(b.numero||'').localeCompare(String(a.numero||'')); });
+  var recotizar=(quotes||[]).filter(function(q){ return effectiveStatus(q)==='recotizar'; }).sort(byNumDesc);
+  var enviados=(quotes||[]).filter(function(q){ return q.status==='espera' && !isVencido(q); }).sort(byNumDesc);
+  var actsDeQuote=function(qid){ return (actividades||[]).some(function(a){ return a.quoteId===qid; }); };
+  var sinArrancar=(quotes||[]).filter(function(q){ return q.status==='aceptado' && !actsDeQuote(q.id); }).sort(byNumDesc);
+  var borradores=(quotes||[]).filter(function(q){ return q.status==='generado'; }).sort(byNumDesc);
   var actsHoy=(actividades||[]).filter(function(a){ return diasCubiertosAct(a).indexOf(hoy)>=0; });
-  var facPend=(quotes||[]).filter(function(q){ return q.status==='aceptado' && !(facturas&&facturas[q.id]); }).sort(function(a,b){ return String(b.numero||'').localeCompare(String(a.numero||'')); });
+  var atrasadas=(actividades||[]).filter(function(a){ if(a.estado==='hecho') return false; var dc=diasCubiertosAct(a); var last=dc.length?dc[dc.length-1]:null; return last && last<hoy; }).sort(function(a,b){ var da=diasCubiertosAct(a), db2=diasCubiertosAct(b); return (da[da.length-1]||'').localeCompare(db2[db2.length-1]||''); });
   var card={backgroundColor:'#fff',borderRadius:12,border:'1px solid #E2E8F0',padding:'16px 18px',display:'flex',flexDirection:'column'};
   var rowItem={display:'flex',justifyContent:'space-between',alignItems:'baseline',gap:8,fontSize:12,padding:'5px 0',borderBottom:'1px solid #F1F5F9',cursor:'pointer'};
   function tituloAct(a){ if(a.titulo&&a.titulo.trim()) return a.titulo.trim(); var q=a.quoteId?(quotes||[]).find(function(x){return x.id===a.quoteId;}):null; return q?((q.cliente&&q.cliente.nombre)||'Actividad'):'(sin título)'; }
@@ -6499,16 +6519,60 @@ function InicioView({ quotes, actividades, facturas, onGoTracker, onGoPlan, setV
       verTodos && items.length>0 ? React.createElement('button',{type:'button',onClick:verTodos,style:{marginTop:10,background:'none',border:'none',color:accent,fontWeight:700,fontSize:12,cursor:'pointer',textAlign:'left',padding:0}},'Ver todos →') : null
     );
   }
-  var itemsDeuda=deudas.slice(0,5).map(function(d){ return React.createElement('div',{key:d.q.id,onClick:function(){ onGoTracker(d.q.id); },style:rowItem}, React.createElement('span',null, React.createElement('b',{style:{color:ORANGE}},'#'+(d.q.numero||'')), '  '+((d.q.cliente&&d.q.cliente.nombre)||'—')), React.createElement('span',{style:{fontWeight:700,color:'#B91C1C',whiteSpace:'nowrap'}}, fmtM(d.saldo))); });
-  var itemsReco=recotizar.slice(0,5).map(function(q){ return React.createElement('div',{key:q.id,onClick:function(){ onGoTracker(q.id); },style:rowItem}, React.createElement('span',null, React.createElement('b',{style:{color:ORANGE}},'#'+(q.numero||'')), '  '+((q.cliente&&q.cliente.nombre)||'—')), React.createElement('span',{style:{fontSize:11,color:'#94A3B8',whiteSpace:'nowrap'}}, fmtFecha(q.fecha))); });
+  function filaPres(q, derecha, derColor){ return React.createElement('div',{key:q.id,onClick:function(){ onGoTracker(q.id); },style:rowItem}, React.createElement('span',{style:{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}, React.createElement('b',{style:{color:ORANGE}},'#'+(q.numero||'')), '  '+((q.cliente&&q.cliente.nombre)||'—')), React.createElement('span',{style:{fontSize:11,fontWeight:derColor?700:400,color:derColor||'#94A3B8',whiteSpace:'nowrap'}}, derecha)); }
+  var itemsDeuda=deudas.slice(0,5).map(function(d){ return filaPres(d.q, fmtM(d.saldo), '#B91C1C'); });
+  var itemsReco=recotizar.slice(0,5).map(function(q){ return filaPres(q, fmtFecha(q.fecha)); });
+  var itemsEnv=enviados.slice(0,5).map(function(q){ return filaPres(q, fmtFecha(q.fecha)); });
+  var itemsArr=sinArrancar.slice(0,5).map(function(q){ return filaPres(q, fmtM(totDe(q))); });
+  var itemsBor=borradores.slice(0,5).map(function(q){ return filaPres(q, fmtFecha(q.fecha)); });
   var itemsActs=actsHoy.slice(0,6).map(function(a){ var per=(a.equipo||[]).length; return React.createElement('div',{key:a.id,onClick:function(){ onGoPlan(); },style:rowItem}, React.createElement('span',{style:{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}, tituloAct(a)), React.createElement('span',{style:{fontSize:11,color:'#94A3B8',whiteSpace:'nowrap'}}, (EST_ACT[a.estado]||EST_ACT.programado).label+(per?(' · '+per+'p'):''))); });
-  var itemsFac=facPend.slice(0,5).map(function(q){ return React.createElement('div',{key:q.id,onClick:function(){ onGoTracker(q.id); },style:rowItem}, React.createElement('span',null, React.createElement('b',{style:{color:ORANGE}},'#'+(q.numero||'')), '  '+((q.cliente&&q.cliente.nombre)||'—')), React.createElement('span',{style:{fontSize:11,color:'#94A3B8',whiteSpace:'nowrap'}}, fmtM(totDe(q)))); });
+  var itemsAtr=atrasadas.slice(0,6).map(function(a){ var dc=diasCubiertosAct(a); var last=dc[dc.length-1]; return React.createElement('div',{key:a.id,onClick:function(){ onGoPlan(); },style:rowItem}, React.createElement('span',{style:{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}, tituloAct(a)), React.createElement('span',{style:{fontSize:11,fontWeight:700,color:'#B91C1C',whiteSpace:'nowrap'}}, 'venció '+fmtFecha(last))); });
+
+  // ── Recordatorios recurrentes (banners) ──
+  var alertsRef = React.useState(null);
+  var alerts = alertsRef[0], setAlerts = alertsRef[1];
+  React.useEffect(function(){ var vivo=true; (async function(){
+    var a={};
+    for(var kk in ALERT_KEYS){ try{ var r=await db.get(ALERT_KEYS[kk]); a[kk]=r?JSON.parse(r.value):null; }catch(e){ a[kk]=null; } }
+    // Primera vez con precios: arranca el reloj de 3 meses hoy (no molesta de entrada)
+    if(!a.precios){ a.precios={done:hoy}; db.set(ALERT_KEYS.precios, JSON.stringify(a.precios)); }
+    if(vivo) setAlerts(a);
+  })(); return function(){ vivo=false; }; }, []);
+  function ackAlert(kind, val){ var na=Object.assign({}, alerts); na[kind]={done:val}; setAlerts(na); db.set(ALERT_KEYS[kind], JSON.stringify({done:val})); }
+  function banner(bg, br, col, icon, titulo, texto, irLabel, onIr, onAck){
+    return React.createElement('div',{style:{background:bg,border:'1px solid '+br,borderRadius:12,padding:'12px 16px',marginBottom:10,display:'flex',alignItems:'center',gap:14,flexWrap:'wrap'}},
+      React.createElement('div',{style:{fontSize:22,lineHeight:1}}, icon),
+      React.createElement('div',{style:{flex:'1 1 220px',minWidth:0}},
+        React.createElement('div',{style:{fontSize:13,fontWeight:800,color:col}}, titulo),
+        React.createElement('div',{style:{fontSize:12,color:'#475569',marginTop:1}}, texto)
+      ),
+      React.createElement('div',{style:{display:'flex',gap:8,flexShrink:0}},
+        onIr? React.createElement('button',{type:'button',onClick:onIr,style:{background:'#fff',border:'1px solid '+br,borderRadius:8,padding:'7px 12px',fontSize:12,fontWeight:600,color:col,cursor:'pointer',whiteSpace:'nowrap'}}, irLabel):null,
+        React.createElement('button',{type:'button',onClick:onAck,style:{background:col,border:'none',borderRadius:8,padding:'7px 12px',fontSize:12,fontWeight:700,color:'#fff',cursor:'pointer',whiteSpace:'nowrap'}}, '✓ Ya lo hice')
+      )
+    );
+  }
+  var banners=[];
+  if(alerts){
+    var pr=alerts.precios&&alerts.precios.done;
+    if(pr && _diasEntre(pr, hoy)>=90){ var meses=Math.floor(_diasEntre(pr,hoy)/30); banners.push(banner('#FFF7ED','#FDBA74','#9A3412','🔔','Revisar precios por inflación','Pasaron '+meses+' meses desde la última actualización ('+fmtFecha(pr)+'). Conviene revisar valores de mano de obra y materiales.','Ir a Mano de obra', function(){ setView('catMdo'); }, function(){ ackAlert('precios', hoy); })); }
+    var fa=alerts.factura&&alerts.factura.done;
+    if(fa!==mesAct){ banners.push(banner('#EFF6FF','#93C5FD','#1D4ED8','🧾','Facturación del mes','Acordate de facturar todo lo que quede sin facturar este mes.','Ir a Seguimiento', function(){ setView('tracker'); }, function(){ ackAlert('factura', mesAct); })); }
+    var pg=alerts.pagos&&alerts.pagos.done; var sab=_ultimoSabado(hoyD);
+    if(!pg || pg<sab){ banners.push(banner('#F5F3FF','#C4B5FD','#6D28D9','💵','Pago del personal','Cargá lo que se le pagó a cada persona esta semana (como egreso de Sueldos).','Cargar egreso', function(){ setView('movimientos'); }, function(){ ackAlert('pagos', hoy); })); }
+  }
+
   return React.createElement(Pane, null,
-    React.createElement(PageHeader, { title: '🏠 Inicio', subtitle: 'Lo que necesita tu atención hoy: cobros pendientes, presupuestos por recotizar y actividades del día.' }),
+    React.createElement(PageHeader, { title: '🏠 Inicio', subtitle: 'Lo que necesita tu atención hoy: cobros, recotizaciones, envíos sin respuesta, trabajos por arrancar y la agenda del día.' }),
+    banners.length? React.createElement('div',{style:{marginBottom:16}}, banners):null,
     React.createElement('div',{style:{display:'grid',gridTemplateColumns:'repeat(auto-fit, minmax(300px, 1fr))',gap:16}},
-      bloque('💰','Pendiente de cobro', fmtM(totDeuda), (totDeuda>0?'#B91C1C':'#166534'), itemsDeuda, '#F26B1D', function(){ setView('dashboard'); }),
-      bloque('⏰','Para recotizar', String(recotizar.length), (recotizar.length>0?'#C2410C':'#166534'), itemsReco, '#CA8A04', function(){ setView('tracker'); }),
-      bloque('🗓','Actividades de hoy', String(actsHoy.length), NAVY, itemsActs, '#2563EB', function(){ setView('planificacion'); })
+      bloque('💰','Pendiente de cobro', fmtM(totDeuda), (totDeuda>0?'#B91C1C':'#166534'), itemsDeuda, '#F26B1D', function(){ onGoTrackerFilter('cobro'); }),
+      bloque('⏰','Para recotizar', String(recotizar.length), (recotizar.length>0?'#C2410C':'#166534'), itemsReco, '#CA8A04', function(){ onGoTrackerFilter('recotizar'); }),
+      bloque('📤','Enviados sin respuesta', String(enviados.length), (enviados.length>0?'#B45309':'#166534'), itemsEnv, '#B45309', function(){ onGoTrackerFilter('espera'); }),
+      bloque('🚧','Aceptados sin arrancar', String(sinArrancar.length), (sinArrancar.length>0?'#065F46':'#166534'), itemsArr, '#059669', function(){ onGoTrackerFilter('aceptado'); }),
+      bloque('⚠️','Actividades atrasadas', String(atrasadas.length), (atrasadas.length>0?'#B91C1C':'#166534'), itemsAtr, '#DC2626', function(){ onGoPlan(); }),
+      bloque('📝','Sin enviar (borradores)', String(borradores.length), (borradores.length>0?'#6D28D9':'#166534'), itemsBor, '#7C3AED', function(){ onGoTrackerFilter('generado'); }),
+      bloque('🗓','Actividades de hoy', String(actsHoy.length), NAVY, itemsActs, '#2563EB', function(){ onGoPlan(); })
     )
   );
 }
@@ -7751,6 +7815,7 @@ function App() {
   const [pdfQuote, setPdfQuote] = useState(null);
   const [clientsFilter, setClientsFilter] = useState("");
   const [trackerHighlight, setTrackerHighlight] = useState(null);
+  const [trackerFilter, setTrackerFilter] = useState(null);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQ, setSearchQ] = useState("");
   // Consolidado: selector de rango de fechas
@@ -8254,6 +8319,7 @@ function App() {
     actividades: actividades,
     facturas: facturas,
     onGoTracker: function(id){ setTrackerHighlight(id); setView("tracker"); },
+    onGoTrackerFilter: function(key){ setTrackerHighlight(null); setTrackerFilter(key); setView("tracker"); },
     onGoPlan: function(){ setView("planificacion"); },
     setView: setView
   }), view === "form" && /*#__PURE__*/React.createElement(QuoteForm, {
@@ -8319,7 +8385,9 @@ function App() {
       setView("clients");
     },
     highlightId: trackerHighlight,
-    onClearHighlight: () => setTrackerHighlight(null)
+    onClearHighlight: () => setTrackerHighlight(null),
+    incomingFilter: trackerFilter,
+    onFilterUsed: () => setTrackerFilter(null)
   })), view === "personal" && /*#__PURE__*/React.createElement(PersonasView, {
     personas: personas,
     onSave: handlePersonas,
