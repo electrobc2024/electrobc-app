@@ -6485,6 +6485,7 @@ function PedidosView({ pedidos, onSave, onConvertir }){
     if(faltan.length){ alert('Completá los campos obligatorios (marcados con *): '+faltan.join(', ')+'.'); return; }
     if(form.tipo!=='terceros' && form.fechaVisita && form.fechaVisita > hoy){ alert('La fecha de visita no puede ser futura.'); return; }
     var patch = {tipo:form.tipo||'visita', nombre:form.nombre.trim(), celular:(form.celular||'').trim(), direccion:(form.direccion||'').trim(), descripcion:(form.descripcion||'').trim(), notas:(form.notas||'').trim(), fechaVisita:form.tipo==='terceros'?'':(form.fechaVisita||''), montoTerceros:form.tipo==='terceros'?(form.montoTerceros||''):'', gananciaPct:form.tipo==='terceros'?(form.gananciaPct||''):''};
+    if(editId && form.estado) patch.estado = form.estado;
     if(editId){
       onSave(list.map(function(p){ return p.id===editId ? Object.assign({}, p, patch) : p; }));
     } else {
@@ -6573,7 +6574,7 @@ function PedidosView({ pedidos, onSave, onConvertir }){
                 ):null
               ),
               React.createElement('div',{style:{display:'flex',gap:6,flexWrap:'wrap',marginTop:12,paddingTop:12,borderTop:'1px solid #F1F5F9'}},
-                e==='por_visitar' ? React.createElement('button',{type:'button',onClick:function(){ setEstado(p,'por_cotizar'); editar(Object.assign({}, p, {estado:'por_cotizar'})); },style:{background:'#1D4ED8',color:'#fff',border:'none',borderRadius:6,padding:'6px 12px',fontSize:12,fontWeight:700,cursor:'pointer'}},'✓ Ya visité → cargar relevamiento') : null,
+                e==='por_visitar' ? React.createElement('button',{type:'button',onClick:function(){ editar(Object.assign({}, p, {estado:'por_cotizar'})); },style:{background:'#1D4ED8',color:'#fff',border:'none',borderRadius:6,padding:'6px 12px',fontSize:12,fontWeight:700,cursor:'pointer'}},'✓ Ya visité → cargar relevamiento') : null,
                 e==='por_cotizar' ? React.createElement('button',{type:'button',onClick:function(){ onConvertir(p); },style:{background:NAVY,color:'#fff',border:'none',borderRadius:6,padding:'6px 12px',fontSize:12,fontWeight:700,cursor:'pointer'}},'➜ Convertir en presupuesto') : null,
                 e==='por_cotizar' ? React.createElement('button',{type:'button',onClick:function(){setEstado(p,'cotizado');},style:{background:'none',border:'1px solid #6EE7B7',borderRadius:6,padding:'6px 11px',fontSize:12,color:'#065F46',cursor:'pointer',fontWeight:600}},'✓ Marcar cotizado') : null,
                 React.createElement('button',{type:'button',onClick:function(){editar(p);},style:{background:'none',border:'1px solid #E2E8F0',borderRadius:6,padding:'6px 11px',fontSize:12,color:'#475569',cursor:'pointer'}},'✏️ Editar'),
