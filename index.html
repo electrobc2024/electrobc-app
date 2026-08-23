@@ -4425,7 +4425,7 @@ function Tracker({
   // unique client names for filter
   const clientNames = [...new Set(quotes.map(q => q.cliente.nombre).filter(Boolean))].sort();
   const _cobQ = q => (q.pagos||[]).reduce(function(a,p){var m=parseFloat(p.monto||0); if(p.moneda==='USD')m=m*parseFloat(p.tcambio||0); return a+m;},0);
-  const filtered = sorted.filter(q => filter === "todos" || q.status === filter || (filter === "recotizar" && isVencido(q)) || (filter === "recotizado" && q.status === "recotizado") || (filter === "cobro" && q.status === "aceptado" && (calcSub(q.mdo)+calcSub(q.mat) - _cobQ(q)) > 1)).filter(q => !clientFilter || q.cliente.nombre === clientFilter).filter(q => !searchTr.trim() || (q.cliente.nombre || "").toLowerCase().includes(searchTr.toLowerCase()) || (q.cliente.administracion || "").toLowerCase().includes(searchTr.toLowerCase()) || (q.numero || "").includes(searchTr) || (q.referencia || "").toLowerCase().includes(searchTr.toLowerCase()) || [q.cliente.calle,q.cliente.numero,q.cliente.depto,q.cliente.entreCalles].filter(Boolean).join(" ").toLowerCase().includes(searchTr.toLowerCase())).filter(q => !searchDir.trim() || [q.cliente.calle, q.cliente.numero, q.cliente.depto, q.cliente.entreCalles].filter(Boolean).join(" ").toLowerCase().includes(searchDir.toLowerCase())).filter(function(q){if(!dateFrom&&!dateTo)return true;var fd=(q.fecha||"").slice(0,10);return(!dateFrom||fd>=dateFrom)&&(!dateTo||fd<=dateTo);}).filter(function(q){if(!tipoFilter.length)return true;var _tt=Array.isArray(q.tipoTrabajo)?q.tipoTrabajo:[q.tipoTrabajo||"electricidad"];return _tt.some(function(t){return tipoFilter.indexOf(t)>=0;});});
+  const filtered = sorted.filter(q => filter === "todos" || q.status === filter || (filter === "recotizar" && isVencido(q)) || (filter === "recotizado" && q.status === "recotizado") || (filter === "cobro" && q.status === "aceptado" && (calcSub(q.mdo)+calcSub(q.mat) - _cobQ(q)) > 1) || (filter === "sinplanificar" && q.status === "aceptado" && !(actividades||[]).some(function(a){return a.quoteId===q.id;}))).filter(q => !clientFilter || q.cliente.nombre === clientFilter).filter(q => !searchTr.trim() || (q.cliente.nombre || "").toLowerCase().includes(searchTr.toLowerCase()) || (q.cliente.administracion || "").toLowerCase().includes(searchTr.toLowerCase()) || (q.numero || "").includes(searchTr) || (q.referencia || "").toLowerCase().includes(searchTr.toLowerCase()) || [q.cliente.calle,q.cliente.numero,q.cliente.depto,q.cliente.entreCalles].filter(Boolean).join(" ").toLowerCase().includes(searchTr.toLowerCase())).filter(q => !searchDir.trim() || [q.cliente.calle, q.cliente.numero, q.cliente.depto, q.cliente.entreCalles].filter(Boolean).join(" ").toLowerCase().includes(searchDir.toLowerCase())).filter(function(q){if(!dateFrom&&!dateTo)return true;var fd=(q.fecha||"").slice(0,10);return(!dateFrom||fd>=dateFrom)&&(!dateTo||fd<=dateTo);}).filter(function(q){if(!tipoFilter.length)return true;var _tt=Array.isArray(q.tipoTrabajo)?q.tipoTrabajo:[q.tipoTrabajo||"electricidad"];return _tt.some(function(t){return tipoFilter.indexOf(t)>=0;});});
   // per-client stats when filter active
   const clientStats = clientFilter ? {
     total: filtered.length,
@@ -4442,6 +4442,7 @@ function Tracker({
     recotizar: quotes.filter(q => isVencido(q)).length,
     aceptado: quotes.filter(q => q.status === "aceptado").length,
     cobro: quotes.filter(q => q.status === "aceptado" && (calcSub(q.mdo)+calcSub(q.mat) - _cobQ(q)) > 1).length,
+    sinplanificar: quotes.filter(q => q.status === "aceptado" && !(actividades||[]).some(function(a){return a.quoteId===q.id;})).length,
     rechazado: quotes.filter(q => q.status === "rechazado").length,
     recotizado: quotes.filter(q => q.status === "recotizado").length
   };
@@ -4487,6 +4488,10 @@ function Tracker({
     label: "Aceptado",
     count: counts.aceptado
   }, {
+    k: "sinplanificar",
+    label: "Aceptado sin planificar",
+    count: counts.sinplanificar
+  }, {
     k: "cobro",
     label: "Pendiente de cobro",
     count: counts.cobro
@@ -4528,7 +4533,7 @@ function Tracker({
   /*#__PURE__*/React.createElement("div", {
     style: {display:"flex",flexWrap:"wrap",gap:10,marginBottom:16}
   }, filterOptions.map(function(o){
-    var c = o.k === "cobro" ? {fg:"#B91C1C",bg:"#FEF2F2",br:"#FCA5A5"} : STATUS_MAP[o.k];
+    var c = o.k === "cobro" ? {fg:"#B91C1C",bg:"#FEF2F2",br:"#FCA5A5"} : o.k === "sinplanificar" ? {fg:"#065F46",bg:"#ECFDF5",br:"#6EE7B7"} : STATUS_MAP[o.k];
     var fg = c ? c.fg : NAVY;
     var bg = c ? c.bg : "#fff";
     var br = c ? (c.br || "#E2E8F0") : "#E2E8F0";
@@ -6502,7 +6507,6 @@ function PedidosView({ pedidos, onSave, onConvertir }){
     var _muestraNotas = (form.tipo!=='terceros') && estadoPedido(form)!=='por_visitar';
     if(_muestraNotas && (!form.notas || !form.notas.trim())) faltan.push('Notas de la visita (relevamiento)');
     if(faltan.length){ alert('Completá los campos obligatorios (marcados con *): '+faltan.join(', ')+'.'); return; }
-    if(form.tipo!=='terceros' && form.fechaVisita && form.fechaVisita > hoy){ alert('La fecha de visita no puede ser futura.'); return; }
     var patch = {tipo:form.tipo||'visita', nombre:form.nombre.trim(), celular:(form.celular||'').trim(), direccion:(form.direccion||'').trim(), descripcion:(form.descripcion||'').trim(), tipoTrabajo:(Array.isArray(form.tipoTrabajo)?form.tipoTrabajo:[]), notas:(form.tipo==='terceros'?'':(form.notas||'').trim()), fechaVisita:form.tipo==='terceros'?'':(form.fechaVisita||''), montoTerceros:form.tipo==='terceros'?(form.montoTerceros||''):'', gananciaPct:form.tipo==='terceros'?(form.gananciaPct||''):''};
     if(editId && form.estado) patch.estado = form.estado;
     var usaPdf = (form.tipo==='terceros') && ((form._terInput || (tieneAdj ? 'pdf' : 'texto'))==='pdf');
@@ -6560,7 +6564,7 @@ function PedidosView({ pedidos, onSave, onConvertir }){
         React.createElement('div',null, lbl('Celular', true), React.createElement('input',{style:inp,type:'tel',inputMode:'tel',value:form.celular||'',onChange:function(e){setForm(Object.assign({},form,{celular:e.target.value.replace(/[^0-9+()\-\s]/g,'')}));},placeholder:'Ej: 11 2345 6789'})),
         React.createElement('div',{style:{gridColumn:isMobile?'auto':'1/-1'}}, lbl('Dirección', true), React.createElement('input',{style:inp,spellCheck:true,autoCapitalize:'sentences',value:form.direccion||'',onChange:function(e){setForm(Object.assign({},form,{direccion:e.target.value}));},placeholder:'Ej: Av. Siempre Viva 742, 3° B'})),
         React.createElement('div',{style:{gridColumn:isMobile?'auto':'1/-1'}}, lbl('Tipo de trabajo'), React.createElement('div',{style:{display:'flex',gap:8,flexWrap:'wrap'}}, TIPOS_TRABAJO.map(function(t){ var m=TT_META[t]; var on=(Array.isArray(form.tipoTrabajo)?form.tipoTrabajo:[]).indexOf(t)>=0; return React.createElement('button',{key:t,type:'button',onClick:function(){toggleTT(t);},style:{padding:'7px 13px',borderRadius:20,border:'1px solid '+(on?m.br:'#E2E8F0'),background:on?m.bg:'#fff',color:on?m.fg:'#475569',fontSize:12,fontWeight:on?700:500,cursor:'pointer'}}, m.i+' '+m.l); })), React.createElement('div',{style:{fontSize:10,color:'#94A3B8',marginTop:3}},'Podés elegir más de uno.')),
-        !esTerceros ? React.createElement('div',null, lbl('Fecha de visita', true), React.createElement('input',{style:inp,type:'date',max:hoy,value:form.fechaVisita||'',onChange:function(e){setForm(Object.assign({},form,{fechaVisita:e.target.value}));}}), React.createElement('div',{style:{fontSize:10,color:'#94A3B8',marginTop:3}},'No puede ser futura. El Inicio te avisa las visitas del día y las atrasadas.')) : null,
+        !esTerceros ? React.createElement('div',null, lbl('Fecha de visita', true), React.createElement('input',{style:inp,type:'date',value:form.fechaVisita||'',onChange:function(e){setForm(Object.assign({},form,{fechaVisita:e.target.value}));}}), React.createElement('div',{style:{fontSize:10,color:'#94A3B8',marginTop:3}},'Podés agendarla a futuro. Aparece en la agenda ese día, y el Inicio te avisa las del día y las atrasadas.')) : null,
         esTerceros ? React.createElement('div',null, lbl('Monto del tercero ($)', true), React.createElement('input',{style:inp,type:'number',min:'0',step:'any',value:form.montoTerceros||'',onChange:function(e){setForm(Object.assign({},form,{montoTerceros:e.target.value}));},placeholder:'Ej: 150000'})) : null,
         esTerceros ? React.createElement('div',null, lbl('% de ganancia', true), React.createElement('input',{style:inp,type:'number',min:'0',step:'any',value:form.gananciaPct||'',onChange:function(e){setForm(Object.assign({},form,{gananciaPct:e.target.value}));},placeholder:'Ej: 30'})) : null,
         esTerceros ? React.createElement('div',{style:{gridColumn:isMobile?'auto':'1/-1',background:'#F8FAFC',border:'1px solid #E2E8F0',borderRadius:8,padding:'10px 12px',display:'flex',justifyContent:'space-between',alignItems:'center'}}, React.createElement('span',{style:{fontSize:12,color:'#475569',fontWeight:600}},'Total sugerido (monto + ganancia)'), React.createElement('span',{style:{fontSize:16,fontWeight:800,color:'#065F46',fontFamily:"'Oswald',system-ui"}}, fmtM(totalTerceros(form)))) : null,
@@ -6629,7 +6633,7 @@ function PedidosView({ pedidos, onSave, onConvertir }){
                   ? React.createElement('button',{type:'button',onClick:function(){verAdj(p);},style:{background:'none',border:'1px solid #93C5FD',borderRadius:6,padding:'6px 11px',fontSize:12,color:'#1D4ED8',cursor:'pointer',fontWeight:600}},'📄 Ver archivo')
                   : React.createElement('label',{style:{display:'inline-flex',alignItems:'center',border:'1px dashed #CBD5E1',borderRadius:6,padding:'6px 11px',fontSize:12,color:'#64748B',cursor:'pointer'}}, '📎 Adjuntar PDF/foto', React.createElement('input',{type:'file',accept:'application/pdf,image/*',style:{display:'none'},onChange:function(ev){ var f=ev.target.files&&ev.target.files[0]; if(f) subirAdj(p, f); ev.target.value=''; }}))) : null,
                 (esTer && p.adjunto) ? React.createElement('button',{type:'button',onClick:function(){quitarAdj(p);},style:{background:'none',border:'1px solid #E2E8F0',borderRadius:6,padding:'6px 11px',fontSize:12,color:'#94A3B8',cursor:'pointer'}},'Quitar archivo') : null,
-                (e==='cotizado'||e==='descartado') ? React.createElement('button',{type:'button',onClick:function(){setEstado(p,'por_cotizar');},style:{background:'none',border:'1px solid #FDBA74',borderRadius:6,padding:'6px 11px',fontSize:12,color:'#9A3412',cursor:'pointer',fontWeight:600}},'↩ Reabrir') : null,
+                (e==='cotizado'||e==='descartado') ? React.createElement('button',{type:'button',onClick:function(){ var dest=(p.tipo!=='terceros' && !(p.notas && p.notas.trim())) ? 'por_visitar' : 'por_cotizar'; setEstado(p,dest); },style:{background:'none',border:'1px solid #FDBA74',borderRadius:6,padding:'6px 11px',fontSize:12,color:'#9A3412',cursor:'pointer',fontWeight:600}},'↩ Reabrir') : null,
                 (e==='por_visitar'||e==='por_cotizar') ? React.createElement('button',{type:'button',title:'Archivar el pedido (queda como “Descartado”, lo podés reabrir)',onClick:function(){ if(confirm('¿Descartar el pedido de "'+(p.nombre||'')+'"?\n\nQueda archivado como “Descartado” (no se borra) y lo podés reabrir cuando quieras.')) setEstado(p,'descartado'); },style:{background:'none',border:'1px solid #E2E8F0',borderRadius:6,padding:'6px 11px',fontSize:12,color:'#B45309',cursor:'pointer'}},'Descartar') : null,
                 React.createElement('button',{type:'button',title:'Borrar definitivamente (no se puede deshacer)',onClick:function(){borrar(p);},style:{background:'none',border:'1px solid #FECACA',borderRadius:6,padding:'6px 11px',fontSize:12,color:'#DC2626',cursor:'pointer',marginLeft:'auto'}},'🗑 Borrar')
               )
@@ -6738,7 +6742,7 @@ function InicioView({ quotes, actividades, facturas, pedidos, onGoTracker, onGoT
         bloque('📝','Sin enviar (borradores)', String(borradores.length), (borradores.length>0?'#6D28D9':'#166534'), itemsBor, '#7C3AED', function(){ onGoTrackerFilter('generado'); }),
         bloque('📤','Enviados sin respuesta', String(enviados.length), (enviados.length>0?'#B45309':'#166534'), itemsEnv, '#B45309', function(){ onGoTrackerFilter('espera'); }),
         bloque('⏰','Para recotizar', String(recotizar.length), (recotizar.length>0?'#C2410C':'#166534'), itemsReco, '#CA8A04', function(){ onGoTrackerFilter('recotizar'); }),
-        bloque('🚧','Aceptados sin arrancar', String(sinArrancar.length), (sinArrancar.length>0?'#065F46':'#166534'), itemsArr, '#059669', function(){ onGoTrackerFilter('aceptado'); }),
+        bloque('🚧','Aceptados sin arrancar', String(sinArrancar.length), (sinArrancar.length>0?'#065F46':'#166534'), itemsArr, '#059669', function(){ onGoTrackerFilter('sinplanificar'); }),
         bloque('💰','Pendiente de cobro', fmtM(totDeuda), (totDeuda>0?'#B91C1C':'#166534'), itemsDeuda, '#F26B1D', function(){ onGoTrackerFilter('cobro'); })
       ]),
       grupo('📌 Por cotizar', [
