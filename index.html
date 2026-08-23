@@ -8002,6 +8002,7 @@ function ActividadEditor({ act, onChange, onSave, onDelete, onClose, quotesAcept
 
 function App() {
   const [menuOpen, setMenuOpen] = React.useState(false);
+  const [navDrop, setNavDrop] = React.useState(null);
   const [view, setView] = useState("inicio");
   React.useEffect(function(){ try { localStorage.setItem("ebc-last-view", view); } catch(e){} }, [view]);
   const [quotes, setQuotes] = useState([]);
@@ -8404,22 +8405,26 @@ function App() {
       color: "#94A3B8"
     }
   }, "Cargando\u2026");
-  const navMain = [
+  const navVisible = [
     {id:"inicio",  label:"🏠 Inicio"},
     {id:"pedidos", label:"📌 Por cotizar"},
     {id:"form",    label:"📋 Nuevo Presupuesto"},
     {id:"clients", label:"👤 Clientes"},
-    {id:"catMdo",  label:"👷 Mano de Obra"},
-    {id:"catMat",  label:"📦 Materiales"},
     {id:"tracker", label:"📈 Seguimiento"},
     {id:"planificacion", label:"🗓 Planificación"},
   ];
-  const navFin = [
+  const navCatalogo = [
+    {id:"catMdo",  label:"👷 Mano de Obra"},
+    {id:"catMat",  label:"📦 Materiales"},
+  ];
+  const navMas = [
     {id:"personal",    label:"🧑‍🔧 Personal"},
     {id:"movimientos", label:"💱 Ingresos / Egresos"},
     {id:"dashboard",   label:"📊 Dashboard"},
     {id:"backups",     label:"💾 Copias"},
   ];
+  const navMain = navVisible.concat(navCatalogo);
+  const navFin = navMas;
   const nav = [...navMain, ...navFin];
   return /*#__PURE__*/React.createElement("div", {
     style: {
@@ -8493,12 +8498,37 @@ function App() {
         }
       },item.label);
     }
-    return navMain.map(function(i){return nbtn(i,false);})
+    function grupo(key,label,items,fin){
+      var activeIn=items.some(function(it){return it.id===view;});
+      var open=navDrop===key;
+      return React.createElement("div",{key:key,style:{position:"relative",display:"flex",alignItems:"stretch"}},
+        React.createElement("button",{
+          onClick:function(e){ e.stopPropagation(); setNavDrop(open?null:key); },
+          style:{display:"flex",alignItems:"center",gap:4,padding:"0 8px",background:"none",border:"none",fontSize:12,
+            fontWeight:(activeIn||open)?700:400,
+            color:(activeIn||open)?"#fff":fin?"rgba(255,210,100,0.8)":"rgba(255,255,255,0.45)",
+            borderBottom:activeIn?"3px solid "+ORANGE:"3px solid transparent",marginBottom:"-3px",whiteSpace:"nowrap",cursor:"pointer"}
+        }, label, React.createElement("span",{style:{fontSize:9,opacity:0.8}}, open?"▲":"▼")),
+        open && React.createElement(React.Fragment,null,
+          React.createElement("div",{onClick:function(){setNavDrop(null);},style:{position:"fixed",inset:0,zIndex:300}}),
+          React.createElement("div",{onClick:function(e){e.stopPropagation();},style:{position:"absolute",top:"calc(100% + 2px)",left:0,zIndex:301,background:"#fff",border:"1px solid #E2E8F0",borderRadius:8,padding:6,boxShadow:"0 12px 32px rgba(0,0,0,0.22)",minWidth:190}},
+            items.map(function(it){ var a=view===it.id; return React.createElement("button",{key:it.id,
+              onClick:function(){ setView(it.id); setNavDrop(null); },
+              style:{display:"block",width:"100%",textAlign:"left",padding:"9px 12px",background:a?"#FFF7ED":"none",border:"none",borderRadius:6,fontSize:13,color:a?ORANGE:"#334155",fontWeight:a?700:500,cursor:"pointer",whiteSpace:"nowrap"},
+              onMouseEnter:function(e){ if(!a) e.currentTarget.style.background="#F1F5F9"; },
+              onMouseLeave:function(e){ if(!a) e.currentTarget.style.background="none"; }
+            }, it.label); })
+          )
+        )
+      );
+    }
+    return navVisible.map(function(i){return nbtn(i,false);})
+      .concat([grupo("catalogo","📚 Catálogo",navCatalogo,false)])
       .concat([React.createElement("div",{key:"sep",style:{
         width:1,height:18,backgroundColor:"rgba(255,255,255,0.25)",
         alignSelf:"center",margin:"0 6px",flexShrink:0
       }})])
-      .concat(navFin.map(function(i){return nbtn(i,true);}))
+      .concat([grupo("mas","⋯ Más",navMas,true)])
       .concat([React.createElement("button",{key:"consolidado",title:"Descargar Excel consolidado por rango de fechas",
         onClick:function(){ setShowConsol(true); },
         style:{display:"flex",alignItems:"center",gap:5,padding:"0 12px",marginLeft:8,background:ORANGE,border:"none",borderRadius:6,fontSize:12,fontWeight:700,color:"#fff",whiteSpace:"nowrap",cursor:"pointer",alignSelf:"center",height:32}
