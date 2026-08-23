@@ -1349,7 +1349,7 @@ const H1 = ({
   }
 }, children);
 const PageHeader = ({ title, subtitle, right }) => /*#__PURE__*/React.createElement("div", {
-  style: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, flexWrap: "wrap", marginBottom: 18 }
+  style: { display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap", marginBottom: 18 }
 }, /*#__PURE__*/React.createElement("div", { style: { minWidth: 0 } },
   /*#__PURE__*/React.createElement("div", { style: { fontFamily: "'Oswald',system-ui", fontSize: 22, fontWeight: 700, color: NAVY, letterSpacing: "-0.01em", lineHeight: 1.2 } }, title),
   subtitle ? /*#__PURE__*/React.createElement("div", { style: { fontSize: 13, color: "#64748B", marginTop: 4, lineHeight: 1.45 } }, subtitle) : null
@@ -6474,7 +6474,11 @@ function PedidosView({ pedidos, onSave, onConvertir }){
   };
   function editar(p){ setEditId(p.id); setForm(Object.assign({}, mkPedido(), p)); setShowForm(true); if(typeof window!=='undefined') window.scrollTo({top:0,behavior:'smooth'}); }
   function guardar(){
-    if(!form.nombre || !form.nombre.trim()){ alert('Poné al menos el nombre / cliente.'); return; }
+    var faltan=[];
+    if(!form.nombre || !form.nombre.trim()) faltan.push('Nombre / Cliente');
+    if(!form.celular || !form.celular.trim()) faltan.push('Celular');
+    if(!form.direccion || !form.direccion.trim()) faltan.push('Dirección');
+    if(faltan.length){ alert('Completá los campos obligatorios (marcados con *): '+faltan.join(', ')+'.'); return; }
     var patch = {tipo:form.tipo||'visita', nombre:form.nombre.trim(), celular:(form.celular||'').trim(), direccion:(form.direccion||'').trim(), descripcion:(form.descripcion||'').trim(), notas:(form.notas||'').trim(), fechaVisita:form.tipo==='terceros'?'':(form.fechaVisita||''), montoTerceros:form.tipo==='terceros'?(form.montoTerceros||''):'', gananciaPct:form.tipo==='terceros'?(form.gananciaPct||''):''};
     if(editId){
       onSave(list.map(function(p){ return p.id===editId ? Object.assign({}, p, patch) : p; }));
@@ -6517,8 +6521,8 @@ function PedidosView({ pedidos, onSave, onConvertir }){
       React.createElement('div',{style:{display:'flex',gap:8,marginBottom:14,flexWrap:'wrap'}}, tipoChip('visita','🏠 Visita propia'), tipoChip('terceros','📄 Presupuesto de terceros')),
       React.createElement('div',{style:{display:'grid',gridTemplateColumns:isMobile?'1fr':'1fr 1fr',gap:12,marginBottom:12}},
         React.createElement('div',null, lbl('Nombre / Cliente', true), React.createElement('input',{style:inp,spellCheck:true,autoCapitalize:'words',value:form.nombre||'',onChange:function(e){setForm(Object.assign({},form,{nombre:e.target.value}));},onBlur:function(e){var v=e.target.value;if(v){var c=capitalize(v);if(c!==v)setForm(Object.assign({},form,{nombre:c}));}},placeholder:'Ej: Juan Pérez'})),
-        React.createElement('div',null, lbl('Celular'), React.createElement('input',{style:inp,type:'tel',value:form.celular||'',onChange:function(e){setForm(Object.assign({},form,{celular:e.target.value}));},placeholder:'Ej: 11 2345 6789'})),
-        React.createElement('div',{style:{gridColumn:isMobile?'auto':'1/-1'}}, lbl('Dirección'), React.createElement('input',{style:inp,spellCheck:true,autoCapitalize:'sentences',value:form.direccion||'',onChange:function(e){setForm(Object.assign({},form,{direccion:e.target.value}));},placeholder:'Ej: Av. Siempre Viva 742, 3° B'})),
+        React.createElement('div',null, lbl('Celular', true), React.createElement('input',{style:inp,type:'tel',value:form.celular||'',onChange:function(e){setForm(Object.assign({},form,{celular:e.target.value}));},placeholder:'Ej: 11 2345 6789'})),
+        React.createElement('div',{style:{gridColumn:isMobile?'auto':'1/-1'}}, lbl('Dirección', true), React.createElement('input',{style:inp,spellCheck:true,autoCapitalize:'sentences',value:form.direccion||'',onChange:function(e){setForm(Object.assign({},form,{direccion:e.target.value}));},placeholder:'Ej: Av. Siempre Viva 742, 3° B'})),
         !esTerceros ? React.createElement('div',null, lbl('Fecha de visita'), React.createElement('input',{style:inp,type:'date',value:form.fechaVisita||'',onChange:function(e){setForm(Object.assign({},form,{fechaVisita:e.target.value}));}}), React.createElement('div',{style:{fontSize:10,color:'#94A3B8',marginTop:3}},'Opcional. Si la agendás, el Inicio te avisa las visitas del día y las atrasadas.')) : null,
         esTerceros ? React.createElement('div',null, lbl('Monto del tercero ($)'), React.createElement('input',{style:inp,type:'number',min:'0',step:'any',value:form.montoTerceros||'',onChange:function(e){setForm(Object.assign({},form,{montoTerceros:e.target.value}));},placeholder:'Ej: 150000'})) : null,
         esTerceros ? React.createElement('div',null, lbl('% de ganancia'), React.createElement('input',{style:inp,type:'number',min:'0',step:'any',value:form.gananciaPct||'',onChange:function(e){setForm(Object.assign({},form,{gananciaPct:e.target.value}));},placeholder:'Ej: 30'})) : null,
