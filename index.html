@@ -1349,7 +1349,7 @@ const H1 = ({
   }
 }, children);
 const PageHeader = ({ title, subtitle, right }) => /*#__PURE__*/React.createElement("div", {
-  style: { display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap", marginBottom: 18 }
+  style: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, flexWrap: "wrap", marginBottom: 18 }
 }, /*#__PURE__*/React.createElement("div", { style: { minWidth: 0 } },
   /*#__PURE__*/React.createElement("div", { style: { fontFamily: "'Oswald',system-ui", fontSize: 22, fontWeight: 700, color: NAVY, letterSpacing: "-0.01em", lineHeight: 1.2 } }, title),
   subtitle ? /*#__PURE__*/React.createElement("div", { style: { fontSize: 13, color: "#64748B", marginTop: 4, lineHeight: 1.45 } }, subtitle) : null
@@ -6507,7 +6507,7 @@ function PedidosView({ pedidos, onSave, onConvertir }){
   var esTerceros = (form.tipo==='terceros');
   var mostrarNotas = esTerceros || estadoPedido(form)!=='por_visitar';
   var tipoChip = function(val, label){ var on=(form.tipo||'visita')===val; return React.createElement('button',{type:'button',onClick:function(){ setForm(Object.assign({},form,{tipo:val})); },style:{padding:'7px 14px',borderRadius:20,border:'1px solid '+(on?ORANGE:'#E2E8F0'),background:on?ORANGE:'#fff',color:on?'#fff':'#475569',fontSize:12,fontWeight:on?700:500,cursor:'pointer'}}, label); };
-  return React.createElement(IngresosPane, null,
+  return React.createElement(Pane, null,
     React.createElement(PageHeader, { title: '📌 Por cotizar', subtitle: 'Visitas por hacer, relevamientos por cotizar y presupuestos de terceros para pasar en limpio. Lo que hoy anotan por WhatsApp, acá no se pierde.', right:
       React.createElement('button',{type:'button',onClick:function(){ if(editId){setEditId(null);} setForm(mkPedido()); setShowForm(function(s){return !s;}); },style:{backgroundColor:showForm?'#fff':ORANGE,color:showForm?ORANGE:'#fff',border:'1px solid '+ORANGE,borderRadius:8,padding:'9px 16px',fontSize:13,fontWeight:700,cursor:'pointer',whiteSpace:'nowrap',flexShrink:0}}, showForm?'✕ Cerrar':'➕ Nuevo pedido')
     }),
