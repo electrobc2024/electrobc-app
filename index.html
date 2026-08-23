@@ -6505,7 +6505,9 @@ function PedidosView({ pedidos, onSave, onConvertir }){
     if(form.tipo!=='terceros' && form.fechaVisita && form.fechaVisita > hoy){ alert('La fecha de visita no puede ser futura.'); return; }
     var patch = {tipo:form.tipo||'visita', nombre:form.nombre.trim(), celular:(form.celular||'').trim(), direccion:(form.direccion||'').trim(), descripcion:(form.descripcion||'').trim(), tipoTrabajo:(Array.isArray(form.tipoTrabajo)?form.tipoTrabajo:[]), notas:(form.tipo==='terceros'?'':(form.notas||'').trim()), fechaVisita:form.tipo==='terceros'?'':(form.fechaVisita||''), montoTerceros:form.tipo==='terceros'?(form.montoTerceros||''):'', gananciaPct:form.tipo==='terceros'?(form.gananciaPct||''):''};
     if(editId && form.estado) patch.estado = form.estado;
-    if(form._adjMeta) patch.adjunto = form._adjMeta;
+    var usaPdf = (form.tipo==='terceros') && ((form._terInput || (tieneAdj ? 'pdf' : 'texto'))==='pdf');
+    if(usaPdf){ if(form._adjMeta) patch.adjunto = form._adjMeta; }
+    else { patch.adjunto = null; }   // sin PDF (visita, o terceros por descripción): no dejar archivo pegado
     var savedId;
     if(editId){
       savedId = editId;
@@ -6516,7 +6518,8 @@ function PedidosView({ pedidos, onSave, onConvertir }){
       savedId = nuevo.id;
       onSave([nuevo].concat(list));
     }
-    if(form._adjDataUrl && savedId){ sbSet('ebc-ped-adj-'+savedId, form._adjDataUrl).catch(function(){}); try{ localStorage.setItem('ebc-ped-adj-'+savedId, form._adjDataUrl); }catch(e){} }
+    if(usaPdf && form._adjDataUrl && savedId){ sbSet('ebc-ped-adj-'+savedId, form._adjDataUrl).catch(function(){}); try{ localStorage.setItem('ebc-ped-adj-'+savedId, form._adjDataUrl); }catch(e){} }
+    if(!usaPdf && editId){ sbSet('ebc-ped-adj-'+editId, '').catch(function(){}); try{ localStorage.removeItem('ebc-ped-adj-'+editId); }catch(e){} }
     setForm(mkPedido()); setEditId(null); setShowForm(false);
   }
   function setEstado(p, est){ onSave(list.map(function(x){ return x.id===p.id ? Object.assign({}, x, {estado:est}) : x; })); }
