@@ -6454,6 +6454,18 @@ function PedidosView({ pedidos, onSave, onConvertir }){
   const waNum = function(c){ return String(c||'').replace(/[^0-9]/g,''); };
   const fmtM = function(n){ return '$ '+Math.round(n||0).toLocaleString('es-AR'); };
   const totalTerceros = function(p){ var m=parseFloat(p.montoTerceros)||0; var g=parseFloat(p.gananciaPct)||0; return m*(1+g/100); };
+  const [adjView, setAdjView] = React.useState(null);
+  const adjKey = function(p){ return 'ebc-ped-adj-'+p.id; };
+  function subirAdj(p, file){
+    if(!file) return;
+    if(file.size > 8*1024*1024){ alert('El archivo es muy grande (máx 8 MB). Subí una versión más liviana.'); return; }
+    var reader=new FileReader();
+    reader.onload=function(){ var dataUrl=reader.result; sbSet(adjKey(p), dataUrl).catch(function(){}); try{ localStorage.setItem(adjKey(p), dataUrl); }catch(e){} onSave(list.map(function(x){ return x.id===p.id ? Object.assign({}, x, {adjunto:{name:file.name, mime:file.type, at:new Date().toISOString()}}) : x; })); };
+    reader.onerror=function(){ alert('No se pudo leer el archivo.'); };
+    reader.readAsDataURL(file);
+  }
+  async function verAdj(p){ try{ var d=await sbGet(adjKey(p)); if(!d){ try{ d=localStorage.getItem(adjKey(p)); }catch(e){} } if(!d){ alert('No se encontró el archivo adjunto.'); return; } setAdjView({name:(p.adjunto&&p.adjunto.name)||'Adjunto', mime:(p.adjunto&&p.adjunto.mime)||'', dataUrl:d}); }catch(e){ alert('No se pudo abrir el adjunto.'); } }
+  function quitarAdj(p){ if(!confirm('¿Quitar el archivo adjunto de este pedido?')) return; sbSet(adjKey(p), '').catch(function(){}); try{ localStorage.removeItem(adjKey(p)); }catch(e){} onSave(list.map(function(x){ if(x.id!==p.id) return x; var c=Object.assign({}, x); delete c.adjunto; return c; })); }
   var estMap = {
     por_visitar:{label:'Por visitar', fg:'#1D4ED8', bg:'#EFF6FF', br:'#93C5FD'},
     por_cotizar:{label:'Por cotizar', fg:'#9A3412', bg:'#FFF7ED', br:'#FDBA74'},
@@ -6542,6 +6554,7 @@ function PedidosView({ pedidos, onSave, onConvertir }){
                   esTer? React.createElement('div',{style:{fontSize:12,color:'#475569',marginTop:6}}, 'Tercero: '+fmtM(parseFloat(p.montoTerceros)||0)+((parseFloat(p.gananciaPct)||0)?(' · +'+p.gananciaPct+'%'):''), React.createElement('span',{style:{fontWeight:800,color:'#065F46'}}, '  →  '+fmtM(totalTerceros(p)))):null,
                   p.descripcion? React.createElement('div',{style:{fontSize:12,color:'#64748B',marginTop:4,whiteSpace:'pre-wrap',lineHeight:1.5}}, p.descripcion):null,
                   p.notas? React.createElement('div',{style:{fontSize:12,color:'#475569',marginTop:8,whiteSpace:'pre-wrap',lineHeight:1.5,background:'#F8FAFC',border:'1px solid #E2E8F0',borderRadius:8,padding:'8px 10px'}}, React.createElement('span',{style:{fontSize:10,fontWeight:700,color:'#94A3B8',textTransform:'uppercase',display:'block',marginBottom:3}}, esTer?'📄 Detalle de terceros':'📝 Notas de la visita'), p.notas):null,
+                  p.adjunto ? React.createElement('div',{onClick:function(){verAdj(p);},style:{fontSize:12,color:'#1D4ED8',marginTop:8,cursor:'pointer',fontWeight:600,display:'inline-flex',alignItems:'center',gap:4}}, '📎 '+((p.adjunto&&p.adjunto.name)||'archivo adjunto')) : null,
                   React.createElement('div',{style:{fontSize:10,color:'#94A3B8',marginTop:6}}, 'Cargado '+fmtFecha(p.fecha)+(p.autor?(' · '+ebcUserLabel(p.autor)):''))
                 ),
                 p.celular? React.createElement('div',{style:{display:'flex',gap:6,flexShrink:0}},
@@ -6554,13 +6567,18 @@ function PedidosView({ pedidos, onSave, onConvertir }){
                 e==='por_cotizar' ? React.createElement('button',{type:'button',onClick:function(){ onConvertir(p); },style:{background:NAVY,color:'#fff',border:'none',borderRadius:6,padding:'6px 12px',fontSize:12,fontWeight:700,cursor:'pointer'}},'➜ Convertir en presupuesto') : null,
                 e==='por_cotizar' ? React.createElement('button',{type:'button',onClick:function(){setEstado(p,'cotizado');},style:{background:'none',border:'1px solid #6EE7B7',borderRadius:6,padding:'6px 11px',fontSize:12,color:'#065F46',cursor:'pointer',fontWeight:600}},'✓ Marcar cotizado') : null,
                 React.createElement('button',{type:'button',onClick:function(){editar(p);},style:{background:'none',border:'1px solid #E2E8F0',borderRadius:6,padding:'6px 11px',fontSize:12,color:'#475569',cursor:'pointer'}},'✏️ Editar'),
+                p.adjunto
+                  ? React.createElement('button',{type:'button',onClick:function(){verAdj(p);},style:{background:'none',border:'1px solid #93C5FD',borderRadius:6,padding:'6px 11px',fontSize:12,color:'#1D4ED8',cursor:'pointer',fontWeight:600}},'📄 Ver archivo')
+                  : React.createElement('label',{style:{display:'inline-flex',alignItems:'center',border:'1px dashed #CBD5E1',borderRadius:6,padding:'6px 11px',fontSize:12,color:'#64748B',cursor:'pointer'}}, '📎 Adjuntar PDF/foto', React.createElement('input',{type:'file',accept:'application/pdf,image/*',style:{display:'none'},onChange:function(ev){ var f=ev.target.files&&ev.target.files[0]; if(f) subirAdj(p, f); ev.target.value=''; }})),
+                p.adjunto ? React.createElement('button',{type:'button',onClick:function(){quitarAdj(p);},style:{background:'none',border:'1px solid #E2E8F0',borderRadius:6,padding:'6px 11px',fontSize:12,color:'#94A3B8',cursor:'pointer'}},'Quitar archivo') : null,
                 (e==='cotizado'||e==='descartado') ? React.createElement('button',{type:'button',onClick:function(){setEstado(p,'por_cotizar');},style:{background:'none',border:'1px solid #FDBA74',borderRadius:6,padding:'6px 11px',fontSize:12,color:'#9A3412',cursor:'pointer',fontWeight:600}},'↩ Reabrir') : null,
                 (e==='por_visitar'||e==='por_cotizar') ? React.createElement('button',{type:'button',onClick:function(){setEstado(p,'descartado');},style:{background:'none',border:'1px solid #E2E8F0',borderRadius:6,padding:'6px 11px',fontSize:12,color:'#B45309',cursor:'pointer'}},'Descartar') : null,
                 React.createElement('button',{type:'button',onClick:function(){borrar(p);},style:{background:'none',border:'1px solid #FECACA',borderRadius:6,padding:'6px 11px',fontSize:12,color:'#DC2626',cursor:'pointer',marginLeft:'auto'}},'🗑')
               )
             );
           })
-        )
+        ),
+    adjView ? React.createElement(FacturaOverlay, { fac: adjView, onClose: function(){ setAdjView(null); } }) : null
   );
 }
 
@@ -7974,7 +7992,8 @@ function App() {
       var _m=parseFloat(pd.montoTerceros)||0, _g=parseFloat(pd.gananciaPct)||0, _t=_m*(1+_g/100);
       _terLine = 'Presupuesto de terceros: $ '+Math.round(_m).toLocaleString('es-AR')+(_g?(' + '+_g+'% ganancia'):'')+' → total sugerido $ '+Math.round(_t).toLocaleString('es-AR');
     }
-    nq.notasVisita = [pd.descripcion, _terLine, pd.notas].filter(Boolean).join('\n\n');
+    var _adjLine = (pd.adjunto && pd.adjunto.name) ? ('Archivo adjunto en el pedido: '+pd.adjunto.name) : "";
+    nq.notasVisita = [pd.descripcion, _terLine, pd.notas, _adjLine].filter(Boolean).join('\n\n');
     nq.desdePedido = pd.id;
     setQuote(nq);
     setView("form");
