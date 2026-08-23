@@ -6665,7 +6665,7 @@ function InicioView({ quotes, actividades, facturas, pedidos, onGoTracker, onGoT
   var rowItem={display:'flex',justifyContent:'space-between',alignItems:'baseline',gap:8,fontSize:12,padding:'5px 0',borderBottom:'1px solid #F1F5F9',cursor:'pointer'};
   function tituloAct(a){ if(a.titulo&&a.titulo.trim()) return a.titulo.trim(); var q=a.quoteId?(quotes||[]).find(function(x){return x.id===a.quoteId;}):null; return q?((q.cliente&&q.cliente.nombre)||'Actividad'):'(sin título)'; }
   function bloque(icon, titulo, valor, valorColor, items, accent, verTodos){
-    return React.createElement('div',{style:Object.assign({},card,{borderTop:'3px solid '+accent})},
+    return React.createElement('div',{key:titulo,style:Object.assign({},card,{borderTop:'3px solid '+accent})},
       React.createElement('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'baseline',marginBottom:8}},
         React.createElement('div',{style:{fontSize:13,fontWeight:700,color:NAVY}}, icon+' '+titulo),
         React.createElement('div',{style:{fontSize:18,fontWeight:800,color:valorColor,fontFamily:"'Oswald',system-ui"}}, valor)
@@ -6674,6 +6674,12 @@ function InicioView({ quotes, actividades, facturas, pedidos, onGoTracker, onGoT
         ? React.createElement('div',{style:{fontSize:12,color:'#94A3B8',padding:'8px 0'}},'Nada pendiente acá 👌')
         : React.createElement('div',null, items),
       verTodos && items.length>0 ? React.createElement('button',{type:'button',onClick:verTodos,style:{marginTop:10,background:'none',border:'none',color:accent,fontWeight:700,fontSize:12,cursor:'pointer',textAlign:'left',padding:0}},'Ver todos →') : null
+    );
+  }
+  function grupo(titulo, cards){
+    return React.createElement('div',{key:titulo,style:{display:'flex',flexDirection:'column',gap:12}},
+      React.createElement('div',{style:{fontSize:12,fontWeight:800,color:'#64748B',textTransform:'uppercase',letterSpacing:'0.06em',paddingBottom:2,borderBottom:'2px solid #E2E8F0'}}, titulo),
+      cards
     );
   }
   function filaPres(q, derecha, derColor){ return React.createElement('div',{key:q.id,onClick:function(){ onGoTracker(q.id); },style:rowItem}, React.createElement('span',{style:{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}, React.createElement('b',{style:{color:ORANGE}},'#'+(q.numero||'')), '  '+((q.cliente&&q.cliente.nombre)||'—')), React.createElement('span',{style:{fontSize:11,fontWeight:derColor?700:400,color:derColor||'#94A3B8',whiteSpace:'nowrap'}}, derecha)); }
@@ -6699,7 +6705,7 @@ function InicioView({ quotes, actividades, facturas, pedidos, onGoTracker, onGoT
   })(); return function(){ vivo=false; }; }, []);
   function ackAlert(kind, val){ var na=Object.assign({}, alerts); na[kind]={done:val}; setAlerts(na); db.set(ALERT_KEYS[kind], JSON.stringify({done:val})); }
   function banner(bg, br, col, icon, titulo, texto, irLabel, onIr, onAck){
-    return React.createElement('div',{style:{background:bg,border:'1px solid '+br,borderRadius:12,padding:'12px 16px',marginBottom:10,display:'flex',alignItems:'center',gap:14,flexWrap:'wrap'}},
+    return React.createElement('div',{key:titulo,style:{background:bg,border:'1px solid '+br,borderRadius:12,padding:'12px 16px',marginBottom:10,display:'flex',alignItems:'center',gap:14,flexWrap:'wrap'}},
       React.createElement('div',{style:{fontSize:22,lineHeight:1}}, icon),
       React.createElement('div',{style:{flex:'1 1 220px',minWidth:0}},
         React.createElement('div',{style:{fontSize:13,fontWeight:800,color:col}}, titulo),
@@ -6724,16 +6730,22 @@ function InicioView({ quotes, actividades, facturas, pedidos, onGoTracker, onGoT
   return React.createElement(Pane, null,
     React.createElement(PageHeader, { title: '🏠 Inicio', subtitle: 'Lo que necesita tu atención hoy: cobros, recotizaciones, envíos sin respuesta, trabajos por arrancar y la agenda del día.' }),
     banners.length? React.createElement('div',{style:{marginBottom:16}}, banners):null,
-    React.createElement('div',{style:{display:'grid',gridTemplateColumns:'repeat(auto-fit, minmax(300px, 1fr))',gap:16}},
-      bloque('🗓','Visitas por hacer', String(porVisitar.length), (porVisitar.length>0?'#1D4ED8':'#166534'), itemsVis, '#2563EB', function(){ setView('pedidos'); }),
-      bloque('📌','Por cotizar', String(porCotizar.length), (porCotizar.length>0?'#9A3412':'#166534'), itemsPed, '#EA580C', function(){ setView('pedidos'); }),
-      bloque('💰','Pendiente de cobro', fmtM(totDeuda), (totDeuda>0?'#B91C1C':'#166534'), itemsDeuda, '#F26B1D', function(){ onGoTrackerFilter('cobro'); }),
-      bloque('⏰','Para recotizar', String(recotizar.length), (recotizar.length>0?'#C2410C':'#166534'), itemsReco, '#CA8A04', function(){ onGoTrackerFilter('recotizar'); }),
-      bloque('📤','Enviados sin respuesta', String(enviados.length), (enviados.length>0?'#B45309':'#166534'), itemsEnv, '#B45309', function(){ onGoTrackerFilter('espera'); }),
-      bloque('🚧','Aceptados sin arrancar', String(sinArrancar.length), (sinArrancar.length>0?'#065F46':'#166534'), itemsArr, '#059669', function(){ onGoTrackerFilter('aceptado'); }),
-      bloque('⚠️','Actividades atrasadas', String(atrasadas.length), (atrasadas.length>0?'#B91C1C':'#166534'), itemsAtr, '#DC2626', function(){ onGoPlan(); }),
-      bloque('📝','Sin enviar (borradores)', String(borradores.length), (borradores.length>0?'#6D28D9':'#166534'), itemsBor, '#7C3AED', function(){ onGoTrackerFilter('generado'); }),
-      bloque('🗓','Actividades de hoy', String(actsHoy.length), NAVY, itemsActs, '#2563EB', function(){ onGoPlan(); })
+    React.createElement('div',{style:{display:'grid',gridTemplateColumns:'repeat(auto-fit, minmax(300px, 1fr))',gap:16,alignItems:'start'}},
+      grupo('📄 Presupuestos', [
+        bloque('📝','Sin enviar (borradores)', String(borradores.length), (borradores.length>0?'#6D28D9':'#166534'), itemsBor, '#7C3AED', function(){ onGoTrackerFilter('generado'); }),
+        bloque('📤','Enviados sin respuesta', String(enviados.length), (enviados.length>0?'#B45309':'#166534'), itemsEnv, '#B45309', function(){ onGoTrackerFilter('espera'); }),
+        bloque('⏰','Para recotizar', String(recotizar.length), (recotizar.length>0?'#C2410C':'#166534'), itemsReco, '#CA8A04', function(){ onGoTrackerFilter('recotizar'); }),
+        bloque('🚧','Aceptados sin arrancar', String(sinArrancar.length), (sinArrancar.length>0?'#065F46':'#166534'), itemsArr, '#059669', function(){ onGoTrackerFilter('aceptado'); }),
+        bloque('💰','Pendiente de cobro', fmtM(totDeuda), (totDeuda>0?'#B91C1C':'#166534'), itemsDeuda, '#F26B1D', function(){ onGoTrackerFilter('cobro'); })
+      ]),
+      grupo('📌 Por cotizar', [
+        bloque('🗓','Visitas por hacer', String(porVisitar.length), (porVisitar.length>0?'#1D4ED8':'#166534'), itemsVis, '#2563EB', function(){ setView('pedidos'); }),
+        bloque('📌','Por cotizar', String(porCotizar.length), (porCotizar.length>0?'#9A3412':'#166534'), itemsPed, '#EA580C', function(){ setView('pedidos'); })
+      ]),
+      grupo('🗓 Agenda', [
+        bloque('🗓','Actividades de hoy', String(actsHoy.length), NAVY, itemsActs, '#2563EB', function(){ onGoPlan(); }),
+        bloque('⚠️','Actividades atrasadas', String(atrasadas.length), (atrasadas.length>0?'#B91C1C':'#166534'), itemsAtr, '#DC2626', function(){ onGoPlan(); })
+      ])
     )
   );
 }
