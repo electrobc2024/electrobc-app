@@ -6473,30 +6473,44 @@ function PedidosView({ pedidos, onSave, onConvertir }){
     descartado:{label:'Descartado', fg:'#991B1B', bg:'#FEF2F2', br:'#FCA5A5'}
   };
   function editar(p){ setEditId(p.id); setForm(Object.assign({}, mkPedido(), p)); setShowForm(true); if(typeof window!=='undefined') window.scrollTo({top:0,behavior:'smooth'}); }
+  function elegirAdjForm(ev){
+    var f=ev.target.files&&ev.target.files[0]; ev.target.value=''; if(!f) return;
+    if(f.size > 8*1024*1024){ alert('El archivo es muy grande (máx 8 MB). Subí una versión más liviana.'); return; }
+    var rd=new FileReader();
+    rd.onload=function(){ setForm(function(fm){ return Object.assign({}, fm, {_adjDataUrl:rd.result, _adjMeta:{name:f.name, mime:f.type, at:new Date().toISOString()}}); }); };
+    rd.onerror=function(){ alert('No se pudo leer el archivo.'); };
+    rd.readAsDataURL(f);
+  }
   function guardar(){
     var faltan=[];
+    var tieneAdj = !!(form._adjDataUrl || (form.adjunto && form.adjunto.name));
     if(!form.nombre || !form.nombre.trim()) faltan.push('Nombre / Cliente');
     if(!form.celular || !form.celular.trim()) faltan.push('Celular');
     if(!form.direccion || !form.direccion.trim()) faltan.push('Dirección');
     if(form.tipo!=='terceros' && !form.fechaVisita) faltan.push('Fecha de visita');
-    if(!form.descripcion || !form.descripcion.trim()) faltan.push('Descripción del trabajo');
+    if(!(form.tipo==='terceros' && tieneAdj) && (!form.descripcion || !form.descripcion.trim())) faltan.push('Descripción del trabajo');
     if(form.tipo==='terceros'){
       if(!form.montoTerceros || !(parseFloat(form.montoTerceros)>0)) faltan.push('Monto del tercero');
       if(form.gananciaPct==='' || form.gananciaPct==null || isNaN(parseFloat(form.gananciaPct))) faltan.push('% de ganancia');
     }
-    var _muestraNotas = (form.tipo==='terceros') || estadoPedido(form)!=='por_visitar';
-    if(_muestraNotas && (!form.notas || !form.notas.trim())) faltan.push(form.tipo==='terceros'?'Detalle del presupuesto de terceros':'Notas de la visita (relevamiento)');
+    var _muestraNotas = (form.tipo!=='terceros') && estadoPedido(form)!=='por_visitar';
+    if(_muestraNotas && (!form.notas || !form.notas.trim())) faltan.push('Notas de la visita (relevamiento)');
     if(faltan.length){ alert('Completá los campos obligatorios (marcados con *): '+faltan.join(', ')+'.'); return; }
     if(form.tipo!=='terceros' && form.fechaVisita && form.fechaVisita > hoy){ alert('La fecha de visita no puede ser futura.'); return; }
-    var patch = {tipo:form.tipo||'visita', nombre:form.nombre.trim(), celular:(form.celular||'').trim(), direccion:(form.direccion||'').trim(), descripcion:(form.descripcion||'').trim(), notas:(form.notas||'').trim(), fechaVisita:form.tipo==='terceros'?'':(form.fechaVisita||''), montoTerceros:form.tipo==='terceros'?(form.montoTerceros||''):'', gananciaPct:form.tipo==='terceros'?(form.gananciaPct||''):''};
+    var patch = {tipo:form.tipo||'visita', nombre:form.nombre.trim(), celular:(form.celular||'').trim(), direccion:(form.direccion||'').trim(), descripcion:(form.descripcion||'').trim(), notas:(form.tipo==='terceros'?'':(form.notas||'').trim()), fechaVisita:form.tipo==='terceros'?'':(form.fechaVisita||''), montoTerceros:form.tipo==='terceros'?(form.montoTerceros||''):'', gananciaPct:form.tipo==='terceros'?(form.gananciaPct||''):''};
     if(editId && form.estado) patch.estado = form.estado;
+    if(form._adjMeta) patch.adjunto = form._adjMeta;
+    var savedId;
     if(editId){
+      savedId = editId;
       onSave(list.map(function(p){ return p.id===editId ? Object.assign({}, p, patch) : p; }));
     } else {
       var estadoIni = form.tipo==='terceros' ? 'por_cotizar' : 'por_visitar';
       var nuevo = Object.assign({}, mkPedido(), patch, {estado:estadoIni});
+      savedId = nuevo.id;
       onSave([nuevo].concat(list));
     }
+    if(form._adjDataUrl && savedId){ sbSet('ebc-ped-adj-'+savedId, form._adjDataUrl).catch(function(){}); try{ localStorage.setItem('ebc-ped-adj-'+savedId, form._adjDataUrl); }catch(e){} }
     setForm(mkPedido()); setEditId(null); setShowForm(false);
   }
   function setEstado(p, est){ onSave(list.map(function(x){ return x.id===p.id ? Object.assign({}, x, {estado:est}) : x; })); }
@@ -6515,7 +6529,9 @@ function PedidosView({ pedidos, onSave, onConvertir }){
   var visibles = (verCerrados ? conEstado.slice() : abiertos.slice()).sort(cmp);
   var tile = function(bg, brd, col, label, val){ return React.createElement('div',{style:{backgroundColor:bg,border:'1px solid '+brd,borderRadius:10,padding:'12px 14px'}}, React.createElement('div',{style:{fontSize:10,fontWeight:700,color:col,textTransform:'uppercase',marginBottom:3}}, label), React.createElement('div',{style:{fontFamily:"'Oswald',system-ui",fontSize:20,fontWeight:700,color:NAVY}}, val)); };
   var esTerceros = (form.tipo==='terceros');
-  var mostrarNotas = esTerceros || estadoPedido(form)!=='por_visitar';
+  var mostrarNotas = (form.tipo!=='terceros') && estadoPedido(form)!=='por_visitar';
+  var tieneAdjForm = !!(form._adjDataUrl || (form.adjunto && form.adjunto.name));
+  var adjNombreForm = (form._adjMeta && form._adjMeta.name) || (form.adjunto && form.adjunto.name) || '';
   var tipoChip = function(val, label){ var on=(form.tipo||'visita')===val; return React.createElement('button',{type:'button',onClick:function(){ setForm(Object.assign({},form,{tipo:val})); },style:{padding:'7px 14px',borderRadius:20,border:'1px solid '+(on?ORANGE:'#E2E8F0'),background:on?ORANGE:'#fff',color:on?'#fff':'#475569',fontSize:12,fontWeight:on?700:500,cursor:'pointer'}}, label); };
   return React.createElement(Pane, null,
     React.createElement(PageHeader, { title: '📌 Por cotizar', subtitle: 'Visitas por hacer, relevamientos por cotizar y presupuestos de terceros para pasar en limpio. Lo que hoy anotan por WhatsApp, acá no se pierde.', right:
@@ -6537,7 +6553,17 @@ function PedidosView({ pedidos, onSave, onConvertir }){
         esTerceros ? React.createElement('div',null, lbl('Monto del tercero ($)', true), React.createElement('input',{style:inp,type:'number',min:'0',step:'any',value:form.montoTerceros||'',onChange:function(e){setForm(Object.assign({},form,{montoTerceros:e.target.value}));},placeholder:'Ej: 150000'})) : null,
         esTerceros ? React.createElement('div',null, lbl('% de ganancia', true), React.createElement('input',{style:inp,type:'number',min:'0',step:'any',value:form.gananciaPct||'',onChange:function(e){setForm(Object.assign({},form,{gananciaPct:e.target.value}));},placeholder:'Ej: 30'})) : null,
         esTerceros ? React.createElement('div',{style:{gridColumn:isMobile?'auto':'1/-1',background:'#F8FAFC',border:'1px solid #E2E8F0',borderRadius:8,padding:'10px 12px',display:'flex',justifyContent:'space-between',alignItems:'center'}}, React.createElement('span',{style:{fontSize:12,color:'#475569',fontWeight:600}},'Total sugerido (monto + ganancia)'), React.createElement('span',{style:{fontSize:16,fontWeight:800,color:'#065F46',fontFamily:"'Oswald',system-ui"}}, fmtM(totalTerceros(form)))) : null,
-        React.createElement('div',{style:{gridColumn:isMobile?'auto':'1/-1'}}, lbl('Descripción del trabajo', true), React.createElement('textarea',{style:Object.assign({},inp,{minHeight:52,resize:'vertical',lineHeight:1.5}),spellCheck:true,autoCapitalize:'sentences',value:form.descripcion||'',onChange:function(e){setForm(Object.assign({},form,{descripcion:e.target.value}));},onBlur:function(e){var v=e.target.value;if(v){var c=v.charAt(0).toUpperCase()+v.slice(1);if(c!==v)setForm(Object.assign({},form,{descripcion:c}));}},placeholder:esTerceros?'Qué incluye el presupuesto del tercero':'Qué hay que ir a ver / cotizar'})),
+        esTerceros ? React.createElement('div',{style:{gridColumn:isMobile?'auto':'1/-1'}}, lbl('Presupuesto del tercero (PDF/foto)'),
+          adjNombreForm
+            ? React.createElement('div',{style:{display:'flex',alignItems:'center',gap:10,flexWrap:'wrap'}},
+                React.createElement('span',{style:{fontSize:12,color:'#1D4ED8',fontWeight:600,display:'inline-flex',alignItems:'center',gap:4}}, '📎 '+adjNombreForm),
+                React.createElement('label',{style:{display:'inline-flex',alignItems:'center',border:'1px solid #E2E8F0',borderRadius:6,padding:'5px 10px',fontSize:12,color:'#64748B',cursor:'pointer'}}, 'Reemplazar', React.createElement('input',{type:'file',accept:'application/pdf,image/*',style:{display:'none'},onChange:elegirAdjForm})),
+                React.createElement('button',{type:'button',onClick:function(){ setForm(function(fm){ var c=Object.assign({},fm); delete c._adjDataUrl; delete c._adjMeta; delete c.adjunto; return c; }); },style:{background:'none',border:'none',color:'#DC2626',fontSize:12,cursor:'pointer'}},'Quitar')
+              )
+            : React.createElement('label',{style:{display:'inline-flex',alignItems:'center',border:'1px dashed #CBD5E1',borderRadius:8,padding:'9px 14px',fontSize:13,color:'#475569',cursor:'pointer',fontWeight:600}}, '📎 Adjuntar PDF/foto', React.createElement('input',{type:'file',accept:'application/pdf,image/*',style:{display:'none'},onChange:elegirAdjForm})),
+          React.createElement('div',{style:{fontSize:10,color:'#94A3B8',marginTop:4}},'Otra forma de cargar el pedido del tercero. Si adjuntás el PDF, no hace falta completar la descripción.')
+        ) : null,
+        React.createElement('div',{style:{gridColumn:isMobile?'auto':'1/-1'}}, lbl('Descripción del trabajo', !(esTerceros && tieneAdjForm)), React.createElement('textarea',{style:Object.assign({},inp,{minHeight:52,resize:'vertical',lineHeight:1.5}),spellCheck:true,autoCapitalize:'sentences',value:form.descripcion||'',onChange:function(e){setForm(Object.assign({},form,{descripcion:e.target.value}));},onBlur:function(e){var v=e.target.value;if(v){var c=v.charAt(0).toUpperCase()+v.slice(1);if(c!==v)setForm(Object.assign({},form,{descripcion:c}));}},placeholder:esTerceros?(tieneAdjForm?'Opcional: aclaraciones sobre el PDF adjunto':'Qué incluye el presupuesto del tercero'):'Qué hay que ir a ver / cotizar'})),
         mostrarNotas ? React.createElement('div',{style:{gridColumn:isMobile?'auto':'1/-1'}}, lbl(esTerceros?'Detalle del presupuesto de terceros':'Notas de la visita (relevamiento)', true), React.createElement('textarea',{style:Object.assign({},inp,{minHeight:96,resize:'vertical',lineHeight:1.5}),spellCheck:true,autoCapitalize:'sentences',value:form.notas||'',onChange:function(e){setForm(Object.assign({},form,{notas:e.target.value}));},placeholder:esTerceros?'Ítems y montos que pasó el tercero, para pasar en limpio...':'Lo que se releva en el lugar para después cotizar: materiales, mano de obra, medidas, cantidades, observaciones...'}), React.createElement('div',{style:{fontSize:10,color:'#94A3B8',marginTop:3}},'Estas notas te van a aparecer como referencia al pasar el pedido a presupuesto (no se imprimen).')) : (!esTerceros ? React.createElement('div',{style:{gridColumn:isMobile?'auto':'1/-1',fontSize:11,color:'#94A3B8',background:'#F8FAFC',border:'1px solid #E2E8F0',borderRadius:8,padding:'8px 10px'}}, '📝 Las notas de la visita (relevamiento) se cargan después de la visita, cuando pase a “Por cotizar”.') : null)
       ),
       React.createElement('div',{style:{display:'flex',gap:8,justifyContent:'flex-end'}},
@@ -6569,7 +6595,7 @@ function PedidosView({ pedidos, onSave, onConvertir }){
                   esTer? React.createElement('div',{style:{fontSize:12,color:'#475569',marginTop:6}}, 'Tercero: '+fmtM(parseFloat(p.montoTerceros)||0)+((parseFloat(p.gananciaPct)||0)?(' · +'+p.gananciaPct+'%'):''), React.createElement('span',{style:{fontWeight:800,color:'#065F46'}}, '  →  '+fmtM(totalTerceros(p)))):null,
                   p.descripcion? React.createElement('div',{style:{fontSize:12,color:'#64748B',marginTop:4,whiteSpace:'pre-wrap',lineHeight:1.5}}, p.descripcion):null,
                   p.notas? React.createElement('div',{style:{fontSize:12,color:'#475569',marginTop:8,whiteSpace:'pre-wrap',lineHeight:1.5,background:'#F8FAFC',border:'1px solid #E2E8F0',borderRadius:8,padding:'8px 10px'}}, React.createElement('span',{style:{fontSize:10,fontWeight:700,color:'#94A3B8',textTransform:'uppercase',display:'block',marginBottom:3}}, esTer?'📄 Detalle de terceros':'📝 Notas de la visita'), p.notas):null,
-                  p.adjunto ? React.createElement('div',{onClick:function(){verAdj(p);},style:{fontSize:12,color:'#1D4ED8',marginTop:8,cursor:'pointer',fontWeight:600,display:'inline-flex',alignItems:'center',gap:4}}, '📎 '+((p.adjunto&&p.adjunto.name)||'archivo adjunto')) : null,
+                  (esTer && p.adjunto) ? React.createElement('div',{onClick:function(){verAdj(p);},style:{fontSize:12,color:'#1D4ED8',marginTop:8,cursor:'pointer',fontWeight:600,display:'inline-flex',alignItems:'center',gap:4}}, '📎 '+((p.adjunto&&p.adjunto.name)||'archivo adjunto')) : null,
                   React.createElement('div',{style:{fontSize:10,color:'#94A3B8',marginTop:6}}, 'Cargado '+fmtFecha(p.fecha)+(p.autor?(' · '+ebcUserLabel(p.autor)):''))
                 ),
                 p.celular? React.createElement('div',{style:{display:'flex',gap:6,flexShrink:0}},
@@ -6582,10 +6608,10 @@ function PedidosView({ pedidos, onSave, onConvertir }){
                 e==='por_cotizar' ? React.createElement('button',{type:'button',onClick:function(){ onConvertir(p); },style:{background:NAVY,color:'#fff',border:'none',borderRadius:6,padding:'6px 12px',fontSize:12,fontWeight:700,cursor:'pointer'}},'➜ Convertir en presupuesto') : null,
                 e==='por_cotizar' ? React.createElement('button',{type:'button',onClick:function(){setEstado(p,'cotizado');},style:{background:'none',border:'1px solid #6EE7B7',borderRadius:6,padding:'6px 11px',fontSize:12,color:'#065F46',cursor:'pointer',fontWeight:600}},'✓ Marcar cotizado') : null,
                 React.createElement('button',{type:'button',onClick:function(){editar(p);},style:{background:'none',border:'1px solid #E2E8F0',borderRadius:6,padding:'6px 11px',fontSize:12,color:'#475569',cursor:'pointer'}},'✏️ Editar'),
-                p.adjunto
+                esTer ? (p.adjunto
                   ? React.createElement('button',{type:'button',onClick:function(){verAdj(p);},style:{background:'none',border:'1px solid #93C5FD',borderRadius:6,padding:'6px 11px',fontSize:12,color:'#1D4ED8',cursor:'pointer',fontWeight:600}},'📄 Ver archivo')
-                  : React.createElement('label',{style:{display:'inline-flex',alignItems:'center',border:'1px dashed #CBD5E1',borderRadius:6,padding:'6px 11px',fontSize:12,color:'#64748B',cursor:'pointer'}}, '📎 Adjuntar PDF/foto', React.createElement('input',{type:'file',accept:'application/pdf,image/*',style:{display:'none'},onChange:function(ev){ var f=ev.target.files&&ev.target.files[0]; if(f) subirAdj(p, f); ev.target.value=''; }})),
-                p.adjunto ? React.createElement('button',{type:'button',onClick:function(){quitarAdj(p);},style:{background:'none',border:'1px solid #E2E8F0',borderRadius:6,padding:'6px 11px',fontSize:12,color:'#94A3B8',cursor:'pointer'}},'Quitar archivo') : null,
+                  : React.createElement('label',{style:{display:'inline-flex',alignItems:'center',border:'1px dashed #CBD5E1',borderRadius:6,padding:'6px 11px',fontSize:12,color:'#64748B',cursor:'pointer'}}, '📎 Adjuntar PDF/foto', React.createElement('input',{type:'file',accept:'application/pdf,image/*',style:{display:'none'},onChange:function(ev){ var f=ev.target.files&&ev.target.files[0]; if(f) subirAdj(p, f); ev.target.value=''; }}))) : null,
+                (esTer && p.adjunto) ? React.createElement('button',{type:'button',onClick:function(){quitarAdj(p);},style:{background:'none',border:'1px solid #E2E8F0',borderRadius:6,padding:'6px 11px',fontSize:12,color:'#94A3B8',cursor:'pointer'}},'Quitar archivo') : null,
                 (e==='cotizado'||e==='descartado') ? React.createElement('button',{type:'button',onClick:function(){setEstado(p,'por_cotizar');},style:{background:'none',border:'1px solid #FDBA74',borderRadius:6,padding:'6px 11px',fontSize:12,color:'#9A3412',cursor:'pointer',fontWeight:600}},'↩ Reabrir') : null,
                 (e==='por_visitar'||e==='por_cotizar') ? React.createElement('button',{type:'button',title:'Archivar el pedido (queda como “Descartado”, lo podés reabrir)',onClick:function(){ if(confirm('¿Descartar el pedido de "'+(p.nombre||'')+'"?\n\nQueda archivado como “Descartado” (no se borra) y lo podés reabrir cuando quieras.')) setEstado(p,'descartado'); },style:{background:'none',border:'1px solid #E2E8F0',borderRadius:6,padding:'6px 11px',fontSize:12,color:'#B45309',cursor:'pointer'}},'Descartar') : null,
                 React.createElement('button',{type:'button',title:'Borrar definitivamente (no se puede deshacer)',onClick:function(){borrar(p);},style:{background:'none',border:'1px solid #FECACA',borderRadius:6,padding:'6px 11px',fontSize:12,color:'#DC2626',cursor:'pointer',marginLeft:'auto'}},'🗑 Borrar')
