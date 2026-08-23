@@ -7006,8 +7006,9 @@ function GanttEditor({ q, acts, personas, onPatchAct, onOpenAct, fechaLimite, on
   );
 }
 
-function PlanificacionView({ actividades, onSave, quotes, personas, planForQuote, onConsumePlan, onPatchQuote }){
+function PlanificacionView({ actividades, onSave, quotes, personas, pedidos, planForQuote, onConsumePlan, onPatchQuote, onGoPedidos }){
   const list = actividades || [];
+  const peds = pedidos || [];
   const qs = quotes || [];
   const pers = personas || [];
   const [view, setView] = React.useState('mes');       // mes | semana | dia
@@ -7165,6 +7166,17 @@ function PlanificacionView({ actividades, onSave, quotes, personas, planForQuote
     );
   }
 
+  // ── Visitas por hacer (pedidos "por visitar" agendados) en la agenda ──
+  const visitasDelDia = function(d){ var s=ymd(d); return peds.filter(function(p){ return estadoPedido(p)==='por_visitar' && p.fechaVisita===s; }); };
+  function visitaChip(v, opts){
+    opts = opts||{};
+    return React.createElement('div',{key:'vis'+v.id, title:'Visita a coordinar: '+(v.nombre||'')+(v.direccion?(' · '+v.direccion):'')+'\n(clic para ver en Por cotizar)', onClick:function(e){ e.stopPropagation(); if(onGoPedidos) onGoPedidos(); },
+      style:{background:'#EFF6FF', color:'#1D4ED8', border:'1px dashed #93C5FD', borderRadius:6, padding:opts.big?'6px 9px':'3px 7px', fontSize:opts.big?12:11, cursor:'pointer', marginBottom:3, display:'flex', alignItems:'center', gap:5, overflow:'hidden', whiteSpace:'nowrap', textOverflow:'ellipsis', fontWeight:600}},
+      React.createElement('span',{style:{flexShrink:0}},'🗓'),
+      React.createElement('span',{style:{overflow:'hidden',textOverflow:'ellipsis'}}, 'Visita: '+(v.nombre||'—'))
+    );
+  }
+
   // ── Navegación de período ──
   function periodoLabel(){
     if(view==='anio') return String(ref.getFullYear());
@@ -7199,6 +7211,7 @@ function PlanificacionView({ actividades, onSave, quotes, personas, planForQuote
             onDrop:function(e){ e.preventDefault(); soltarEnDia(ymd(d)); },
             style:{minHeight:96,borderRight:(i%7!==6)?'1px solid #F1F5F9':'none',borderBottom:i<35?'1px solid #F1F5F9':'none',padding:5,background:inMonth?'#fff':'#FBFCFE',cursor:'pointer',opacity:inMonth?1:0.55}},
             React.createElement('div',{style:{fontSize:11,fontWeight:sameDay(d,hoy)?800:600,color:sameDay(d,hoy)?'#fff':'#64748B',marginBottom:3, background:sameDay(d,hoy)?ORANGE:'transparent', width:sameDay(d,hoy)?20:'auto', height:sameDay(d,hoy)?20:'auto', borderRadius:'50%', display:'inline-flex',alignItems:'center',justifyContent:'center'}}, d.getDate()),
+            visitasDelDia(d).map(function(v){ return visitaChip(v); }),
             acts.slice(0,3).map(function(a){ return chip(a, ymd(d)); }),
             acts.length>3? React.createElement('div',{style:{fontSize:10,color:'#94A3B8',fontWeight:600}}, '+'+(acts.length-3)+' más'):null
           );
@@ -7217,8 +7230,9 @@ function PlanificacionView({ actividades, onSave, quotes, personas, planForQuote
           onDrop:function(e){ e.preventDefault(); soltarEnDia(ymd(d)); },
           style:{background:'#fff',border:'1px solid '+(sameDay(d,hoy)?ORANGE:'#E2E8F0'),borderRadius:10,padding:8,minHeight:'clamp(240px, calc(100vh - 300px), 900px)',cursor:'pointer'}},
           React.createElement('div',{style:{fontSize:11,fontWeight:700,color:sameDay(d,hoy)?ORANGE:'#64748B',marginBottom:6,textAlign:'center'}}, DOW[i]+' '+d.getDate()),
+          visitasDelDia(d).map(function(v){ return visitaChip(v, {big:true}); }),
           acts.map(function(a){ return chip(a, ymd(d), {big:true}); }),
-          acts.length===0? React.createElement('div',{style:{fontSize:10,color:'#CBD5E1',textAlign:'center',marginTop:8}}, '+'):null
+          (acts.length===0 && visitasDelDia(d).length===0)? React.createElement('div',{style:{fontSize:10,color:'#CBD5E1',textAlign:'center',marginTop:8}}, '+'):null
         );
       })
     );
@@ -7280,6 +7294,7 @@ function PlanificacionView({ actividades, onSave, quotes, personas, planForQuote
   function renderDia(){
     var s = ymd(ref);
     var acts = actsDelDia(ref);
+    var vis = visitasDelDia(ref);
     // carga por persona ese día
     var carga = {};
     acts.forEach(function(a){ var h=horasDelDiaAct(a,s); (a.equipo||[]).forEach(function(pid){ carga[pid]=(carga[pid]||0)+h; }); });
@@ -7288,9 +7303,16 @@ function PlanificacionView({ actividades, onSave, quotes, personas, planForQuote
       // Resumen de carga por persona
       cargaArr.length? React.createElement('div',{style:{display:'flex',gap:8,flexWrap:'wrap',marginBottom:10}}, cargaArr.map(function(c){ var over=c.h>8.001; return React.createElement('div',{key:c.pid,style:{background:over?'#FEF2F2':'#F8FAFC',border:'1px solid '+(over?'#FCA5A5':'#E2E8F0'),borderRadius:20,padding:'4px 11px',fontSize:12,color:over?'#B91C1C':'#475569',fontWeight:600}}, persLabel(c.pid)+': '+(Math.round(c.h*10)/10)+'h / 8h'); })):null,
       React.createElement('div',{style:{background:'#fff',border:'1px solid '+(sameDay(ref,hoy)?ORANGE:'#E2E8F0'),borderRadius:10,padding:14,minHeight:'clamp(280px, calc(100vh - 320px), 1000px)'}},
-        acts.length===0
+        vis.length? React.createElement('div',{style:{display:'flex',flexDirection:'column',gap:8,marginBottom:acts.length?12:0}}, vis.map(function(v){ return React.createElement('div',{key:'vd'+v.id,onClick:function(){ if(onGoPedidos) onGoPedidos(); },style:{display:'flex',alignItems:'center',gap:10,background:'#EFF6FF',border:'1px solid #93C5FD',borderLeft:'5px solid #1D4ED8',borderRadius:8,padding:'10px 12px',cursor:'pointer'}},
+            React.createElement('div',{style:{background:'#1D4ED8',color:'#fff',borderRadius:7,padding:'4px 9px',fontSize:12,fontWeight:800,whiteSpace:'nowrap'}},'🗓 Visita'),
+            React.createElement('div',{style:{minWidth:0,flex:1}},
+              React.createElement('div',{style:{fontSize:13,fontWeight:700,color:'#1E3A8A'}}, v.nombre||'—'),
+              (v.direccion||v.celular)? React.createElement('div',{style:{fontSize:11,color:'#475569',marginTop:2}}, [v.direccion,v.celular].filter(Boolean).join(' · ')):null
+            )
+          ); })):null,
+        (acts.length===0 && vis.length===0)
           ? React.createElement('div',{style:{textAlign:'center',color:'#94A3B8',fontSize:13,padding:'30px 0'}}, 'Sin actividades este día. Tocá "Nueva actividad" para agregar.')
-          : React.createElement('div',{style:{display:'flex',flexDirection:'column',gap:8}}, acts.map(function(a){ var est=EST_ACT[a.estado]||EST_ACT.por_planificar; var h=horasDelDiaAct(a,s);
+          : (acts.length===0 ? null : React.createElement('div',{style:{display:'flex',flexDirection:'column',gap:8}}, acts.map(function(a){ var est=EST_ACT[a.estado]||EST_ACT.por_planificar; var h=horasDelDiaAct(a,s);
               return React.createElement('div',{key:a.id,title:resumenDe(a),onClick:function(){ setEditing(Object.assign({},a)); },
                 style:{display:'flex',alignItems:'center',gap:10,background:'#fff',border:'1px solid #E2E8F0',borderLeft:'5px solid '+(a.color||'#F26B1D'),borderRadius:8,padding:'10px 12px',cursor:'pointer'}},
                 React.createElement('div',{style:{background:a.color||'#F26B1D',color:'#fff',borderRadius:7,padding:'4px 9px',fontSize:13,fontWeight:800,minWidth:44,textAlign:'center'}}, (Math.round(h*10)/10)+'h'),
@@ -7299,7 +7321,7 @@ function PlanificacionView({ actividades, onSave, quotes, personas, planForQuote
                   React.createElement('div',{style:{fontSize:11,color:'#64748B',marginTop:2}}, est.label+((a.equipo&&a.equipo.length)?(' · '+(a.equipo||[]).map(persLabel).join(', ')):''))
                 )
               );
-            }))
+            })))
       )
     );
   }
@@ -8548,9 +8570,11 @@ function App() {
     onSave: handleActividades,
     quotes: quotes,
     personas: personas,
+    pedidos: pedidos,
     planForQuote: planForQuote,
     onConsumePlan: function(){ setPlanForQuote(null); },
-    onPatchQuote: patchQuote
+    onPatchQuote: patchQuote,
+    onGoPedidos: function(){ setView("pedidos"); }
   }), (view==="dashboard"||view==="movimientos") && /*#__PURE__*/React.createElement(IngresosView, {
     quotes: quotes,
     egresos: egresos,
