@@ -797,7 +797,7 @@ const savePersonas = async d => {
   } catch { try { await db.set(PKEY, JSON.stringify(d)); } catch {} }
 };
 // ── Pedidos por cotizar (leads: proyectos a ir a ver / cotizar) ──
-const mkPedido = () => ({ id: uid(), tipo: "visita", nombre: "", celular: "", direccion: "", descripcion: "", notas: "", fechaVisita: "", montoTerceros: "", gananciaPct: "", estado: "por_visitar", fecha: new Date().toISOString(), autor: ebcUser() });
+const mkPedido = () => ({ id: uid(), tipo: "visita", nombre: "", celular: "", direccion: "", descripcion: "", notas: "", tipoTrabajo: ["electricidad"], fechaVisita: "", montoTerceros: "", gananciaPct: "", estado: "por_visitar", fecha: new Date().toISOString(), autor: ebcUser() });
 // Normaliza estados viejos ('pendiente' → 'por_cotizar')
 const estadoPedido = (p) => { var e = p && p.estado; if(e==='pendiente') return 'por_cotizar'; return e || 'por_visitar'; };
 const loadPedidos = async () => {
@@ -6454,6 +6454,8 @@ function PedidosView({ pedidos, onSave, onConvertir }){
   const waNum = function(c){ return String(c||'').replace(/[^0-9]/g,''); };
   const fmtM = function(n){ return '$ '+Math.round(n||0).toLocaleString('es-AR'); };
   const totalTerceros = function(p){ var m=parseFloat(p.montoTerceros)||0; var g=parseFloat(p.gananciaPct)||0; return m*(1+g/100); };
+  var TT_META = { electricidad:{i:'⚡',l:'Electricidad',fg:'#B45309',bg:'#FFF7ED',br:'#FDBA74'}, pintura:{i:'🎨',l:'Pintura',fg:'#065F46',bg:'#ECFDF5',br:'#6EE7B7'}, plomeria:{i:'🔧',l:'Plomería',fg:'#1D4ED8',bg:'#EFF6FF',br:'#93C5FD'} };
+  function toggleTT(t){ setForm(function(fm){ var arr=Array.isArray(fm.tipoTrabajo)?fm.tipoTrabajo.slice():[]; var i=arr.indexOf(t); if(i>=0) arr.splice(i,1); else arr.push(t); return Object.assign({},fm,{tipoTrabajo:arr}); }); }
   const [adjView, setAdjView] = React.useState(null);
   const adjKey = function(p){ return 'ebc-ped-adj-'+p.id; };
   function subirAdj(p, file){
@@ -6497,7 +6499,7 @@ function PedidosView({ pedidos, onSave, onConvertir }){
     if(_muestraNotas && (!form.notas || !form.notas.trim())) faltan.push('Notas de la visita (relevamiento)');
     if(faltan.length){ alert('Completá los campos obligatorios (marcados con *): '+faltan.join(', ')+'.'); return; }
     if(form.tipo!=='terceros' && form.fechaVisita && form.fechaVisita > hoy){ alert('La fecha de visita no puede ser futura.'); return; }
-    var patch = {tipo:form.tipo||'visita', nombre:form.nombre.trim(), celular:(form.celular||'').trim(), direccion:(form.direccion||'').trim(), descripcion:(form.descripcion||'').trim(), notas:(form.tipo==='terceros'?'':(form.notas||'').trim()), fechaVisita:form.tipo==='terceros'?'':(form.fechaVisita||''), montoTerceros:form.tipo==='terceros'?(form.montoTerceros||''):'', gananciaPct:form.tipo==='terceros'?(form.gananciaPct||''):''};
+    var patch = {tipo:form.tipo||'visita', nombre:form.nombre.trim(), celular:(form.celular||'').trim(), direccion:(form.direccion||'').trim(), descripcion:(form.descripcion||'').trim(), tipoTrabajo:(Array.isArray(form.tipoTrabajo)?form.tipoTrabajo:[]), notas:(form.tipo==='terceros'?'':(form.notas||'').trim()), fechaVisita:form.tipo==='terceros'?'':(form.fechaVisita||''), montoTerceros:form.tipo==='terceros'?(form.montoTerceros||''):'', gananciaPct:form.tipo==='terceros'?(form.gananciaPct||''):''};
     if(editId && form.estado) patch.estado = form.estado;
     if(form._adjMeta) patch.adjunto = form._adjMeta;
     var savedId;
@@ -6549,6 +6551,7 @@ function PedidosView({ pedidos, onSave, onConvertir }){
         React.createElement('div',null, lbl('Nombre / Cliente', true), React.createElement('input',{style:inp,spellCheck:true,autoCapitalize:'words',value:form.nombre||'',onChange:function(e){setForm(Object.assign({},form,{nombre:e.target.value}));},onBlur:function(e){var v=e.target.value;if(v){var c=capitalize(v);if(c!==v)setForm(Object.assign({},form,{nombre:c}));}},placeholder:'Ej: Juan Pérez'})),
         React.createElement('div',null, lbl('Celular', true), React.createElement('input',{style:inp,type:'tel',inputMode:'tel',value:form.celular||'',onChange:function(e){setForm(Object.assign({},form,{celular:e.target.value.replace(/[^0-9+()\-\s]/g,'')}));},placeholder:'Ej: 11 2345 6789'})),
         React.createElement('div',{style:{gridColumn:isMobile?'auto':'1/-1'}}, lbl('Dirección', true), React.createElement('input',{style:inp,spellCheck:true,autoCapitalize:'sentences',value:form.direccion||'',onChange:function(e){setForm(Object.assign({},form,{direccion:e.target.value}));},placeholder:'Ej: Av. Siempre Viva 742, 3° B'})),
+        React.createElement('div',{style:{gridColumn:isMobile?'auto':'1/-1'}}, lbl('Tipo de trabajo'), React.createElement('div',{style:{display:'flex',gap:8,flexWrap:'wrap'}}, TIPOS_TRABAJO.map(function(t){ var m=TT_META[t]; var on=(Array.isArray(form.tipoTrabajo)?form.tipoTrabajo:[]).indexOf(t)>=0; return React.createElement('button',{key:t,type:'button',onClick:function(){toggleTT(t);},style:{padding:'7px 13px',borderRadius:20,border:'1px solid '+(on?m.br:'#E2E8F0'),background:on?m.bg:'#fff',color:on?m.fg:'#475569',fontSize:12,fontWeight:on?700:500,cursor:'pointer'}}, m.i+' '+m.l); })), React.createElement('div',{style:{fontSize:10,color:'#94A3B8',marginTop:3}},'Podés elegir más de uno.')),
         !esTerceros ? React.createElement('div',null, lbl('Fecha de visita', true), React.createElement('input',{style:inp,type:'date',max:hoy,value:form.fechaVisita||'',onChange:function(e){setForm(Object.assign({},form,{fechaVisita:e.target.value}));}}), React.createElement('div',{style:{fontSize:10,color:'#94A3B8',marginTop:3}},'No puede ser futura. El Inicio te avisa las visitas del día y las atrasadas.')) : null,
         esTerceros ? React.createElement('div',null, lbl('Monto del tercero ($)', true), React.createElement('input',{style:inp,type:'number',min:'0',step:'any',value:form.montoTerceros||'',onChange:function(e){setForm(Object.assign({},form,{montoTerceros:e.target.value}));},placeholder:'Ej: 150000'})) : null,
         esTerceros ? React.createElement('div',null, lbl('% de ganancia', true), React.createElement('input',{style:inp,type:'number',min:'0',step:'any',value:form.gananciaPct||'',onChange:function(e){setForm(Object.assign({},form,{gananciaPct:e.target.value}));},placeholder:'Ej: 30'})) : null,
@@ -6588,7 +6591,8 @@ function PedidosView({ pedidos, onSave, onConvertir }){
                   React.createElement('div',{style:{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}},
                     React.createElement('span',{style:{fontSize:16,fontWeight:700,color:NAVY}}, p.nombre||'(sin nombre)'),
                     React.createElement('span',{style:{fontSize:11,fontWeight:700,color:est.fg,background:est.bg,border:'1px solid '+est.br,borderRadius:20,padding:'2px 9px'}}, est.label),
-                    esTer? React.createElement('span',{style:{fontSize:11,fontWeight:700,color:'#6D28D9',background:'#F5F3FF',border:'1px solid #C4B5FD',borderRadius:20,padding:'2px 9px'}}, '📄 De terceros'):null
+                    esTer? React.createElement('span',{style:{fontSize:11,fontWeight:700,color:'#6D28D9',background:'#F5F3FF',border:'1px solid #C4B5FD',borderRadius:20,padding:'2px 9px'}}, '📄 De terceros'):null,
+                    (Array.isArray(p.tipoTrabajo)?p.tipoTrabajo:[]).map(function(t){ var m=TT_META[t]; if(!m) return null; return React.createElement('span',{key:t,style:{fontSize:11,fontWeight:700,color:m.fg,background:m.bg,border:'1px solid '+m.br,borderRadius:20,padding:'2px 9px'}}, m.i+' '+m.l); })
                   ),
                   p.direccion? React.createElement('div',{style:{fontSize:12,color:'#475569',marginTop:5}}, '📍 '+p.direccion):null,
                   (e==='por_visitar' && p.fechaVisita)? React.createElement('div',{style:{fontSize:12,fontWeight:700,marginTop:5,color:visVenc?'#B91C1C':(visHoy?'#B45309':'#1D4ED8')}}, '🗓 Visita: '+fmtFecha(p.fechaVisita)+(visVenc?' (atrasada)':(visHoy?' (hoy)':''))):null,
@@ -8050,6 +8054,7 @@ function App() {
     nq.cliente.telefono = pd.celular || "";
     nq.cliente.calle = pd.direccion || "";
     if(pd.descripcion) nq.referencia = pd.descripcion;
+    if(Array.isArray(pd.tipoTrabajo) && pd.tipoTrabajo.length) nq.tipoTrabajo = pd.tipoTrabajo.slice();
     var _terLine = "";
     if(pd.tipo==='terceros'){
       var _m=parseFloat(pd.montoTerceros)||0, _g=parseFloat(pd.gananciaPct)||0, _t=_m*(1+_g/100);
