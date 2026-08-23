@@ -4379,11 +4379,13 @@ function Tracker({
   highlightId,
   onClearHighlight,
   incomingFilter,
-  onFilterUsed
+  onFilterUsed,
+  onPatchQuote
 }) {
   const isMobile = useIsMobile();
   const [clientFilter, setClientFilter] = useState("");
   const [dropId, setDropId] = useState(null);
+  const [trabId, setTrabId] = useState(null);
   const [pagosPendientes, setPagosPendientes] = useState({});
   const [expandId, setExpandId] = useState(highlightId || null);
   const [editInlineId, setEditInlineId] = useState(null);
@@ -4915,11 +4917,15 @@ function Tracker({
       var color = pct >= 100 ? "#059669" : pct >= 50 ? "#2563EB" : "#F59E0B";
       var actsQ = (actividades||[]).filter(function(a){ return a.quoteId===q.id; });
       var ed, aLabel;
-      if(actsQ.length===0){ ed=null; var _dSin = q.aceptadoDesde ? Math.floor((Date.now()-new Date(q.aceptadoDesde).getTime())/86400000) : null; aLabel="⚠ Sin planificar"+((_dSin!=null && _dSin>=3)?(" (hace "+_dSin+"d)"):""); }
+      if(q.trabajoManual==='hecho'){ ed=EST_ACT.hecho; aLabel="✓ Hecho"; }
+      else if(q.trabajoManual==='planificar'){ ed=EST_ACT.por_planificar; aLabel="🛠 Por planificar"; }
+      else if(actsQ.length===0){ ed=null; var _dSin = q.aceptadoDesde ? Math.floor((Date.now()-new Date(q.aceptadoDesde).getTime())/86400000) : null; aLabel="⚠ Sin planificar"+((_dSin!=null && _dSin>=3)?(" (hace "+_dSin+"d)"):""); }
       else { var totA=actsQ.length, hechA=actsQ.filter(function(x){return x.estado==='hecho';}).length;
         if(hechA===totA){ ed=EST_ACT.hecho; aLabel="🗓 Hecho"; }
         else { var nonH=actsQ.filter(function(x){return x.estado!=='hecho';}); var minK=nonH.reduce(function(m,x){ return EST_ORDER.indexOf(x.estado)<EST_ORDER.indexOf(m)?x.estado:m; },'hecho'); ed=EST_ACT[minK]||EST_ACT.por_planificar; aLabel="🗓 "+ed.label+(hechA>0?(" ("+hechA+"/"+totA+")"):""); }
       }
+      var trabOpen = trabId===q.id;
+      function optT(label,fg,bg,br,on){ return React.createElement("button",{type:"button",onClick:function(e){ e.stopPropagation(); on(); },style:{display:"block",width:"100%",textAlign:"left",padding:"8px 12px",background:"none",border:"none",borderRadius:6,fontSize:12,color:fg,fontWeight:600,cursor:"pointer",whiteSpace:"nowrap"},onMouseEnter:function(e){e.currentTarget.style.background=bg;},onMouseLeave:function(e){e.currentTarget.style.background="none";}}, label); }
       return /*#__PURE__*/React.createElement("div", {style:{display:"flex",flexDirection:"column",gap:4}},
         /*#__PURE__*/React.createElement("div", {style:{display:"flex",flexDirection:"column",gap:3}},
           /*#__PURE__*/React.createElement("div", {style:{height:6,backgroundColor:"#E2E8F0",borderRadius:3,overflow:"hidden"}},
@@ -4930,7 +4936,19 @@ function Tracker({
             /*#__PURE__*/React.createElement("span", {style:{fontSize:9,color:"#94A3B8",whiteSpace:"nowrap"}}, "Resta $"+Math.max(0,total-cobrado).toLocaleString("es-AR",{maximumFractionDigits:0}))
           )
         ),
-        /*#__PURE__*/React.createElement("button", {type:"button",onClick:function(){ if(onGoToPlan) onGoToPlan(q.id); },title: ed?"Ver/editar en Planificación":"Planificar este presupuesto",style:{fontSize:9,fontWeight:700,padding:"3px 8px",borderRadius:6,whiteSpace:"nowrap",textAlign:"center",cursor:"pointer",color: ed?ed.color:"#B91C1C", backgroundColor: ed?ed.bg:"#FEF2F2", border:"1px solid "+(ed?ed.dot:"#FCA5A5")}}, aLabel)
+        /*#__PURE__*/React.createElement("div",{style:{position:"relative"}},
+          /*#__PURE__*/React.createElement("button", {type:"button",onClick:function(e){ e.stopPropagation(); setTrabId(trabOpen?null:q.id); },title:"Marcar estado del trabajo",style:{fontSize:9,fontWeight:700,padding:"3px 8px",borderRadius:6,whiteSpace:"nowrap",textAlign:"center",cursor:"pointer",width:"100%",color: ed?ed.color:"#B91C1C", backgroundColor: ed?ed.bg:"#FEF2F2", border:"1px solid "+(ed?ed.dot:"#FCA5A5")}}, aLabel, /*#__PURE__*/React.createElement("span",{style:{fontSize:8,marginLeft:4,opacity:0.7}},"▾")),
+          trabOpen && /*#__PURE__*/React.createElement(React.Fragment,null,
+            /*#__PURE__*/React.createElement("div",{onClick:function(){setTrabId(null);},style:{position:"fixed",inset:0,zIndex:9998}}),
+            /*#__PURE__*/React.createElement("div",{onClick:function(e){e.stopPropagation();},style: isMobile? {position:"fixed",left:"50%",top:"50%",transform:"translate(-50%,-50%)",zIndex:9999,background:"#fff",border:"1px solid #E2E8F0",borderRadius:10,padding:6,boxShadow:"0 16px 48px rgba(0,0,0,0.3)",minWidth:210} : {position:"absolute",top:"calc(100% + 4px)",left:"50%",transform:"translateX(-50%)",zIndex:9999,background:"#fff",border:"1px solid #E2E8F0",borderRadius:8,padding:6,boxShadow:"0 12px 32px rgba(0,0,0,0.2)",minWidth:190,textAlign:"left"}},
+              optT("✓ Hecho","#065F46","#ECFDF5","#6EE7B7",function(){ if(onPatchQuote) onPatchQuote(q.id,{trabajoManual:'hecho'}); setTrabId(null); }),
+              optT("🛠 Hay que planificar","#9A3412","#FFF7ED","#FDBA74",function(){ if(onPatchQuote) onPatchQuote(q.id,{trabajoManual:'planificar'}); setTrabId(null); }),
+              optT("🔄 Automático (según actividades)","#475569","#F1F5F9","#E2E8F0",function(){ if(onPatchQuote) onPatchQuote(q.id,{trabajoManual:null}); setTrabId(null); }),
+              /*#__PURE__*/React.createElement("div",{style:{height:1,background:"#E2E8F0",margin:"4px 0"}}),
+              optT("🗓 Ir a Planificación","#1D4ED8","#EFF6FF","#93C5FD",function(){ if(onGoToPlan) onGoToPlan(q.id); setTrabId(null); })
+            )
+          )
+        )
       );
     })()), /*#__PURE__*/React.createElement("td", {style:{padding:"10px 10px",textAlign:"center"}}, /*#__PURE__*/React.createElement("span",{style:{fontSize:10,fontWeight:700,color:"#475569",backgroundColor:"#F1F5F9",padding:"2px 8px",borderRadius:20,whiteSpace:"nowrap"}}, ebcUserLabel(q.autor||"guille"))), /*#__PURE__*/React.createElement("td", {
       style: {
@@ -8666,7 +8684,8 @@ function App() {
     highlightId: trackerHighlight,
     onClearHighlight: () => setTrackerHighlight(null),
     incomingFilter: trackerFilter,
-    onFilterUsed: () => setTrackerFilter(null)
+    onFilterUsed: () => setTrackerFilter(null),
+    onPatchQuote: patchQuote
   })), view === "personal" && /*#__PURE__*/React.createElement(PersonasView, {
     personas: personas,
     onSave: handlePersonas,
