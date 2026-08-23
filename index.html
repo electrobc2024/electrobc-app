@@ -8030,8 +8030,7 @@ function App() {
     nq.desdePedido = pd.id;
     setQuote(nq);
     setView("form");
-    // Marcar el pedido como cotizado
-    handlePedidos((pedidos||[]).map(function(x){ return x.id===pd.id ? Object.assign({}, x, {estado:"cotizado"}) : x; }));
+    // El pedido pasa a "cotizado" recién cuando se guarda el presupuesto (ver handleSave).
   };
   // ── Facturas por presupuesto (archivo PDF/imagen, guardado aparte del listado) ──
   const [facturas, setFacturas] = useState({});            // índice { quoteId: {name, mime, at} }
@@ -8154,6 +8153,13 @@ function App() {
     const nl = exists ? cur.map(q => q.id === updated.id ? updated : q) : [...cur, updated];
     setQuotes(nl);
     saveQ(nl).catch(() => {});
+    // Si este presupuesto viene de un pedido "Por cotizar", recién ahora (al guardar) lo marcamos como cotizado
+    if (updated.desdePedido) {
+      var _cur = pedidos || [];
+      if (_cur.some(function(x){ return x.id===updated.desdePedido && (x.estado==='por_cotizar' || x.estado==='pendiente'); })) {
+        handlePedidos(_cur.map(function(x){ return x.id===updated.desdePedido ? Object.assign({}, x, {estado:"cotizado"}) : x; }));
+      }
+    }
     if (statusRaw === "generar" || exists) {
       const maxNum = nl.reduce((m, q) => Math.max(m, parseInt(q.numero) || 0), NUM_INICIO - 1);
       setQuote(mkQuote(String(maxNum + 1).padStart(4, "0")));
