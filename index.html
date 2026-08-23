@@ -4918,7 +4918,7 @@ function Tracker({
       var actsQ = (actividades||[]).filter(function(a){ return a.quoteId===q.id; });
       var ed, aLabel;
       if(q.trabajoManual==='hecho'){ ed=EST_ACT.hecho; aLabel="✓ Hecho"; }
-      else if(q.trabajoManual==='planificar'){ ed=EST_ACT.por_planificar; aLabel="🛠 Por planificar"; }
+      else if(q.trabajoManual==='planificar'){ ed=EST_ACT.por_planificar; aLabel="⚠ Sin planificar"; }
       else if(actsQ.length===0){ ed=null; var _dSin = q.aceptadoDesde ? Math.floor((Date.now()-new Date(q.aceptadoDesde).getTime())/86400000) : null; aLabel="⚠ Sin planificar"+((_dSin!=null && _dSin>=3)?(" (hace "+_dSin+"d)"):""); }
       else { var totA=actsQ.length, hechA=actsQ.filter(function(x){return x.estado==='hecho';}).length;
         if(hechA===totA){ ed=EST_ACT.hecho; aLabel="🗓 Hecho"; }
@@ -4942,7 +4942,7 @@ function Tracker({
             /*#__PURE__*/React.createElement("div",{onClick:function(){setTrabId(null);},style:{position:"fixed",inset:0,zIndex:9998}}),
             /*#__PURE__*/React.createElement("div",{onClick:function(e){e.stopPropagation();},style: isMobile? {position:"fixed",left:"50%",top:"50%",transform:"translate(-50%,-50%)",zIndex:9999,background:"#fff",border:"1px solid #E2E8F0",borderRadius:10,padding:6,boxShadow:"0 16px 48px rgba(0,0,0,0.3)",minWidth:210} : {position:"absolute",top:"calc(100% + 4px)",left:"50%",transform:"translateX(-50%)",zIndex:9999,background:"#fff",border:"1px solid #E2E8F0",borderRadius:8,padding:6,boxShadow:"0 12px 32px rgba(0,0,0,0.2)",minWidth:190,textAlign:"left"}},
               optT("✓ Hecho","#065F46","#ECFDF5","#6EE7B7",function(){ if(onPatchQuote) onPatchQuote(q.id,{trabajoManual:'hecho'}); setTrabId(null); }),
-              optT("🛠 Hay que planificar","#9A3412","#FFF7ED","#FDBA74",function(){ if(onPatchQuote) onPatchQuote(q.id,{trabajoManual:'planificar'}); setTrabId(null); }),
+              optT("⚠ Sin planificar","#9A3412","#FFF7ED","#FDBA74",function(){ if(onPatchQuote) onPatchQuote(q.id,{trabajoManual:'planificar'}); setTrabId(null); }),
               optT("🔄 Automático (según actividades)","#475569","#F1F5F9","#E2E8F0",function(){ if(onPatchQuote) onPatchQuote(q.id,{trabajoManual:null}); setTrabId(null); }),
               /*#__PURE__*/React.createElement("div",{style:{height:1,background:"#E2E8F0",margin:"4px 0"}}),
               optT("🗓 Ir a Planificación","#1D4ED8","#EFF6FF","#93C5FD",function(){ if(onGoToPlan) onGoToPlan(q.id); setTrabId(null); })
