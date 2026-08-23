@@ -8027,7 +8027,11 @@ function App() {
     var _terLine = "";
     if(pd.tipo==='terceros'){
       var _m=parseFloat(pd.montoTerceros)||0, _g=parseFloat(pd.gananciaPct)||0, _t=_m*(1+_g/100);
-      _terLine = 'Presupuesto de terceros: $ '+Math.round(_m).toLocaleString('es-AR')+(_g?(' + '+_g+'% ganancia'):'')+' → total sugerido $ '+Math.round(_t).toLocaleString('es-AR');
+      var _tot = Math.round(_t);
+      _terLine = 'Presupuesto de terceros: $ '+Math.round(_m).toLocaleString('es-AR')+(_g?(' + '+_g+'% ganancia'):'')+' → total sugerido $ '+_tot.toLocaleString('es-AR');
+      // Precargamos el total ya con la ganancia como una línea de mano de obra.
+      // En el PDF solo aparece el precio final; la ganancia no se explicita.
+      nq.mdo = [Object.assign(mkRow(), {desc: pd.descripcion || 'Trabajo (presupuesto)', qty: 1, pu: _tot})];
     }
     var _adjLine = (pd.adjunto && pd.adjunto.name) ? ('Archivo adjunto en el pedido: '+pd.adjunto.name) : "";
     nq.notasVisita = [pd.descripcion, _terLine, pd.notas, _adjLine].filter(Boolean).join('\n\n');
