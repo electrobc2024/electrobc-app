@@ -5185,10 +5185,10 @@ function Tracker({
         width: "100%",
         backgroundColor: "#fff"
       }
-    }, ["generado", "revision", "espera", "aceptado", "rechazado"].filter(s=>s===(editForm.status||"generado")||canTransition(editForm.status||"generado",s)).map(s => /*#__PURE__*/React.createElement("option", {
+    }, ["generado", "revision", "espera", "aceptado", "rechazado"].map(s => /*#__PURE__*/React.createElement("option", {
       key: s,
       value: s
-    }, s.charAt(0).toUpperCase() + s.slice(1)))))), /*#__PURE__*/React.createElement("div", {
+    }, (STATUS_MAP[s] && STATUS_MAP[s].label) || (s.charAt(0).toUpperCase() + s.slice(1))))))), /*#__PURE__*/React.createElement("div", {
       style: {
         display: "grid",
         gridTemplateColumns: "repeat(4,1fr)",
