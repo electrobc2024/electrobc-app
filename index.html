@@ -6464,10 +6464,11 @@ function PersonasView({ personas, onSave, egresos }){
 }
 
 // ── Pedidos por cotizar (leads a ir a ver) ──
-function PedidosView({ pedidos, onSave, onConvertir }){
+function PedidosView({ pedidos, clients, onSave, onConvertir }){
   const NAVY = "#0A0F1E", ORANGE = "#F26B1D";
   const isMobile = useIsMobile();
   const list = pedidos || [];
+  const clientesOrd = (clients||[]).slice().sort(function(a,b){ return (a.nombre||'').localeCompare(b.nombre||''); });
   const [form, setForm] = React.useState(mkPedido());
   const [editId, setEditId] = React.useState(null);
   const [showForm, setShowForm] = React.useState(false);
@@ -6579,6 +6580,10 @@ function PedidosView({ pedidos, onSave, onConvertir }){
       React.createElement('div',{style:{fontSize:13,fontWeight:700,color:NAVY,marginBottom:12}}, editId?'✏️ Editar pedido':'➕ Nuevo pedido'),
       React.createElement('div',{style:{display:'flex',gap:8,marginBottom:14,flexWrap:'wrap'}}, tipoChip('visita','🏠 Visita propia'), tipoChip('terceros','📄 Presupuesto de terceros')),
       React.createElement('div',{style:{display:'grid',gridTemplateColumns:isMobile?'1fr':'1fr 1fr',gap:12,marginBottom:12}},
+        clientesOrd.length ? React.createElement('div',{style:{gridColumn:isMobile?'auto':'1/-1'}}, lbl('Cargar cliente guardado'), React.createElement('select',{value:"",onChange:function(e){ var id=e.target.value; if(!id) return; var c=clientesOrd.find(function(x){return x.id===id;}); if(c){ setForm(function(fm){ return Object.assign({},fm,{nombre:c.nombre||fm.nombre, celular:(c.telefono||fm.celular||''), direccion:([c.calle,c.depto,c.entreCalles].filter(Boolean).join(' ')||fm.direccion||'')}); }); } },style:Object.assign({},inp,{cursor:'pointer'})},
+          React.createElement('option',{value:""},'— Buscar o completar manualmente —'),
+          clientesOrd.map(function(c){ return React.createElement('option',{key:c.id,value:c.id}, (c.nombre||'(sin nombre)')+(c.administracion?(' · '+c.administracion):'')); })
+        ), React.createElement('div',{style:{fontSize:10,color:'#94A3B8',marginTop:3}},'Elegí un cliente para autocompletar nombre, celular y dirección. Podés editar lo que precargue.')) : null,
         React.createElement('div',null, lbl('Nombre / Cliente', true), React.createElement('input',{style:inp,spellCheck:true,autoCapitalize:'words',value:form.nombre||'',onChange:function(e){setForm(Object.assign({},form,{nombre:e.target.value}));},onBlur:function(e){var v=e.target.value;if(v){var c=capitalize(v);if(c!==v)setForm(Object.assign({},form,{nombre:c}));}},placeholder:'Ej: Juan Pérez'})),
         React.createElement('div',null, lbl('Celular', true), React.createElement('input',{style:inp,type:'tel',inputMode:'tel',value:form.celular||'',onChange:function(e){setForm(Object.assign({},form,{celular:e.target.value.replace(/[^0-9+()\-\s]/g,'')}));},placeholder:'Ej: 11 2345 6789'})),
         React.createElement('div',{style:{gridColumn:isMobile?'auto':'1/-1'}}, lbl('Dirección', true), React.createElement('input',{style:inp,spellCheck:true,autoCapitalize:'sentences',value:form.direccion||'',onChange:function(e){setForm(Object.assign({},form,{direccion:e.target.value}));},placeholder:'Ej: Av. Siempre Viva 742, 3° B'})),
@@ -8618,6 +8623,7 @@ function App() {
     setView: setView
   }), view === "pedidos" && /*#__PURE__*/React.createElement(PedidosView, {
     pedidos: pedidos,
+    clients: clients,
     onSave: handlePedidos,
     onConvertir: pedidoAPresupuesto
   }), view === "form" && /*#__PURE__*/React.createElement(QuoteForm, {
