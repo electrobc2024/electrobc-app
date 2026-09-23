@@ -716,32 +716,36 @@ const loadQ = async () => {
 var _syncBase = {};
 function _idset(arr){ var s = {}; (arr || []).forEach(function(it){ if(it && it.id) s[it.id] = 1; }); return s; }
 function setSyncBase(key, arr){ _syncBase[key] = _idset(arr); }
-// Une localArr con la nube respetando borrados locales.
-function mergeArrByIdBase(cloudArr, localArr, baseKey){
+// Une localArr con la nube. Por defecto respeta borrados locales (allowDel!==false).
+// Si allowDel===false, es UNIÓN pura: nunca descarta nada de la nube (evita que un
+// merge borre por error un ítem que otro dispositivo tenía).
+function mergeArrByIdBase(cloudArr, localArr, baseKey, allowDel){
   var base = _syncBase[baseKey] || null;
   var out = [], seen = {};
   (localArr || []).forEach(function(it){ if(it && it.id) seen[it.id] = 1; out.push(it); });
   (cloudArr || []).forEach(function(it){
     if(!it || !it.id || seen[it.id]) return;
-    if(base && base[it.id]) return; // lo teníamos y lo borramos → no lo revivimos
-    out.push(it);                    // agregado por otro dispositivo → lo sumamos
+    if(allowDel!==false && base && base[it.id]) return; // borrado local intencional → no lo revivimos
+    out.push(it);                                        // en la nube y no local → lo sumamos
   });
   _syncBase[baseKey] = _idset(out);
   return out;
 }
-async function sbMergeArr(key, localArr){
+async function sbMergeArr(key, localArr, allowDel){
   var cloud = [];
   try { var r = await sbGet(key); if(Array.isArray(r)) cloud = r; else if(typeof r === 'string'){ var p = JSON.parse(r); if(Array.isArray(p)) cloud = p; } } catch(e){}
-  return mergeArrByIdBase(cloud, localArr, key);
+  return mergeArrByIdBase(cloud, localArr, key, allowDel);
 }
 async function sbMergeCat(key, localCat){
   var cloud = {mdo:[],mat:[]};
   try { var r = await sbGet(key); var c = (typeof r === 'string') ? JSON.parse(r) : r; if(c && typeof c === 'object' && !Array.isArray(c)) cloud = c; } catch(e){}
   return { mdo: mergeArrByIdBase(cloud.mdo || [], localCat.mdo || [], key+':mdo'), mat: mergeArrByIdBase(cloud.mat || [], localCat.mat || [], key+':mat') };
 }
-const saveQ = async d => {
+// allowDel: solo true en el borrado explícito. Los guardados de rutina son UNIÓN
+// (nunca descartan un presupuesto por sincronización).
+const saveQ = async (d, allowDel) => {
   try {
-    var merged = await sbMergeArr(SKEY, d);
+    var merged = await sbMergeArr(SKEY, d, allowDel===true);
     await db.set(SKEY, JSON.stringify(merged));
   } catch { try { await db.set(SKEY, JSON.stringify(d)); } catch {} }
 };
@@ -8199,9 +8203,9 @@ function App() {
       setLoading(false);
     });
   }, []);
-  const persist = useCallback(async u => {
+  const persist = useCallback(async (u, allowDel) => {
     setQuotes(u);
-    await saveQ(u);
+    await saveQ(u, allowDel);
   }, []);
   const patchQuote = useCallback((id, patch) => {
     const cur = quotesRef.current;
@@ -8344,7 +8348,7 @@ function App() {
     if (!confirm(msg)) return;
     var nl = cur.filter(function(q){ return q.id!==id; });
     if(orig){ nl = nl.map(function(q){ if(q.id===orig.id){ var c=Object.assign({},q,{status:'espera'}); delete c.recotizadoPor; return c; } return q; }); }
-    await persist(nl);
+    await persist(nl, true);   // borrado explícito: sí propaga la baja
   }, [quotesRef, persist]);
   const handleDuplicate = useCallback(async function(orig) {
     var cur = quotesRef.current;
