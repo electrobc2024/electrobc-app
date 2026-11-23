@@ -6690,6 +6690,8 @@ function TrabajosView({ quotes, pedidos, actividades, personas, facturas, onPatc
   function estadoObra(q){ if(q.trabajoManual && EST_ACT[q.trabajoManual]) return q.trabajoManual; var aq=acts.filter(function(a){return a.quoteId===q.id;}); if(!aq.length) return 'por_planificar'; if(aq.every(function(a){return a.estado==='hecho';})) return 'hecho'; var nonH=aq.filter(function(x){return x.estado!=='hecho';}); return nonH.reduce(function(m,x){return EST_ORDER.indexOf(x.estado)<EST_ORDER.indexOf(m)?x.estado:m;},'hecho'); }
   var obras=(quotes||[]).filter(function(q){ return q.status==='aceptado' && !esHecho(q); });
   var leads=(pedidos||[]).filter(function(p){ var e=estadoPedido(p); return e==='por_visitar'||e==='por_cotizar'; });
+  var enEspera=(quotes||[]).filter(function(q){ return q.status==='espera' && !isVencido(q); });
+  var paraReco=(quotes||[]).filter(function(q){ return effectiveStatus(q)==='recotizar'; });
   var rows=obras.map(function(q){ return {kind:'obra', id:q.id, q:q}; }).concat(leads.map(function(p){ return {kind:'pedido', id:p.id, p:p}; }));
   var prioRank={alta:0,media:1,baja:2,'':3};
   function getPlan(r){ return (r.kind==='obra' ? (r.q.plan||{}) : (r.p.plan||{})); }
@@ -6785,6 +6787,8 @@ function TrabajosView({ quotes, pedidos, actividades, personas, facturas, onPatc
     React.createElement('div',{style:{display:'flex',gap:10,flexWrap:'wrap',marginBottom:14}},
       React.createElement('div',{style:{background:'#ECFDF5',border:'1px solid #A7F3D0',borderRadius:10,padding:'10px 14px'}}, React.createElement('div',{style:{fontSize:10,fontWeight:700,color:'#047857',textTransform:'uppercase'}},'🔧 Obras por hacer'), React.createElement('div',{style:{fontFamily:"'Oswald',system-ui",fontSize:20,fontWeight:700,color:NAVY}}, String(nObra))),
       React.createElement('div',{style:{background:'#FFF7ED',border:'1px solid #FED7AA',borderRadius:10,padding:'10px 14px'}}, React.createElement('div',{style:{fontSize:10,fontWeight:700,color:'#B45309',textTransform:'uppercase'}},'📌 Por cotizar'), React.createElement('div',{style:{fontFamily:"'Oswald',system-ui",fontSize:20,fontWeight:700,color:NAVY}}, String(nLead))),
+      React.createElement('button',{type:'button',onClick:function(){ onGoTrackerFilter('espera'); },title:'Presupuestos enviados esperando respuesta — hacer seguimiento',style:{textAlign:'left',cursor:'pointer',background:'#FFFBEB',border:'1px solid '+(enEspera.length>0?'#FDE68A':'#E2E8F0'),borderRadius:10,padding:'10px 14px'}}, React.createElement('div',{style:{fontSize:10,fontWeight:700,color:'#B45309',textTransform:'uppercase'}},'📤 En espera (seguir)'), React.createElement('div',{style:{fontFamily:"'Oswald',system-ui",fontSize:20,fontWeight:700,color:NAVY}}, String(enEspera.length))),
+      React.createElement('button',{type:'button',onClick:function(){ onGoTrackerFilter('recotizar'); },title:'Presupuestos vencidos — conviene recotizar',style:{textAlign:'left',cursor:'pointer',background:'#FFF7ED',border:'1px solid '+(paraReco.length>0?'#FDBA74':'#E2E8F0'),borderRadius:10,padding:'10px 14px'}}, React.createElement('div',{style:{fontSize:10,fontWeight:700,color:'#C2410C',textTransform:'uppercase'}},'⏰ Para recotizar'), React.createElement('div',{style:{fontFamily:"'Oswald',system-ui",fontSize:20,fontWeight:700,color:(paraReco.length>0?'#C2410C':NAVY)}}, String(paraReco.length))),
       React.createElement('div',{style:{marginLeft:'auto',display:'flex',gap:6,alignItems:'center',flexWrap:'wrap'}},
         React.createElement('button',{type:'button',onClick:function(){ onGoPlan(); },style:{background:'none',border:'1px solid #E2E8F0',borderRadius:8,padding:'8px 12px',fontSize:12,fontWeight:600,color:'#475569',cursor:'pointer'}},'🗓 Planificación'),
         React.createElement('button',{type:'button',onClick:function(){ setView('pedidos'); },style:{background:'none',border:'1px solid #E2E8F0',borderRadius:8,padding:'8px 12px',fontSize:12,fontWeight:600,color:'#475569',cursor:'pointer'}},'📌 Por cotizar'),
@@ -9905,6 +9909,51 @@ function IngresosView({quotes, egresos, onSaveEgresos, clients, catalog, persona
                 React.createElement('span',{style:{fontSize:12,color:'#475569',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}, (i+1)+'. '+r.nom),
                 React.createElement('span',{style:{fontSize:12,fontWeight:700,color:NAVY,flexShrink:0}}, fmt(r.cob))
               ); }))
+            );
+          })(),
+          (function(){
+            var byCli={};
+            (quotes||[]).forEach(function(q){
+              if(q.status==='recotizado') return;
+              var nom=((q.cliente&&(q.cliente.administracion||q.cliente.nombre))||'—').trim()||'—';
+              var b=byCli[nom]||(byCli[nom]={nom:nom,total:0,acep:0,rech:0,esp:0,reco:0});
+              b.total++;
+              if(q.status==='aceptado') b.acep++;
+              else if(q.status==='rechazado') b.rech++;
+              else if(effectiveStatus(q)==='recotizar') b.reco++;
+              else if(q.status==='espera') b.esp++;
+            });
+            var arr=Object.keys(byCli).map(function(k){return byCli[k];}).filter(function(x){return x.total>=2 && (x.reco+x.esp+x.rech)>0;}).sort(function(a,b){ var na=a.reco+a.esp, nb=b.reco+b.esp; if(nb!==na) return nb-na; return b.total-a.total; }).slice(0,8);
+            var thX={padding:'6px 8px',fontSize:9,fontWeight:700,color:'#94A3B8',textTransform:'uppercase',textAlign:'right',borderBottom:'1px solid #E2E8F0',whiteSpace:'nowrap'};
+            var tdX={padding:'6px 8px',fontSize:12,color:'#475569',textAlign:'right',borderBottom:'1px solid #F1F5F9',whiteSpace:'nowrap'};
+            return React.createElement('div',{style:Object.assign({},card,{marginTop:12})},
+              React.createElement('div',{style:{fontSize:13,fontWeight:700,color:NAVY,marginBottom:3}},'📉 Conversión por cliente'),
+              React.createElement('div',{style:{fontSize:11,color:'#94A3B8',marginBottom:8}},'Clientes a los que presupuestás seguido pero cierran poco, o que quedan sin respuesta / para recotizar.'),
+              arr.length===0 ? React.createElement('div',{style:{color:'#94A3B8',fontSize:12}},'Sin datos suficientes todavía.') :
+              React.createElement('div',{style:{overflowX:'auto'}},
+                React.createElement('table',{style:{width:'100%',borderCollapse:'collapse'}},
+                  React.createElement('thead',null, React.createElement('tr',null,
+                    React.createElement('th',{style:Object.assign({},thX,{textAlign:'left'})},'Cliente / Admin.'),
+                    React.createElement('th',{style:thX},'Presup.'),
+                    React.createElement('th',{style:thX},'Aceptados'),
+                    React.createElement('th',{style:thX},'% acept.'),
+                    React.createElement('th',{style:thX},'En espera'),
+                    React.createElement('th',{style:thX},'Recotizar')
+                  )),
+                  React.createElement('tbody',null, arr.map(function(b){
+                    var pct=b.total>0?Math.round(b.acep/b.total*100):0;
+                    var pctCol = pct>=50?'#166534':(pct>=25?'#B45309':'#B91C1C');
+                    return React.createElement('tr',{key:b.nom},
+                      React.createElement('td',{style:Object.assign({},tdX,{textAlign:'left',color:NAVY,fontWeight:600,maxWidth:170,overflow:'hidden',textOverflow:'ellipsis'})}, b.nom),
+                      React.createElement('td',{style:tdX}, b.total),
+                      React.createElement('td',{style:tdX}, b.acep),
+                      React.createElement('td',{style:Object.assign({},tdX,{fontWeight:700,color:pctCol})}, pct+'%'),
+                      React.createElement('td',{style:tdX}, b.esp||'—'),
+                      React.createElement('td',{style:Object.assign({},tdX,{fontWeight:700,color:b.reco>0?'#C2410C':'#94A3B8'})}, b.reco||'—')
+                    );
+                  }))
+                )
+              )
             );
           })()
           )
