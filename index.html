@@ -10251,6 +10251,13 @@ function PortalView({ token }){
           ))
         ),
     React.createElement('div',{style:{fontSize:11,color:'#94A3B8',marginTop:14,textAlign:'center'}},'Este tablero es de solo lectura y se actualiza automáticamente. Tocá el N° de cada presupuesto para ver o descargar el PDF.'),
+    // ── Pedido de reseña en Google ──
+    React.createElement('div',{style:{background:'#fff',border:'1px solid #FED7AA',borderRadius:14,padding:'22px 22px',marginTop:16,textAlign:'center',boxShadow:'0 2px 10px rgba(0,0,0,0.04)'}},
+      React.createElement('div',{style:{fontSize:24,letterSpacing:3,color:'#F59E0B',marginBottom:6}},'★★★★★'),
+      React.createElement('div',{style:{fontFamily:"'Oswald',system-ui",fontSize:19,fontWeight:700,color:NAVY,marginBottom:6}},'¿Nos dejás una reseña?'),
+      React.createElement('div',{style:{fontSize:13,color:'#64748B',lineHeight:1.6,maxWidth:540,margin:'0 auto 16px'}},'Gracias por confiar en ELECTRO BC ⚡ Si quedaste conforme con el trabajo, una reseña en Google nos ayuda muchísimo a que más personas nos conozcan. Son 2 minutos: ponés las estrellas y contás en un par de líneas cómo fue tu experiencia.'),
+      React.createElement('a',{href:'https://g.page/r/CWy-GBHHGnuMECE/review',target:'_blank',rel:'noopener noreferrer',style:{display:'inline-flex',alignItems:'center',gap:8,background:ORANGE,color:'#fff',textDecoration:'none',fontWeight:700,fontSize:14,padding:'12px 24px',borderRadius:10}},'⭐ Dejar mi reseña en Google')
+    ),
     pdfQuote ? React.createElement(PdfOverlay,{ quote: pdfQuote, onClose:function(){ setPdfQuote(null); }, onMarkSent:function(){}, soloPdf:true }) : null,
     facView ? React.createElement(FacturaOverlay,{ fac: facView, onClose:function(){ setFacView(null); } }) : null,
     cronQ ? React.createElement('div',{onMouseDown:function(){setCronQ(null);},style:{position:'fixed',inset:0,zIndex:10000,backgroundColor:'rgba(0,0,0,0.85)',display:'flex',flexDirection:'column',alignItems:'center',overflowY:'auto',padding:'20px 16px'}},
