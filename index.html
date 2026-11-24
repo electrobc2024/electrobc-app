@@ -9463,6 +9463,10 @@ function IngresosView({quotes, egresos, onSaveEgresos, clients, catalog, persona
   const [movAnosVer, setMovAnosVer] = React.useState([String(new Date().getFullYear())]);
   const [openCardInfo, setOpenCardInfo] = React.useState([]);
   const [rubroModo, setRubroModo] = React.useState('mdo'); // mdo | mat | total
+  const [repAno, setRepAno] = React.useState(String(new Date().getFullYear()));
+  const [repMes, setRepMes] = React.useState(String(new Date().getMonth()+1).padStart(2,'0'));
+  const [reparto, setReparto] = React.useState({fede:34, guille:33, caja:33});
+  React.useEffect(function(){ (async()=>{ try{ var r=await db.get('ebc-reparto-v1'); if(r){ var x=JSON.parse(r.value); if(x&&typeof x==='object') setReparto({fede:(x.fede!=null?x.fede:34), guille:(x.guille!=null?x.guille:33), caja:(x.caja!=null?x.caja:33)}); } }catch(e){} })(); }, []);
 
   const fmt = n => (parseFloat(n)||0).toLocaleString('es-AR',{style:'currency',currency:'ARS',maximumFractionDigits:0});
   const fmtN = n => (parseFloat(n)||0).toLocaleString('es-AR',{maximumFractionDigits:0});
@@ -9939,6 +9943,46 @@ function IngresosView({quotes, egresos, onSaveEgresos, clients, catalog, persona
                 React.createElement('span',{style:{fontSize:10,color:'#475569',width:92,flexShrink:0,textAlign:'right',fontWeight:esMes?700:400}}, fML(m.v))
               ); })),
               React.createElement('div',{style:{fontSize:10,color:'#94A3B8',marginTop:6}}, 'La línea roja marca la meta próxima ('+fML(proxima)+').')
+            );
+          })(),
+          (function(){
+            // ── Reparto de socios ──
+            var ML2=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+            var per=repAno+'-'+repMes;
+            function inPer(f){ return f && String(f).slice(0,7)===per; }
+            function arsP2(p){ var m=parseFloat(p.monto||0); return p.moneda==='USD'? m*(parseFloat(p.tcambio)||0):m; }
+            var ingMO=0;
+            (quotes||[]).forEach(function(q){ if(q.status!=='aceptado') return; var md=calcSub(q.mdo), mt=calcSub(q.mat), tot=md+mt; if(tot<=0) return; var share=md/tot; (q.pagos||[]).forEach(function(p){ if(!inPer(p.fecha)) return; ingMO+=arsP2(p)*share; }); });
+            function egSum(cats){ return (egresos||[]).filter(function(e){ return e.tipo!=='ingreso' && inPer(e.fecha) && cats.indexOf(e.cat)>=0; }).reduce(function(s,e){ var m=parseFloat(e.monto)||0; if((e.moneda||'$')==='USD') m=m*(parseFloat(e.tcambio)||0); return s+m; },0); }
+            var sueldos=egSum(['sueldos']);
+            var gastos=egSum(['combustible','herramientas','seguros','varios']);
+            var excedente=ingMO - sueldos - gastos;
+            var sumPct=(parseFloat(reparto.fede)||0)+(parseFloat(reparto.guille)||0)+(parseFloat(reparto.caja)||0);
+            function part(pct){ return sumPct>0 ? excedente*((parseFloat(pct)||0)/sumPct) : 0; }
+            var yrs={}; (quotes||[]).forEach(function(q){ (q.pagos||[]).forEach(function(p){ if(p.fecha) yrs[String(p.fecha).slice(0,4)]=1; }); }); (egresos||[]).forEach(function(e){ if(e.fecha) yrs[String(e.fecha).slice(0,4)]=1; }); yrs[String(new Date().getFullYear())]=1; var anosR=Object.keys(yrs).sort();
+            var fM2=function(v){ return '$ '+Math.round(v).toLocaleString('es-AR'); };
+            var rowR=function(lbl,val,col,bold){ return React.createElement('div',{style:{display:'flex',justifyContent:'space-between',padding:'6px 0',borderBottom:'1px solid #F1F5F9'}}, React.createElement('span',{style:{fontSize:12,color:'#475569',fontWeight:bold?700:400}}, lbl), React.createElement('span',{style:{fontSize:13,fontWeight:bold?800:700,color:col||NAVY}}, val)); };
+            var pInp={border:'1px solid #E2E8F0',borderRadius:6,padding:'4px 6px',fontSize:12,width:56,textAlign:'right'};
+            return React.createElement('div',{style:Object.assign({},card,{marginTop:12})},
+              React.createElement('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',gap:8,flexWrap:'wrap',marginBottom:6}},
+                React.createElement('div',{style:{fontSize:13,fontWeight:700,color:NAVY}},'🤝 Reparto de socios'),
+                React.createElement('div',{style:{display:'flex',gap:6}},
+                  React.createElement('select',{value:repMes,onChange:function(e){setRepMes(e.target.value);},style:{border:'1px solid #E2E8F0',borderRadius:6,padding:'4px 6px',fontSize:12,cursor:'pointer'}}, ['01','02','03','04','05','06','07','08','09','10','11','12'].map(function(m,i){ return React.createElement('option',{key:m,value:m}, ML2[i]); })),
+                  React.createElement('select',{value:repAno,onChange:function(e){setRepAno(e.target.value);},style:{border:'1px solid #E2E8F0',borderRadius:6,padding:'4px 6px',fontSize:12,cursor:'pointer'}}, anosR.map(function(a){ return React.createElement('option',{key:a,value:a}, a); }))
+                )
+              ),
+              React.createElement('div',{style:{fontSize:11,color:'#94A3B8',marginBottom:10}},'De los ingresos de mano de obra del mes se restan sueldos y gastos/inversiones (sin materiales ni compras para clientes). Lo que queda se reparte.'),
+              rowR('Ingresos de mano de obra', fM2(ingMO), '#166534'),
+              rowR('− Sueldos', fM2(sueldos), '#B91C1C'),
+              rowR('− Gastos / inversiones', fM2(gastos), '#B91C1C'),
+              rowR('= Excedente a repartir', fM2(excedente), excedente>=0?NAVY:'#B91C1C', true),
+              React.createElement('div',{style:{marginTop:10,display:'flex',flexDirection:'column',gap:8}},
+                [['fede','Fede'],['guille','Guille'],['caja','Caja Electro BC']].map(function(o){ return React.createElement('div',{key:o[0],style:{display:'flex',alignItems:'center',justifyContent:'space-between',gap:8,background:'#F8FAFC',border:'1px solid #E2E8F0',borderRadius:8,padding:'8px 10px'}},
+                  React.createElement('div',{style:{display:'flex',alignItems:'center',gap:6}}, React.createElement('span',{style:{fontSize:12,fontWeight:700,color:NAVY,minWidth:54}}, o[1]), React.createElement('input',{type:'number',min:'0',value:reparto[o[0]],onChange:function(e){ var nr=Object.assign({},reparto); nr[o[0]]=e.target.value; setReparto(nr); },onBlur:function(){ db.set('ebc-reparto-v1', JSON.stringify(reparto)); },style:pInp}), React.createElement('span',{style:{fontSize:11,color:'#94A3B8'}},'%')),
+                  React.createElement('span',{style:{fontSize:15,fontWeight:800,color:NAVY,fontFamily:"'Oswald',system-ui"}}, fM2(part(reparto[o[0]])))
+                ); })
+              ),
+              Math.abs(sumPct-100)>0.5 ? React.createElement('div',{style:{fontSize:10,color:'#B45309',marginTop:6}},'Los % suman '+Math.round(sumPct)+'% (se reparte proporcional). Para que sea exacto, que sumen 100%.') : null
             );
           })(),
           (function(){
