@@ -9465,8 +9465,8 @@ function IngresosView({quotes, egresos, onSaveEgresos, clients, catalog, persona
   const [rubroModo, setRubroModo] = React.useState('mdo'); // mdo | mat | total
   const [repAno, setRepAno] = React.useState(String(new Date().getFullYear()));
   const [repMes, setRepMes] = React.useState(String(new Date().getMonth()+1).padStart(2,'0'));
-  const [reparto, setReparto] = React.useState({fede:34, guille:33, caja:33});
-  React.useEffect(function(){ (async()=>{ try{ var r=await db.get('ebc-reparto-v1'); if(r){ var x=JSON.parse(r.value); if(x&&typeof x==='object') setReparto({fede:(x.fede!=null?x.fede:34), guille:(x.guille!=null?x.guille:33), caja:(x.caja!=null?x.caja:33)}); } }catch(e){} })(); }, []);
+  const [reparto, setReparto] = React.useState({fede:34, guille:33, caja:33, fedeId:'', guilleId:''});
+  React.useEffect(function(){ (async()=>{ try{ var r=await db.get('ebc-reparto-v1'); if(r){ var x=JSON.parse(r.value); if(x&&typeof x==='object') setReparto({fede:(x.fede!=null?x.fede:34), guille:(x.guille!=null?x.guille:33), caja:(x.caja!=null?x.caja:33), fedeId:(x.fedeId||''), guilleId:(x.guilleId||'')}); } }catch(e){} })(); }, []);
 
   const fmt = n => (parseFloat(n)||0).toLocaleString('es-AR',{style:'currency',currency:'ARS',maximumFractionDigits:0});
   const fmtN = n => (parseFloat(n)||0).toLocaleString('es-AR',{maximumFractionDigits:0});
@@ -9954,9 +9954,12 @@ function IngresosView({quotes, egresos, onSaveEgresos, clients, catalog, persona
             var ingMO=0;
             (quotes||[]).forEach(function(q){ if(q.status!=='aceptado') return; var md=calcSub(q.mdo), mt=calcSub(q.mat), tot=md+mt; if(tot<=0) return; var share=md/tot; (q.pagos||[]).forEach(function(p){ if(!inPer(p.fecha)) return; ingMO+=arsP2(p)*share; }); });
             function egSum(cats){ return (egresos||[]).filter(function(e){ return e.tipo!=='ingreso' && inPer(e.fecha) && cats.indexOf(e.cat)>=0; }).reduce(function(s,e){ var m=parseFloat(e.monto)||0; if((e.moneda||'$')==='USD') m=m*(parseFloat(e.tcambio)||0); return s+m; },0); }
-            var sueldos=egSum(['sueldos']);
+            var sueldoDe=function(pid){ if(!pid) return 0; return (egresos||[]).filter(function(e){ return e.tipo!=='ingreso' && e.cat==='sueldos' && e.personaId===pid && inPer(e.fecha); }).reduce(function(s,e){ var m=parseFloat(e.monto)||0; if((e.moneda||'$')==='USD') m=m*(parseFloat(e.tcambio)||0); return s+m; },0); };
+            var sueldoFede=sueldoDe(reparto.fedeId), sueldoGuille=sueldoDe(reparto.guilleId);
+            var sueldosTot=egSum(['sueldos']);
+            var sueldosEmp=Math.max(0, sueldosTot - sueldoFede - sueldoGuille);
             var gastos=egSum(['combustible','herramientas','seguros','varios']);
-            var excedente=ingMO - sueldos - gastos;
+            var excedente=ingMO - sueldosEmp - gastos;
             var sumPct=(parseFloat(reparto.fede)||0)+(parseFloat(reparto.guille)||0)+(parseFloat(reparto.caja)||0);
             function part(pct){ return sumPct>0 ? excedente*((parseFloat(pct)||0)/sumPct) : 0; }
             var yrs={}; (quotes||[]).forEach(function(q){ (q.pagos||[]).forEach(function(p){ if(p.fecha) yrs[String(p.fecha).slice(0,4)]=1; }); }); (egresos||[]).forEach(function(e){ if(e.fecha) yrs[String(e.fecha).slice(0,4)]=1; }); yrs[String(new Date().getFullYear())]=1; var anosR=Object.keys(yrs).sort();
@@ -9973,13 +9976,21 @@ function IngresosView({quotes, egresos, onSaveEgresos, clients, catalog, persona
               ),
               React.createElement('div',{style:{fontSize:11,color:'#94A3B8',marginBottom:10}},'De los ingresos de mano de obra del mes se restan sueldos y gastos/inversiones (sin materiales ni compras para clientes). Lo que queda se reparte.'),
               rowR('Ingresos de mano de obra', fM2(ingMO), '#166534'),
-              rowR('− Sueldos', fM2(sueldos), '#B91C1C'),
+              rowR('− Sueldos de empleados (sin socios)', fM2(sueldosEmp), '#B91C1C'),
               rowR('− Gastos / inversiones', fM2(gastos), '#B91C1C'),
               rowR('= Excedente a repartir', fM2(excedente), excedente>=0?NAVY:'#B91C1C', true),
-              React.createElement('div',{style:{marginTop:10,display:'flex',flexDirection:'column',gap:8}},
-                [['fede','Fede'],['guille','Guille'],['caja','Caja Electro BC']].map(function(o){ return React.createElement('div',{key:o[0],style:{display:'flex',alignItems:'center',justifyContent:'space-between',gap:8,background:'#F8FAFC',border:'1px solid #E2E8F0',borderRadius:8,padding:'8px 10px'}},
-                  React.createElement('div',{style:{display:'flex',alignItems:'center',gap:6}}, React.createElement('span',{style:{fontSize:12,fontWeight:700,color:NAVY,minWidth:54}}, o[1]), React.createElement('input',{type:'number',min:'0',value:reparto[o[0]],onChange:function(e){ var nr=Object.assign({},reparto); nr[o[0]]=e.target.value; setReparto(nr); },onBlur:function(){ db.set('ebc-reparto-v1', JSON.stringify(reparto)); },style:pInp}), React.createElement('span',{style:{fontSize:11,color:'#94A3B8'}},'%')),
-                  React.createElement('span',{style:{fontSize:15,fontWeight:800,color:NAVY,fontFamily:"'Oswald',system-ui"}}, fM2(part(reparto[o[0]])))
+              React.createElement('div',{style:{display:'flex',gap:8,flexWrap:'wrap',marginTop:10,marginBottom:4,alignItems:'center'}},
+                React.createElement('span',{style:{fontSize:11,fontWeight:700,color:'#94A3B8',textTransform:'uppercase'}},'Socios:'),
+                [['fedeId','Fede'],['guilleId','Guille']].map(function(s){ return React.createElement('label',{key:s[0],style:{display:'inline-flex',alignItems:'center',gap:4,fontSize:11,color:'#475569'}}, s[1]+' =', React.createElement('select',{value:reparto[s[0]]||'',onChange:function(e){ var nr=Object.assign({},reparto); nr[s[0]]=e.target.value; setReparto(nr); db.set('ebc-reparto-v1', JSON.stringify(nr)); },style:{border:'1px solid #E2E8F0',borderRadius:6,padding:'3px 6px',fontSize:11,cursor:'pointer'}}, React.createElement('option',{value:''},'—'), (personas||[]).slice().sort(function(a,b){return (a.nombre||'').localeCompare(b.nombre||'');}).map(function(p){ return React.createElement('option',{key:p.id,value:p.id}, p.nombre); }))); })
+              ),
+              React.createElement('div',{style:{fontSize:10,color:'#94A3B8',marginBottom:8}},'A cada socio se le suma su propio sueldo del mes + su parte del excedente. Por eso su sueldo no se resta como costo.'),
+              React.createElement('div',{style:{display:'flex',flexDirection:'column',gap:8}},
+                [{k:'fede',l:'Fede',sueldo:sueldoFede},{k:'guille',l:'Guille',sueldo:sueldoGuille},{k:'caja',l:'Caja Electro BC',sueldo:0}].map(function(o){ var rep=part(reparto[o.k]); var tk=o.sueldo+rep; return React.createElement('div',{key:o.k,style:{display:'flex',alignItems:'center',justifyContent:'space-between',gap:8,background:'#F8FAFC',border:'1px solid #E2E8F0',borderRadius:8,padding:'8px 10px'}},
+                  React.createElement('div',{style:{display:'flex',alignItems:'center',gap:6}}, React.createElement('span',{style:{fontSize:12,fontWeight:700,color:NAVY,minWidth:54}}, o.l), React.createElement('input',{type:'number',min:'0',value:reparto[o.k],onChange:function(e){ var nr=Object.assign({},reparto); nr[o.k]=e.target.value; setReparto(nr); },onBlur:function(){ db.set('ebc-reparto-v1', JSON.stringify(reparto)); },style:pInp}), React.createElement('span',{style:{fontSize:11,color:'#94A3B8'}},'%')),
+                  React.createElement('div',{style:{textAlign:'right'}},
+                    React.createElement('div',{style:{fontSize:15,fontWeight:800,color:NAVY,fontFamily:"'Oswald',system-ui"}}, fM2(tk)),
+                    o.sueldo>0 ? React.createElement('div',{style:{fontSize:9,color:'#94A3B8'}}, 'sueldo '+fM2(o.sueldo)+' + reparto '+fM2(rep)) : null
+                  )
                 ); })
               ),
               Math.abs(sumPct-100)>0.5 ? React.createElement('div',{style:{fontSize:10,color:'#B45309',marginTop:6}},'Los % suman '+Math.round(sumPct)+'% (se reparte proporcional). Para que sea exacto, que sumen 100%.') : null
