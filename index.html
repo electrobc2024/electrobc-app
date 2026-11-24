@@ -9901,17 +9901,6 @@ function IngresosView({quotes, egresos, onSaveEgresos, clients, catalog, persona
             dashAnosVer:dashAnosVer
           }),
           (function(){
-            var ranking=rentData.ranking;
-            return React.createElement('div',{style:Object.assign({},card,{marginTop:12})},
-              React.createElement('div',{style:{fontSize:13,fontWeight:700,color:NAVY,marginBottom:8}},'\u{1F3C6} Ranking de clientes (por cobrado)'),
-              ranking.length===0 ? React.createElement('div',{style:{color:'#94A3B8',fontSize:12}},'Sin cobros registrados.') :
-              React.createElement('div',null, ranking.map(function(r,i){ return React.createElement('div',{key:r.nom,style:{display:'flex',justifyContent:'space-between',alignItems:'baseline',gap:8,padding:'5px 0',borderBottom:i<ranking.length-1?'1px solid #F1F5F9':'none'}},
-                React.createElement('span',{style:{fontSize:12,color:'#475569',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}, (i+1)+'. '+r.nom),
-                React.createElement('span',{style:{fontSize:12,fontWeight:700,color:NAVY,flexShrink:0}}, fmt(r.cob))
-              ); }))
-            );
-          })(),
-          (function(){
             function _cobQ(q){ return (q.pagos||[]).reduce(function(s,p){ var m=parseFloat(p.monto||0); if(p.moneda==='USD') m=m*(parseFloat(p.tcambio)||0); return s+m; },0); }
             var _precioHora=function(pid){ var p=(personas||[]).find(function(x){return x.id===pid;}); return p?(parseFloat(p.precioHora)||0):0; };
             var _moDe=function(q){ var acts=(actividades||[]).filter(function(a){return a.quoteId===q.id;}); return acts.reduce(function(s,a){ var hr=parseFloat(a.horasReal)||0; if(hr<=0) return s; var vals=(a.equipo||[]).map(_precioHora).filter(function(v){return v>0;}); var avg=vals.length?(vals.reduce(function(x,y){return x+y;},0)/vals.length):0; return s+hr*avg; },0); };
@@ -9927,25 +9916,39 @@ function IngresosView({quotes, egresos, onSaveEgresos, clients, catalog, persona
               else if(effectiveStatus(q)==='recotizar') b.reco++;
               else if(q.status==='espera') b.esp++;
             });
-            var arr=Object.keys(byCli).map(function(k){return byCli[k];}).filter(function(x){return x.total>=2;}).sort(function(a,b){ if(b.total!==a.total) return b.total-a.total; return b.cob-a.cob; }).slice(0,12);
+            var arr=Object.keys(byCli).map(function(k){return byCli[k];}).filter(function(x){return x.total>=2;}).sort(function(a,b){ if(b.cob!==a.cob) return b.cob-a.cob; return b.total-a.total; }).slice(0,12);
             var thX={padding:'6px 8px',fontSize:9,fontWeight:700,color:'#94A3B8',textTransform:'uppercase',textAlign:'right',borderBottom:'1px solid #E2E8F0',whiteSpace:'nowrap'};
             var tdX={padding:'6px 8px',fontSize:12,color:'#475569',textAlign:'right',borderBottom:'1px solid #F1F5F9',whiteSpace:'nowrap'};
             return React.createElement('div',{style:Object.assign({},card,{marginTop:12})},
-              React.createElement('div',{style:{fontSize:13,fontWeight:700,color:NAVY,marginBottom:3}},'📊 Clientes: conversión + valor'),
-              React.createElement('div',{style:{fontSize:11,color:'#94A3B8',marginBottom:8}},'A quién le presupuestás más, cuánto te cierra y cuánto te dejó (cobrado). Alto cobrado + baja conversión: vale la pena, calificá mejor. Bajo cobrado + baja conversión: estás gastando pólvora.'),
+              React.createElement('div',{style:{fontSize:13,fontWeight:700,color:NAVY,marginBottom:3}},'🏆 Ranking de clientes (valor + conversión)'),
+              React.createElement('div',{style:{fontSize:11,color:'#94A3B8',marginBottom:6}},'Ordenado por lo cobrado (clientes más valiosos arriba). Cruza cuánto te cierra con cuánto te deja. Alto cobrado + baja conversión: vale la pena, calificá mejor. Bajo cobrado + baja conversión: estás gastando pólvora.'),
+              React.createElement('details',{style:{marginBottom:8}},
+                React.createElement('summary',{style:{fontSize:11,fontWeight:700,color:'#1D4ED8',cursor:'pointer'}},'ℹ️ ¿Cómo se calcula cada columna?'),
+                React.createElement('div',{style:{fontSize:11,color:'#475569',lineHeight:1.6,marginTop:6,background:'#F8FAFC',border:'1px solid #E2E8F0',borderRadius:8,padding:'8px 10px'}},
+                  React.createElement('div',null, React.createElement('b',null,'Cliente / Admin.'),': se agrupa por administración; si no tiene, por nombre del cliente.'),
+                  React.createElement('div',null, React.createElement('b',null,'Presup.'),': cantidad de presupuestos que le hiciste (no cuenta los reemplazados por una recotización).'),
+                  React.createElement('div',null, React.createElement('b',null,'Aceptados'),': cuántos de esos presupuestos te aceptó.'),
+                  React.createElement('div',null, React.createElement('b',null,'% acept.'),': aceptados ÷ total de presupuestos. Verde ≥50%, naranja ≥25%, rojo abajo.'),
+                  React.createElement('div',null, React.createElement('b',null,'En espera'),': presupuestos enviados que siguen esperando respuesta (vigentes).'),
+                  React.createElement('div',null, React.createElement('b',null,'Recotizar'),': presupuestos que vencieron sin respuesta y conviene actualizar.'),
+                  React.createElement('div',null, React.createElement('b',null,'Cobrado'),': total que ya te pagó (suma de todos los pagos de sus presupuestos).'),
+                  React.createElement('div',null, React.createElement('b',null,'Ticket prom.'),': monto promedio de los presupuestos aceptados (total presupuestado de aceptados ÷ cantidad aceptada).'),
+                  React.createElement('div',null, React.createElement('b',null,'Margen %'),': (cobrado − costo) ÷ cobrado. El costo es mano de obra real (horas trabajadas × valor hora de cada persona) + materiales a costo. Verde ≥40%, naranja ≥20%, rojo abajo.')
+                )
+              ),
               arr.length===0 ? React.createElement('div',{style:{color:'#94A3B8',fontSize:12}},'Sin datos suficientes todavía.') :
               React.createElement('div',{style:{overflowX:'auto'}},
                 React.createElement('table',{style:{width:'100%',borderCollapse:'collapse'}},
                   React.createElement('thead',null, React.createElement('tr',null,
-                    React.createElement('th',{style:Object.assign({},thX,{textAlign:'left'})},'Cliente / Admin.'),
-                    React.createElement('th',{style:thX},'Presup.'),
-                    React.createElement('th',{style:thX},'Aceptados'),
-                    React.createElement('th',{style:thX},'% acept.'),
-                    React.createElement('th',{style:thX},'En espera'),
-                    React.createElement('th',{style:thX},'Recotizar'),
-                    React.createElement('th',{style:thX},'Cobrado'),
-                    React.createElement('th',{style:thX},'Ticket prom.'),
-                    React.createElement('th',{style:thX},'Margen %')
+                    React.createElement('th',{style:Object.assign({},thX,{textAlign:'left'}),title:'Agrupado por administración; si no tiene, por nombre'},'Cliente / Admin.'),
+                    React.createElement('th',{style:thX,title:'Presupuestos que le hiciste (sin los reemplazados por recotización)'},'Presup.'),
+                    React.createElement('th',{style:thX,title:'Cuántos te aceptó'},'Aceptados'),
+                    React.createElement('th',{style:thX,title:'Aceptados ÷ total de presupuestos'},'% acept.'),
+                    React.createElement('th',{style:thX,title:'Enviados esperando respuesta (vigentes)'},'En espera'),
+                    React.createElement('th',{style:thX,title:'Vencidos sin respuesta — conviene recotizar'},'Recotizar'),
+                    React.createElement('th',{style:thX,title:'Total que ya te pagó'},'Cobrado'),
+                    React.createElement('th',{style:thX,title:'Monto promedio de los presupuestos aceptados'},'Ticket prom.'),
+                    React.createElement('th',{style:thX,title:'(Cobrado − costo mano de obra real + materiales) ÷ cobrado'},'Margen %')
                   )),
                   React.createElement('tbody',null, arr.map(function(b){
                     var pct=b.total>0?Math.round(b.acep/b.total*100):0;
