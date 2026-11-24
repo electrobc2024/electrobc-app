@@ -9912,23 +9912,24 @@ function IngresosView({quotes, egresos, onSaveEgresos, clients, catalog, persona
             );
           })(),
           (function(){
+            function _cobQ(q){ return (q.pagos||[]).reduce(function(s,p){ var m=parseFloat(p.monto||0); if(p.moneda==='USD') m=m*(parseFloat(p.tcambio)||0); return s+m; },0); }
             var byCli={};
             (quotes||[]).forEach(function(q){
               if(q.status==='recotizado') return;
               var nom=((q.cliente&&(q.cliente.administracion||q.cliente.nombre))||'—').trim()||'—';
-              var b=byCli[nom]||(byCli[nom]={nom:nom,total:0,acep:0,rech:0,esp:0,reco:0});
-              b.total++;
+              var b=byCli[nom]||(byCli[nom]={nom:nom,total:0,acep:0,rech:0,esp:0,reco:0,cob:0});
+              b.total++; b.cob+=_cobQ(q);
               if(q.status==='aceptado') b.acep++;
               else if(q.status==='rechazado') b.rech++;
               else if(effectiveStatus(q)==='recotizar') b.reco++;
               else if(q.status==='espera') b.esp++;
             });
-            var arr=Object.keys(byCli).map(function(k){return byCli[k];}).filter(function(x){return x.total>=2 && (x.reco+x.esp+x.rech)>0;}).sort(function(a,b){ var na=a.reco+a.esp, nb=b.reco+b.esp; if(nb!==na) return nb-na; return b.total-a.total; }).slice(0,8);
+            var arr=Object.keys(byCli).map(function(k){return byCli[k];}).filter(function(x){return x.total>=2;}).sort(function(a,b){ if(b.total!==a.total) return b.total-a.total; return b.cob-a.cob; }).slice(0,12);
             var thX={padding:'6px 8px',fontSize:9,fontWeight:700,color:'#94A3B8',textTransform:'uppercase',textAlign:'right',borderBottom:'1px solid #E2E8F0',whiteSpace:'nowrap'};
             var tdX={padding:'6px 8px',fontSize:12,color:'#475569',textAlign:'right',borderBottom:'1px solid #F1F5F9',whiteSpace:'nowrap'};
             return React.createElement('div',{style:Object.assign({},card,{marginTop:12})},
-              React.createElement('div',{style:{fontSize:13,fontWeight:700,color:NAVY,marginBottom:3}},'📉 Conversión por cliente'),
-              React.createElement('div',{style:{fontSize:11,color:'#94A3B8',marginBottom:8}},'Clientes a los que presupuestás seguido pero cierran poco, o que quedan sin respuesta / para recotizar.'),
+              React.createElement('div',{style:{fontSize:13,fontWeight:700,color:NAVY,marginBottom:3}},'📊 Clientes: conversión + valor'),
+              React.createElement('div',{style:{fontSize:11,color:'#94A3B8',marginBottom:8}},'A quién le presupuestás más, cuánto te cierra y cuánto te dejó (cobrado). Alto cobrado + baja conversión: vale la pena, calificá mejor. Bajo cobrado + baja conversión: estás gastando pólvora.'),
               arr.length===0 ? React.createElement('div',{style:{color:'#94A3B8',fontSize:12}},'Sin datos suficientes todavía.') :
               React.createElement('div',{style:{overflowX:'auto'}},
                 React.createElement('table',{style:{width:'100%',borderCollapse:'collapse'}},
@@ -9938,7 +9939,8 @@ function IngresosView({quotes, egresos, onSaveEgresos, clients, catalog, persona
                     React.createElement('th',{style:thX},'Aceptados'),
                     React.createElement('th',{style:thX},'% acept.'),
                     React.createElement('th',{style:thX},'En espera'),
-                    React.createElement('th',{style:thX},'Recotizar')
+                    React.createElement('th',{style:thX},'Recotizar'),
+                    React.createElement('th',{style:thX},'Cobrado')
                   )),
                   React.createElement('tbody',null, arr.map(function(b){
                     var pct=b.total>0?Math.round(b.acep/b.total*100):0;
@@ -9949,7 +9951,8 @@ function IngresosView({quotes, egresos, onSaveEgresos, clients, catalog, persona
                       React.createElement('td',{style:tdX}, b.acep),
                       React.createElement('td',{style:Object.assign({},tdX,{fontWeight:700,color:pctCol})}, pct+'%'),
                       React.createElement('td',{style:tdX}, b.esp||'—'),
-                      React.createElement('td',{style:Object.assign({},tdX,{fontWeight:700,color:b.reco>0?'#C2410C':'#94A3B8'})}, b.reco||'—')
+                      React.createElement('td',{style:Object.assign({},tdX,{fontWeight:700,color:b.reco>0?'#C2410C':'#94A3B8'})}, b.reco||'—'),
+                      React.createElement('td',{style:Object.assign({},tdX,{fontWeight:700,color:NAVY})}, '$ '+Math.round(b.cob).toLocaleString('es-AR'))
                     );
                   }))
                 )
