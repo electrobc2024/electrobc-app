@@ -9459,6 +9459,7 @@ function IngresosView({quotes, egresos, onSaveEgresos, clients, catalog, persona
   const [movMesesVer, setMovMesesVer] = React.useState([]);
   const [movAnosVer, setMovAnosVer] = React.useState([String(new Date().getFullYear())]);
   const [openCardInfo, setOpenCardInfo] = React.useState([]);
+  const [rubroModo, setRubroModo] = React.useState('mdo'); // mdo | mat | total
 
   const fmt = n => (parseFloat(n)||0).toLocaleString('es-AR',{style:'currency',currency:'ARS',maximumFractionDigits:0});
   const fmtN = n => (parseFloat(n)||0).toLocaleString('es-AR',{maximumFractionDigits:0});
@@ -9901,23 +9902,64 @@ function IngresosView({quotes, egresos, onSaveEgresos, clients, catalog, persona
             dashAnosVer:dashAnosVer
           }),
           (function(){
+            // ── Meta de ingresos de mano de obra (sin materiales) ──
+            var ML=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+            function arsP(p){ var m=parseFloat(p.monto||0); return p.moneda==='USD'? m*(parseFloat(p.tcambio)||0):m; }
+            var byMonth={};
+            (quotes||[]).forEach(function(q){ if(q.status!=='aceptado') return; var md=calcSub(q.mdo), mt=calcSub(q.mat), tot=md+mt; if(tot<=0) return; var share=md/tot; (q.pagos||[]).forEach(function(p){ if(!p.fecha) return; var mes=String(p.fecha).slice(0,7); byMonth[mes]=(byMonth[mes]||0)+arsP(p)*share; }); });
+            var now=new Date(); var serie=[]; for(var i=5;i>=0;i--){ var d=new Date(now.getFullYear(), now.getMonth()-i, 1); var key=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); serie.push({key:key, label:ML[d.getMonth()]+' '+String(d.getFullYear()).slice(2), v: byMonth[key]||0}); }
+            var mesKey=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
+            var actual=byMonth[mesKey]||0;
+            var metas=[10000000,20000000,30000000,40000000];
+            var proxima=metas.find(function(m){ return actual < m-0.5; }) || metas[metas.length-1];
+            var pctMeta=proxima>0?Math.min(100,Math.round(actual/proxima*100)):0;
+            var trackMax=Math.max(proxima*1.12, Math.max.apply(null, serie.map(function(x){return x.v;}).concat([1])));
+            var fML=function(v){ return '$ '+Math.round(v).toLocaleString('es-AR'); };
+            return React.createElement('div',{style:Object.assign({},card,{marginTop:12})},
+              React.createElement('div',{style:{fontSize:13,fontWeight:700,color:NAVY,marginBottom:3}},'🎯 Ingresos de mano de obra (meta)'),
+              React.createElement('div',{style:{fontSize:11,color:'#94A3B8',marginBottom:10}},'Solo la parte de mano de obra de lo cobrado (sin materiales). Metas: $10M → $20M → $30M → $40M por mes.'),
+              React.createElement('div',{style:{display:'flex',gap:16,flexWrap:'wrap',alignItems:'flex-end',marginBottom:12}},
+                React.createElement('div',null, React.createElement('div',{style:{fontSize:10,fontWeight:700,color:'#94A3B8',textTransform:'uppercase'}},'Este mes'), React.createElement('div',{style:{fontFamily:"'Oswald',system-ui",fontSize:26,fontWeight:700,color:NAVY}}, fML(actual))),
+                React.createElement('div',{style:{flex:'1 1 220px',minWidth:180}},
+                  React.createElement('div',{style:{display:'flex',justifyContent:'space-between',fontSize:11,color:'#64748B',marginBottom:3}}, React.createElement('span',null,'Meta próxima: '+fML(proxima)), React.createElement('span',{style:{fontWeight:700,color:pctMeta>=100?'#166534':'#B45309'}}, pctMeta+'%')),
+                  React.createElement('div',{style:{height:12,background:'#F1F5F9',borderRadius:6,overflow:'hidden'}}, React.createElement('div',{style:{width:pctMeta+'%',height:'100%',background:pctMeta>=100?'#16A34A':ORANGE,borderRadius:6}})),
+                  React.createElement('div',{style:{fontSize:10,color:'#94A3B8',marginTop:3}}, actual>=proxima?'¡Meta alcanzada! 🎉':('Faltan '+fML(proxima-actual)))
+                )
+              ),
+              React.createElement('div',{style:{fontSize:10,fontWeight:700,color:'#94A3B8',textTransform:'uppercase',marginBottom:6}},'Últimos 6 meses'),
+              React.createElement('div',{style:{display:'flex',flexDirection:'column',gap:7}}, serie.map(function(m){ var w=trackMax>0?Math.round(m.v/trackMax*100):0; var goalPos=trackMax>0?(proxima/trackMax*100):90; var esMes=m.key===mesKey; return React.createElement('div',{key:m.key,style:{display:'flex',alignItems:'center',gap:8}},
+                React.createElement('span',{style:{fontSize:10,color:'#64748B',width:52,flexShrink:0,fontWeight:esMes?700:400}}, m.label),
+                React.createElement('div',{style:{position:'relative',flex:1,height:16,background:'#F8FAFC',borderRadius:4,overflow:'hidden'}},
+                  React.createElement('div',{style:{width:w+'%',height:'100%',background:m.v>=proxima?'#16A34A':(esMes?ORANGE:'#93C5FD'),borderRadius:4}}),
+                  React.createElement('div',{style:{position:'absolute',left:goalPos+'%',top:0,bottom:0,width:2,background:'#DC2626',opacity:0.7}})
+                ),
+                React.createElement('span',{style:{fontSize:10,color:'#475569',width:92,flexShrink:0,textAlign:'right',fontWeight:esMes?700:400}}, fML(m.v))
+              ); })),
+              React.createElement('div',{style:{fontSize:10,color:'#94A3B8',marginTop:6}}, 'La línea roja marca la meta próxima ('+fML(proxima)+').')
+            );
+          })(),
+          (function(){
             function _cob(q){ return (q.pagos||[]).reduce(function(s,p){ var m=parseFloat(p.monto||0); if(p.moneda==='USD') m=m*(parseFloat(p.tcambio)||0); return s+m; },0); }
             var _ph=function(pid){ var p=(personas||[]).find(function(x){return x.id===pid;}); return p?(parseFloat(p.precioHora)||0):0; };
             var _mo=function(q){ var a=(actividades||[]).filter(function(x){return x.quoteId===q.id;}); return a.reduce(function(s,x){ var hr=parseFloat(x.horasReal)||0; if(hr<=0) return s; var vs=(x.equipo||[]).map(_ph).filter(function(v){return v>0;}); var av=vs.length?(vs.reduce(function(a,b){return a+b;},0)/vs.length):0; return s+hr*av; },0); };
             var _mat=function(q){ return calcSub(q.mat)/(1+((typeof margenMat!=='undefined'?(parseFloat(margenMat)||0):0)/100)); };
             var RB={electricidad:{l:'Electricidad',i:'⚡',c:'#F59E0B'},pintura:{l:'Pintura',i:'🎨',c:'#10B981'},plomeria:{l:'Plomería',i:'🔧',c:'#3B82F6'},otros:{l:'Otros',i:'🛠',c:'#94A3B8'}};
             var acc={electricidad:{cob:0,ct:0,n:0},pintura:{cob:0,ct:0,n:0},plomeria:{cob:0,ct:0,n:0},otros:{cob:0,ct:0,n:0}};
-            (quotes||[]).forEach(function(q){ if(q.status!=='aceptado') return; var cob=_cob(q); if(cob<=0) return; var ct=_mat(q)+_mo(q); var tt=Array.isArray(q.tipoTrabajo)?q.tipoTrabajo:(q.tipoTrabajo?[q.tipoTrabajo]:[]); tt=tt.filter(function(t){return t==='electricidad'||t==='pintura'||t==='plomeria';}); var dst=tt.length?tt:['otros']; var cs=cob/dst.length, cts=ct/dst.length; dst.forEach(function(t){ acc[t].cob+=cs; acc[t].ct+=cts; acc[t].n++; }); });
+            (quotes||[]).forEach(function(q){ if(q.status!=='aceptado') return; var md=calcSub(q.mdo), mt=calcSub(q.mat), tot=md+mt; if(tot<=0) return; var share = rubroModo==='total'?1:(rubroModo==='mat'?(mt/tot):(md/tot)); var cob=_cob(q)*share; if(cob<=0) return; var ct = rubroModo==='mat'?_mat(q):(rubroModo==='total'?(_mat(q)+_mo(q)):_mo(q)); var tt=Array.isArray(q.tipoTrabajo)?q.tipoTrabajo:(q.tipoTrabajo?[q.tipoTrabajo]:[]); tt=tt.filter(function(t){return t==='electricidad'||t==='pintura'||t==='plomeria';}); var dst=tt.length?tt:['otros']; var cs=cob/dst.length, cts=ct/dst.length; dst.forEach(function(t){ acc[t].cob+=cs; acc[t].ct+=cts; acc[t].n++; }); });
+            var modoLbl = rubroModo==='mat'?'Materiales':(rubroModo==='total'?'Total':'Mano de obra');
             var orden=['electricidad','pintura','plomeria','otros'].filter(function(k){return acc[k].cob>0;});
             var tot=orden.reduce(function(s,k){return s+acc[k].cob;},0);
             return React.createElement('div',{style:Object.assign({},card,{marginTop:12})},
-              React.createElement('div',{style:{fontSize:13,fontWeight:700,color:NAVY,marginBottom:3}},'⚡ Ingresos y rentabilidad por rubro'),
-              React.createElement('div',{style:{fontSize:11,color:'#94A3B8',marginBottom:10}},'Cuánto cobrás y qué margen deja cada tipo de trabajo, para ver qué sale más y qué es más rentable. Los presupuestos con más de un rubro se reparten en partes iguales. Margen = (cobrado − costo mano de obra real + materiales) ÷ cobrado.'),
+              React.createElement('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',gap:8,flexWrap:'wrap',marginBottom:3}},
+                React.createElement('div',{style:{fontSize:13,fontWeight:700,color:NAVY}},'⚡ Ingresos y rentabilidad por rubro'),
+                React.createElement('div',{style:{display:'flex',gap:4,background:'#F1F5F9',borderRadius:8,padding:2}}, [['mdo','Mano de obra'],['mat','Materiales'],['total','Total']].map(function(o){ var on=rubroModo===o[0]; return React.createElement('button',{key:o[0],type:'button',onClick:function(){ setRubroModo(o[0]); },style:{border:'none',borderRadius:6,padding:'5px 10px',fontSize:11,fontWeight:on?700:500,cursor:'pointer',background:on?'#fff':'none',color:on?NAVY:'#64748B',boxShadow:on?'0 1px 2px rgba(0,0,0,0.08)':'none'}}, o[1]); }))
+              ),
+              React.createElement('div',{style:{fontSize:11,color:'#94A3B8',marginBottom:10}},'Midiendo: '+modoLbl+'. Cuánto cobrás por tipo de trabajo y qué margen deja, para ver qué sale más y qué es más rentable. Los presupuestos con más de un rubro se reparten en partes iguales.'),
               tot<=0 ? React.createElement('div',{style:{color:'#94A3B8',fontSize:12}},'Sin cobros registrados todavía.') :
               React.createElement('div',{style:{display:'flex',flexDirection:'column',gap:12}}, orden.map(function(k){ var r=RB[k]; var v=acc[k].cob; var pct=tot>0?Math.round(v/tot*100):0; var mg=v>0?Math.round((v-acc[k].ct)/v*100):null; var mc=mg==null?'#94A3B8':(mg>=40?'#166534':(mg>=20?'#B45309':'#B91C1C')); return React.createElement('div',{key:k},
                 React.createElement('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'baseline',marginBottom:3,gap:8,flexWrap:'wrap'}},
                   React.createElement('span',{style:{fontSize:12,fontWeight:700,color:NAVY}}, r.i+' '+r.l+' · '+acc[k].n+' trab.'),
-                  React.createElement('span',{style:{fontSize:12,color:'#475569'}}, '$ '+Math.round(v).toLocaleString('es-AR')+'  ·  '+pct+'% de ingresos  ·  ', React.createElement('span',{style:{fontWeight:800,color:mc}}, 'margen '+(mg==null?'—':(mg+'%'))))
+                  React.createElement('span',{style:{fontSize:12,color:'#475569'}}, '$ '+Math.round(v).toLocaleString('es-AR')+' MO  ·  '+pct+'%  ·  ', React.createElement('span',{style:{fontWeight:800,color:mc}}, 'margen '+(mg==null?'—':(mg+'%'))))
                 ),
                 React.createElement('div',{style:{height:9,background:'#F1F5F9',borderRadius:5,overflow:'hidden'}}, React.createElement('div',{style:{width:pct+'%',height:'100%',background:r.c,borderRadius:5}}))
               ); }))
